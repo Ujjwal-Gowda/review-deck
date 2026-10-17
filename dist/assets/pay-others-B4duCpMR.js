@@ -1,0 +1,11 @@
+const e=`<p class="goal">Comparing PayPal, Square, Adyen, Braintree, and regional payment providers across fees, developer experience, and global reach.</p>
+<table>
+  <tr><th>Gateway</th><th>Best For</th><th>Key Strength</th><th>Fee Baseline</th></tr>
+  <tr><td>Stripe</td><td>Global SaaS & Developers</td><td>Developer tools, Billing, Connect</td><td>2.9% + 30¢</td></tr>
+  <tr><td>Razorpay / Cashfree</td><td>India & South Asia</td><td>UPI, Netbanking, Rupay, AutoPay</td><td>2% domestic</td></tr>
+  <tr><td>Adyen</td><td>Enterprise Global</td><td>Direct bank connections, lower interchange</td><td>Tiered / IC+</td></tr>
+  <tr><td>PayPal / Braintree</td><td>Consumer Checkout</td><td>Brand recognition, buyer trust</td><td>2.9% - 3.49%</td></tr>
+</table>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>366.1 <span class="levels">basic</span> Design an abstraction layer (PaymentProvider interface) decoupling your app from specific gateway SDKs.</summary><div><p>Expose <code>createOrder</code>, <code>refund</code>, <code>verifyWebhook</code> across all providers.</p></div></details>
+</div>`;export{e as default};

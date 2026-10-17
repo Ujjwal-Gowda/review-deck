@@ -1,0 +1,26 @@
+const e=`<p class="goal">A tiny structure that answers "are these two things in the same group?" almost instantly, even while groups are merging.</p>
+<div class="diagram">every item points to a PARENT; the root of the chain is the group's representative
+parent: {a: a, b: a, c: b, d: d}        a ← b ← c        d          find(c) → b → a  (group "a")
+union(c, d): attach d's root under a's root →  a ← b ← c,  a ← d        now c and d are connected</div>
+<pre data-lang="python"><code class="language-python">class UnionFind:
+    def __init__(self, items):
+        self.parent = {x: x for x in items}
+        self.rank = {x: 0 for x in items}
+    def find(self, x):
+        while self.parent[x] != x:
+            self.parent[x] = self.parent[self.parent[x]]   # path compression: point closer to the root
+            x = self.parent[x]
+        return x
+    def union(self, a, b):
+        ra, rb = self.find(a), self.find(b)
+        if ra == rb: return False                          # already in the same group (for Kruskal: this edge would make a cycle)
+        if self.rank[ra] &lt; self.rank[rb]: ra, rb = rb, ra  # union by rank: attach the shorter tree under the taller
+        self.parent[rb] = ra
+        if self.rank[ra] == self.rank[rb]: self.rank[ra] += 1
+        return True</code></pre>
+<p>With both optimisations, each operation costs almost O(1) (inverse Ackermann time, which is at most about 4 for any real input).</p>
+<p>Uses: Kruskal's minimum spanning tree, "are these accounts linked?" (merging duplicate customers who share a phone or email), connected components as edges stream in, image segmentation, network connectivity.</p>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>0.1 <span class="levels">basic</span> Customers share phone numbers or emails. Given (customer, identifier) pairs, group customers who are the same person using Union-Find.</summary><div><p>Keep a map from identifier to the first customer seen with it. For each (customer, id): if the id was seen, union(customer, first_customer_for_id), otherwise record it. Finally group customers by find(customer).</p></div></details>
+</div>
+`;export{e as default};

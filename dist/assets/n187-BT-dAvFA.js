@@ -1,0 +1,14 @@
+const e=`<p class="goal">How modern CPUs actually run code, and the code patterns that help or hurt.</p>
+<ul>
+<li><b>Caches rule:</b> an L1 hit costs ~1 ns, main memory ~100 ns. Sequential, contiguous access (arrays, struct-of-arrays) lets the prefetcher hide that latency. Pointer-chasing doesn't (<a class="xref" data-old="n03">chapter 3</a>, <a class="xref" data-old="c22">chapter 5</a>).</li>
+<li><b>Branch prediction:</b> the CPU guesses branches in order to keep its pipeline full, and a wrong guess costs about 15–20 cycles. Unpredictable branches in hot loops (random data) are slow; sorted data, or branchless code (<code>x = cond * a + (1-cond) * b</code>), helps.</li>
+<li><b>SIMD:</b> one instruction processes 4–16 values. Compilers auto-vectorise simple loops over arrays at <code>-O2/-O3</code>. NumPy, Rust iterators and C loops benefit; boxed objects in Python don't.</li>
+<li><b>Instruction-level parallelism:</b> independent operations run simultaneously; long dependency chains serialise them.</li>
+<li><b>False sharing and contention</b> between cores (<a class="xref" data-old="n27">chapter 27</a>).</li>
+</ul>
+<pre data-lang="shell"><code class="language-bash">perf stat -e cycles,instructions,cache-misses,branch-misses ./app   # instructions per cycle, miss rates</code></pre>
+<p>This level matters for hot inner loops (parsers, image and video processing, game engines, databases), not for typical web handlers, which are dominated by I/O.</p>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>187.1 <span class="levels">basic</span> Sum a large array in C twice: first in order, then in random index order. Explain the timing difference with <code>perf stat</code>.</summary><div><p>Random order causes far more cache misses (<code>cache-misses</code> in perf stat) and is several times slower, even though the number of additions is identical.</p></div></details>
+</div>
+`;export{e as default};

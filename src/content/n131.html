@@ -1,0 +1,20 @@
+<p class="goal">The private network your cloud resources live in.</p>
+<div class="diagram">VPC 10.0.0.0/16  (region ap-south-1)
+ ├── public subnet  10.0.1.0/24 (AZ a) ── load balancer, NAT gateway   ← route to the Internet Gateway
+ ├── public subnet  10.0.2.0/24 (AZ b)
+ ├── private subnet 10.0.11.0/24 (AZ a) ── app servers / containers     ← outbound only, via NAT
+ ├── private subnet 10.0.12.0/24 (AZ b)
+ └── private subnet 10.0.21.0/24 (AZ a/b) ── databases                   ← no internet route at all</div>
+<table>
+<tr><th>Piece</th><th>Role</th></tr>
+<tr><td>Subnet</td><td>an IP range within one AZ; "public" = it has a route to the internet gateway</td></tr>
+<tr><td>Route table</td><td>where traffic for each destination goes</td></tr>
+<tr><td>Internet / NAT gateway</td><td>inbound+outbound for public subnets / outbound-only for private subnets (NAT gateways are surprisingly expensive)</td></tr>
+<tr><td><b>Security group</b></td><td>a stateful firewall per resource: "the DB accepts 5432 only from the app's security group"</td></tr>
+<tr><td>Load balancer (ALB/NLB)</td><td>a public entry point; spreads traffic across healthy targets; terminates TLS</td></tr>
+<tr><td>VPC peering / private endpoints</td><td>connect VPCs, or reach S3 and other services without going over the internet</td></tr>
+</table>
+<p>Principle: only load balancers (and maybe a bastion or VPN) are public. Everything else is private, and security groups reference each other rather than IP ranges.</p>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>131.1 <span class="levels">basic</span> Draw the VPC for FreshOn: which subnets hold the load balancer, the API, Postgres and Redis, and what security-group rules connect them?</summary><div><p>Public subnets: the load balancer. Private: API (allowing 8080 from the load balancer's security group). Isolated: Postgres and Redis (allowing only from the API's security group). No inbound internet except 443 to the load balancer.</p></div></details>
+</div>

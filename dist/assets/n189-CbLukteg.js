@@ -1,0 +1,16 @@
+const e=`<p class="goal">Most backend slowness is database slowness. A checklist to fix it.</p>
+<ol>
+<li><b>Find the expensive queries:</b> <code>pg_stat_statements</code> sorted by <code>total_exec_time</code> (frequency × duration matters more than the single slowest query); slow-query logs (<code>log_min_duration_statement = 200ms</code>).</li>
+<li><b>Explain them</b> (<a class="xref" data-old="n96">chapter 96</a>): look for sequential scans on big tables, bad row estimates, sorts spilling to disk.</li>
+<li><b>Index</b> for the real WHERE and ORDER BY patterns (<a class="xref" data-old="n95">chapter 95</a>).</li>
+<li><b>Fix access patterns:</b> N+1 queries become joins or batches; <code>SELECT *</code> becomes the needed columns; deep OFFSET pagination becomes cursors; many round trips become one query or a CTE.</li>
+<li><b>Connection pooling:</b> a right-sized pool (roughly cores × 2–4 per database, not 500), plus PgBouncer for many clients.</li>
+<li><b>Cache</b> hot, rarely changing reads (the catalogue, settings).</li>
+<li><b>Reduce write amplification:</b> batch inserts (<code>COPY</code>, multi-row INSERT), drop unused indexes, avoid updating unchanged rows.</li>
+<li><b>Data lifecycle:</b> archive or partition old data (partition by month, drop old partitions instead of <code>DELETE</code>).</li>
+<li><b>Hardware and config</b> last: enough RAM for the working set, <code>shared_buffers</code>, fast disks.</li>
+</ol>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>189.1 <span class="levels">basic</span> Enable <code>pg_stat_statements</code>, run your app's test suite, and list the top 5 queries by total time.</summary><div><p><code>SELECT query, calls, total_exec_time FROM pg_stat_statements ORDER BY total_exec_time DESC LIMIT 5;</code> Usually one or two queries dominate, so optimise those first.</p></div></details>
+</div>
+`;export{e as default};

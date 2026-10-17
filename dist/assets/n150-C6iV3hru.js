@@ -1,0 +1,14 @@
+const e=`<p class="goal">DNS as production infrastructure: naming services, migrating safely, failing over.</p>
+<ul>
+<li><b>Buy the domain at a registrar, run DNS at a good provider</b> (Cloudflare, Route 53). Point the registrar's NS records at the provider. Turn on registrar lock and 2FA: losing the domain loses everything.</li>
+<li><b>Name services by role:</b> <code>api.</code>, <code>app.</code>, <code>status.</code>, <code>files.</code>. Point them at load balancers or CDNs via CNAME/ALIAS, never at individual servers.</li>
+<li><b>Migrations:</b> lower the TTL to 60–300 s a day ahead, switch the record, watch traffic move, then raise the TTL again.</li>
+<li><b>DNS-based failover and routing:</b> health-checked records (Route 53 failover, Cloudflare load balancing) answer with a healthy endpoint; latency or geo routing sends users to the nearest region. Clients cache answers, so failover is never instant.</li>
+<li><b>Email records</b> (SPF, DKIM, DMARC) decide whether your invoices and OTP emails land in the inbox or in spam.</li>
+<li><b>CAA records</b> restrict which certificate authorities may issue certificates for your domain.</li>
+<li><b>Keep DNS as code</b> (Terraform, OctoDNS) so changes are reviewed and reversible.</li>
+</ul>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>150.1 <span class="levels">think</span> You're moving the API from one server to another with a new IP. Write the DNS steps and timing.</summary><div><p>The day before, lower the TTL to 300 s. Deploy the new server, test it via <code>/etc/hosts</code>. Switch the A record; watch traffic move over about 5 minutes; keep the old server up until its traffic stops; raise the TTL again.</p></div></details>
+</div>
+`;export{e as default};

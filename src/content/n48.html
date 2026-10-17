@@ -1,0 +1,37 @@
+<p class="goal">A pull request is a proposal plus a conversation. Make yours easy to review and quick to merge.</p>
+<h3>The flow</h3>
+<div class="diagram">branch → small commits → push → open PR (draft if early) → CI runs → review → address feedback → approve → merge → delete branch → deploy</div>
+<h3>What makes a PR easy to review</h3>
+<ul>
+<li><b>Small:</b> under about 400 changed lines. Review quality collapses on large diffs. Split refactors from behaviour changes, and stack PRs if you need to.</li>
+<li><b>One purpose:</b> "Add zone-based delivery fees", not "fees + a renamed util + a dependency bump".</li>
+<li><b>Self-reviewed first:</b> read your own diff on GitHub before requesting review. You'll catch half the comments yourself.</li>
+<li><b>Green CI</b> before you ask for anyone's time.</li>
+</ul>
+<h3>A description template</h3>
+<pre data-lang="plaintext"><code class="language-plaintext">## What
+Zone-based delivery fees: free above ₹499 in central zones, ₹30 flat elsewhere.
+
+## Why
+Fixes #87. Flat fee was losing money on outskirt deliveries.
+
+## How
+- New FeeRule strategy per zone (orders/fees.ts)
+- Zone added to Order; migration 0012 backfills "central"
+
+## Testing
+- Unit tests for each rule incl. the ₹499 boundary
+- Manually placed orders in both zones on staging
+
+## Risk / rollout
+Behind FEATURE_ZONE_FEES flag; off by default.</code></pre>
+<h3>Merge options on GitHub</h3>
+<table>
+<tr><th>Option</th><th>Result</th><th>Use when</th></tr>
+<tr><td>Merge commit</td><td>all commits + a merge commit</td><td>you want the full branch history preserved</td></tr>
+<tr><td><b>Squash and merge</b></td><td>the whole PR becomes one commit on main</td><td>most teams: a clean main, one commit per PR</td></tr>
+<tr><td>Rebase and merge</td><td>commits replayed linearly</td><td>your commits are already clean and meaningful</td></tr>
+</table>
+<h3>Responding to review</h3>
+<p>Reply to every comment, whether with a fix or a reasoned disagreement. Push fixes as new commits during review (easier to re-review) and squash at merge. Don't take comments personally: the review is of the code, not of you.</p>
+<details class="ex"><summary>48.1 <span class="levels">basic</span> Take a change you'd normally commit straight to main, do it as a branch + PR with the template above, and merge it with squash.</summary><div><p><code>git switch -c fix/x</code> → commit → <code>git push -u origin fix/x</code> → <code>gh pr create</code> → wait for green checks → <code>gh pr merge --squash --delete-branch</code>.</p></div></details>

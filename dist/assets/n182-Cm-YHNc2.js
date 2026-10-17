@@ -1,0 +1,23 @@
+const t=`<p class="goal">Caching strategies, and the ways caches go wrong.</p>
+<table>
+<tr><th>Strategy</th><th>How</th><th>Trade-off</th></tr>
+<tr><td><b>Cache-aside</b> (lazy)</td><td>the app reads the cache; on a miss, reads the DB and fills the cache</td><td>the default; the first read is slow; data is stale until the TTL expires or it's invalidated</td></tr>
+<tr><td>Read-through</td><td>the cache library loads from the DB itself on a miss</td><td>cleaner code; same staleness</td></tr>
+<tr><td>Write-through</td><td>write to the cache and the DB together</td><td>the cache is always fresh; slower writes</td></tr>
+<tr><td>Write-back (write-behind)</td><td>write to the cache, flush to the DB later</td><td>fast writes; risk of losing data</td></tr>
+<tr><td>Write-around</td><td>write only to the DB; cache on read</td><td>avoids caching data that's never read</td></tr>
+</table>
+<h3>Failure modes</h3>
+<table>
+<tr><th>Problem</th><th>Fix</th></tr>
+<tr><td><b>Stale data</b></td><td>delete the key when the data is written (invalidate rather than update, to avoid races) plus a TTL as a safety net</td></tr>
+<tr><td><b>Stampede</b>: a hot key expires and 1,000 requests hit the DB at once</td><td>a lock or single-flight per key; serve stale while revalidating; jitter the TTLs</td></tr>
+<tr><td><b>Penetration</b>: repeated lookups for keys that don't exist</td><td>cache "not found" briefly; Bloom filter</td></tr>
+<tr><td><b>Avalanche</b>: many keys expire at once, or the cache restarts empty</td><td>random TTLs; warm the cache up; replicated cache</td></tr>
+<tr><td>Hot key</td><td>a local in-process cache in front of Redis; replicate the key</td></tr>
+</table>
+<p>Caching layers, from the client inwards: browser (HTTP headers), CDN, reverse proxy, application memory, Redis, database buffer cache. Cache as close to the user as correctness allows. And measure the hit rate: a 30% hit rate is mostly overhead.</p>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>182.1 <span class="levels">basic</span> Add cache-aside with Redis to a slow endpoint, then simulate a stampede with 200 concurrent requests right after expiry. Fix it with a per-key lock.</summary><div><p>Without the fix, the database sees ~200 identical queries; with single-flight (<code>SET lock NX</code>, others wait briefly and re-read), it sees 1. Add jitter to the TTLs too.</p></div></details>
+</div>
+`;export{t as default};

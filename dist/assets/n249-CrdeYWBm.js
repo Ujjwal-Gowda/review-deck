@@ -1,0 +1,13 @@
+const e=`<p class="goal">Writing technical documents that people actually read and use. Document types are covered in <a class="xref" data-old="n41">chapter 41</a>.</p>
+<ul>
+<li><b>Start with the reader and their task:</b> "a new developer wants to run the app" or "on-call at 3 a.m. needs to restore the database". Write for that task only.</li>
+<li><b>Bottom line up front:</b> the answer or decision first, the details after.</li>
+<li><b>Structure for scanning:</b> headings that say something, short paragraphs, numbered steps for procedures, tables for comparisons, copy-pasteable commands.</li>
+<li><b>Concrete over abstract:</b> an example request and response beats a paragraph describing it.</li>
+<li><b>Test your docs:</b> follow your own README on a fresh machine or container. Every step that fails is a bug.</li>
+<li><b>Keep docs close to the code</b> (in the repo, updated in the same PR), and date or version them.</li>
+<li><b>Edit ruthlessly:</b> cut filler; one idea per sentence; active voice.</li>
+<li><b>Diagrams</b> for structure and flow (Mermaid in Markdown renders on GitHub).</li>
+</ul>
+<p>A useful model is <b>Diátaxis</b>: tutorials (learning), how-to guides (tasks), reference (facts), and explanation (understanding). Keep them separate, since mixing them serves no reader well.</p>
+`;export{e as default};

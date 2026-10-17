@@ -1,0 +1,85 @@
+<p class="goal">Thinking recursively: the patterns, the costs, and converting recursion to loops.</p>
+<p>Chapter 10 introduced base cases and the call stack. This chapter is about <i>designing</i> recursive solutions.</p>
+<h3>The recipe</h3>
+<ol>
+<li><b>Define the function's contract in words:</b> "<code>size(dir)</code> returns the total bytes under dir."</li>
+<li><b>Base case(s):</b> the smallest inputs you can answer directly (an empty list, a leaf node, n = 0).</li>
+<li><b>Recursive case:</b> express the answer using the <i>same function on smaller inputs</i>, and <b>trust it</b> (the leap of faith).</li>
+<li><b>Check progress:</b> every call must move strictly toward a base case.</li>
+</ol>
+<pre data-lang="python"><code class="language-python">from pathlib import Path
+def size(p: Path) -&gt; int:
+    if p.is_file():                         # base case
+        return p.stat().st_size
+    return sum(size(child) for child in p.iterdir())   # a directory's size = the sum of its children's</code></pre>
+<h3>Recursive shapes you'll meet again and again</h3>
+<table>
+<tr><th>Shape</th><th>Pattern</th><th>Examples</th></tr>
+<tr><td>Linear</td><td>f(n) uses f(n−1)</td><td>factorial, walking a linked list</td></tr>
+<tr><td>Divide and conquer</td><td>split into halves, combine</td><td>merge sort, binary search, fast exponentiation</td></tr>
+<tr><td>Tree recursion</td><td>recurse into each child</td><td>file trees, JSON, the HTML DOM, ASTs, org charts</td></tr>
+<tr><td>Backtracking</td><td>choose → recurse → un-choose</td><td>permutations, sudoku, N-queens, route search</td></tr>
+<tr><td>Mutual recursion</td><td>f calls g, g calls f</td><td>recursive-descent parsers (expression → term → factor → expression)</td></tr>
+</table>
+<pre data-lang="python"><code class="language-python">def permutations(items):
+    out = []
+    def go(path, remaining):
+        if not remaining:                       # base: a full arrangement
+            out.append(path[:]); return
+        for i, x in enumerate(remaining):
+            path.append(x)                      # choose
+            go(path, remaining[:i] + remaining[i+1:])
+            path.pop()                          # un-choose (backtrack)
+    go([], items)
+    return out</code></pre>
+<h3>Overlapping subproblems → memoisation</h3>
+<p>If the same call happens many times (naive fib calls <code>fib(30)</code> about 832,000 times), cache results by argument. That turns exponential into polynomial time, and it's the doorway to dynamic programming (<a class="xref" data-old="c11">chapter 19</a>).</p>
+<pre data-lang="rust"><code class="language-rust">use std::collections::HashMap;
+fn ways(n: u64, memo: &amp;mut HashMap&lt;u64, u64&gt;) -&gt; u64 {   // stair-climbing: 1 or 2 steps at a time
+    if n &lt;= 1 { return 1; }
+    if let Some(&amp;v) = memo.get(&amp;n) { return v; }
+    let v = ways(n - 1, memo) + ways(n - 2, memo);
+    memo.insert(n, v);
+    v
+}</code></pre>
+<h3>Stack depth and tail calls</h3>
+<table>
+<tr><th>Language</th><th>Default recursion limit</th><th>Tail-call optimisation?</th></tr>
+<tr><td>Python</td><td>~1000 frames (<code>sys.setrecursionlimit</code>)</td><td>no</td></tr>
+<tr><td>JS (V8)</td><td>~10,000 frames</td><td>no (only Safari implements proper tail calls)</td></tr>
+<tr><td>Go</td><td>goroutine stacks grow dynamically up to 1 GB, so very deep is OK</td><td>no</td></tr>
+<tr><td>Rust / C</td><td>main-thread stack ~8 MB</td><td>often, as an optimisation, but not guaranteed</td></tr>
+</table>
+<p>A <b>tail call</b> is a recursive call that's the very last action (<code>return f(n-1, acc*n)</code>). Languages that guarantee tail-call optimisation (Scheme, and many functional languages) reuse the frame, so it behaves like a loop. In your five languages, don't rely on it: for deep or unbounded depth, use an explicit stack.</p>
+<h3>Recursion → iteration with an explicit stack</h3>
+<pre data-lang="go"><code class="language-go">func sizeIter(root string) (int64, error) {
+    var total int64
+    stack := []string{root}                       // the explicit stack replaces the call stack
+    for len(stack) &gt; 0 {
+        p := stack[len(stack)-1]
+        stack = stack[:len(stack)-1]
+        info, err := os.Lstat(p)
+        if err != nil { return 0, err }
+        if !info.IsDir() { total += info.Size(); continue }
+        entries, err := os.ReadDir(p)
+        if err != nil { return 0, err }
+        for _, e := range entries { stack = append(stack, filepath.Join(p, e.Name())) }
+    }
+    return total, nil
+}</code></pre>
+<p>Swap the stack for a queue and you get breadth-first order: the same trick as DFS vs BFS in <a class="xref" data-old="c12">chapter 18</a>.</p>
+<div class="exercises"><h3>Exercises</h3>
+<details class="ex"><summary>21.1 <span class="levels">basic</span> Recursively compute the maximum depth of nested lists: <code>depth([1,[2,[3]],[]])</code> → 3.</summary><div><pre data-lang="python"><code class="language-python">def depth(x):
+    if not isinstance(x, list): return 0
+    return 1 + max((depth(i) for i in x), default=0)</code></pre></div></details>
+<details class="ex"><summary>21.2 <span class="levels">think</span> Write all subsets of a list (the power set) recursively in Rust, returning <code>Vec&lt;Vec&lt;i32&gt;&gt;</code>. What's its complexity?</summary><div><pre data-lang="rust"><code class="language-rust">fn subsets(xs: &amp;[i32]) -&gt; Vec&lt;Vec&lt;i32&gt;&gt; {
+    match xs.split_first() {
+        None =&gt; vec![vec![]],
+        Some((&amp;h, rest)) =&gt; {
+            let without = subsets(rest);
+            let with: Vec&lt;_&gt; = without.iter().map(|s| { let mut v = vec![h]; v.extend(s); v }).collect();
+            [without, with].concat()
+        }
+    }
+}</code></pre><p>O(n·2ⁿ): 2ⁿ subsets, each up to n long.</p></div></details>
+</div>

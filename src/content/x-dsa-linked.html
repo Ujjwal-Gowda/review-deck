@@ -1,0 +1,116 @@
+<p class="goal">Items that don't sit next to each other: each one points to the next. Linked lists teach pointers and references better than anything else, and power queues, LRU caches and allocators.</p>
+<h3>The picture</h3>
+<div class="diagram">Each NODE holds a value and a pointer ("next") to the following node. The list itself only remembers the HEAD.
+
+ head
+  │
+  ▼
+┌──────┬───┐   ┌──────┬───┐   ┌──────┬───┐
+│ milk │ ●─┼──►│ curd │ ●─┼──►│paneer│ ╳ │   ╳ = None / NULL: the end of the list
+└──────┴───┘   └──────┴───┘   └──────┴───┘
+ (address 5000)  (address 7300)  (address 1200)   ← scattered anywhere in memory</div>
+<p>An analogy: a treasure hunt. Each clue tells you where the next clue is. Finding clue #50 means following 49 clues, but slipping a new clue into the chain only means rewriting one clue.</p>
+<h3>A singly linked list, built step by step</h3>
+<pre data-lang="python"><code class="language-python">class Node:
+    def __init__(self, value, next=None):
+        self.value = value
+        self.next = next
+
+class LinkedList:
+    def __init__(self):
+        self.head = None
+        self.size = 0
+
+    def push_front(self, value):                 # O(1)
+        self.head = Node(value, self.head)       # new node points at the old head
+        self.size += 1
+
+    def find(self, value):                       # O(n): walk until found
+        cur = self.head
+        while cur is not None:
+            if cur.value == value:
+                return cur
+            cur = cur.next
+        return None
+
+    def insert_after(self, node, value):         # O(1) once you have the node
+        node.next = Node(value, node.next)
+        self.size += 1
+
+    def remove(self, value):                     # O(n): find it, then unlink it
+        prev, cur = None, self.head
+        while cur is not None and cur.value != value:
+            prev, cur = cur, cur.next
+        if cur is None:
+            return False                         # not found
+        if prev is None:
+            self.head = cur.next                 # removing the head
+        else:
+            prev.next = cur.next                 # bypass cur
+        self.size -= 1
+        return True
+
+    def __iter__(self):
+        cur = self.head
+        while cur:
+            yield cur.value
+            cur = cur.next</code></pre>
+<h3>Inserting, drawn out</h3>
+<div class="diagram">insert "dahi" after "milk":
+
+1. create the new node, pointing where milk points:    [dahi]──► curd
+2. point milk at the new node:                          milk ──► [dahi] ──► curd ──► paneer
+
+Only 2 pointers change, however long the list is. That's O(1).
+The ORDER matters: do step 2 first and you've lost the link to curd forever.</div>
+<h3>Deleting, drawn out</h3>
+<div class="diagram">remove "curd":   prev = milk, cur = curd
+   milk ──► curd ──► paneer
+   milk ───────────► paneer     (prev.next = cur.next; curd is now unreachable, and garbage-collected / freed)</div>
+<h3>Reversing a list: the classic exercise</h3>
+<pre data-lang="python"><code class="language-python">def reverse(head):
+    prev = None
+    cur = head
+    while cur:
+        nxt = cur.next      # 1. remember the rest of the list
+        cur.next = prev     # 2. flip this node's arrow backwards
+        prev = cur          # 3. move prev forward
+        cur = nxt           # 4. move cur forward
+    return prev             # prev is the new head</code></pre>
+<div class="diagram">start:        None   A → B → C → None
+after node A: None ← A    B → C        (prev=A, cur=B)
+after node B: None ← A ← B    C        (prev=B, cur=C)
+after node C: None ← A ← B ← C         (prev=C, cur=None) → return C</div>
+<h3>Finding a cycle: Floyd's tortoise and hare</h3>
+<p>A buggy list might loop back on itself, and walking it would never end. Move one pointer by 1 step and another by 2. If there's a loop, the fast one laps the slow one and they meet; if not, the fast one reaches the end.</p>
+<pre data-lang="python"><code class="language-python">def has_cycle(head):
+    slow = fast = head
+    while fast and fast.next:
+        slow = slow.next
+        fast = fast.next.next
+        if slow is fast:
+            return True
+    return False
+# The same fast/slow trick finds the MIDDLE of a list: when fast reaches the end, slow is halfway.</code></pre>
+<h3>Variations</h3>
+<table>
+<tr><th>Kind</th><th>Picture</th><th>Adds</th></tr>
+<tr><td><b>Singly</b> linked</td><td><code>A → B → C</code></td><td>the simplest; can only walk forward</td></tr>
+<tr><td><b>Doubly</b> linked</td><td><code>A ⇄ B ⇄ C</code></td><td>a <code>prev</code> pointer: walk both ways; delete a node in O(1) when you hold it</td></tr>
+<tr><td><b>Circular</b></td><td><code>A → B → C → (back to A)</code></td><td>round-robin scheduling, ring buffers</td></tr>
+<tr><td>With a <b>tail pointer</b></td><td>head … tail</td><td>O(1) append at the end (a queue)</td></tr>
+<tr><td>With a <b>sentinel / dummy node</b></td><td><code>[dummy] → A → B</code></td><td>no special case for the empty list or the head</td></tr>
+</table>
+<h3>The same node in other languages</h3>
+<pre data-lang="c"><code class="language-c">typedef struct Node { int value; struct Node *next; } Node;
+Node *push_front(Node *head, int v) { Node *n = malloc(sizeof *n); n-&gt;value = v; n-&gt;next = head; return n; }
+/* you must free every node yourself when you're done */</code></pre>
+<pre data-lang="go"><code class="language-go">type Node struct { Value int; Next *Node }
+head = &amp;Node{Value: 5, Next: head}        // Go also has container/list (doubly linked)</code></pre>
+<pre data-lang="rust"><code class="language-rust">struct Node { value: i32, next: Option&lt;Box&lt;Node&gt;&gt; }   // Box = an owned heap pointer; None = end of list
+// Doubly linked lists fight Rust's ownership rules (each node has two owners): use VecDeque or indices.</code></pre>
+<h3>When do you actually use one?</h3>
+<p>Honestly, rarely directly: arrays win for most lists because of the cache (<a class="xref" data-old="c12">Data Structures</a>). But linked lists are <b>inside</b> things you use all the time: an LRU cache (a hash map plus a doubly linked list), OS task lists, memory allocators' free lists, and hash-table buckets with chaining. They're also an interview favourite, precisely because they test careful pointer handling.</p>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>0.1 <span class="levels">basic</span> Implement a doubly linked list with <code>push_back</code>, <code>pop_front</code> and <code>remove(node)</code> in O(1), using one sentinel node that links to itself when the list is empty. Then build an LRU cache (capacity 3) from it plus a dict.</summary><div><p>Sentinel: <code>s.prev = s.next = s</code>. Insert x before s (at the back): <code>x.prev, x.next = s.prev, s; s.prev.next = x; s.prev = x</code>. Remove: <code>x.prev.next = x.next; x.next.prev = x.prev</code>. LRU: the dict maps key to node; on get, move the node to the back; on put when over capacity, evict <code>s.next</code> (the least recently used).</p></div></details>
+</div>

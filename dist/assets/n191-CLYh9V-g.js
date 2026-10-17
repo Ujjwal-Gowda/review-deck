@@ -1,0 +1,15 @@
+const e=`<p class="goal">Running load tests that produce trustworthy, actionable results.</p>
+<p>The tool basics are in <a class="xref" data-old="n110">chapter 110</a>. Here's what makes a test realistic:</p>
+<ul>
+<li><b>A realistic traffic mix:</b> derive the ratios from production logs (70% browse, 20% cart, 8% checkout, 2% admin), not one endpoint hammered in a loop.</li>
+<li><b>Realistic data:</b> production-sized tables, varied IDs (so caches aren't artificially hot), realistic payload sizes.</li>
+<li><b>Open vs closed models:</b> real users arrive at a rate regardless of how slow you are (an open model: k6 <code>constant-arrival-rate</code>). A fixed number of virtual users waiting for responses (a closed model) hides overload by slowing its own request rate.</li>
+<li><b>Warm-up</b> before measuring (JIT compilers, caches, connection pools).</li>
+<li><b>Watch the server side</b> during the test: CPU, memory, DB connections, queue depth, GC pauses. The client tells you <i>that</i> it's slow; the server tells you <i>why</i>.</li>
+<li><b>Find the knee:</b> increase load step by step until p99 latency or errors bend upwards. That's your real capacity. Plan to run at 50–70% of it.</li>
+<li><b>Little's law</b> for sizing: in-flight requests = arrival rate × latency. That tells you the concurrency, pool and thread counts you need.</li>
+</ul>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>191.1 <span class="levels">think</span> Your load test used 100 virtual users with no think time and showed 900 requests/s. Why might production still fall over at 400 requests/s?</summary><div><p>A closed-loop test slows itself down, hiding overload. The real traffic mix differs (heavier endpoints). Caches were warm. Production data volume is bigger. Test with an open arrival rate and a realistic mix.</p></div></details>
+</div>
+`;export{e as default};

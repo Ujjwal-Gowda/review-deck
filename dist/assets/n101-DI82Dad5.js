@@ -1,0 +1,20 @@
+const e=`<p class="goal">The document model: when it's a good fit, and what you give up.</p>
+<pre data-lang="javascript"><code class="language-javascript">db.orders.insertOne({ _id: "ord_42", store: "hsr", customer: { id: 7, name: "Asha" },
+  items: [{ sku: "milk", qty: 2, price: 6000 }], status: "paid", createdAt: new Date() });   // nested: one read gets it all
+db.orders.find({ store: "hsr", status: "paid" }).sort({ createdAt: -1 }).limit(20);
+db.orders.createIndex({ store: 1, createdAt: -1 });
+db.orders.aggregate([                                                          // pipeline: like GROUP BY
+  { $match: { createdAt: { $gte: ISODate("2026-09-01") } } },
+  { $unwind: "$items" },
+  { $group: { _id: "$items.sku", units: { $sum: "$items.qty" } } },
+  { $sort: { units: -1 } }, { $limit: 10 } ]);</code></pre>
+<table>
+<tr><th>Good fit</th><th>Poor fit</th></tr>
+<tr><td>data read and written as one self-contained unit (a product with variable attributes, event payloads, CMS content)</td><td>many relationships queried in many directions (orders ↔ customers ↔ stock ↔ suppliers)</td></tr>
+<tr><td>schemas that vary per record</td><td>strong cross-document invariants and reporting joins</td></tr>
+</table>
+<p><b>Embed vs reference:</b> embed data that's owned and bounded (order items inside an order); reference data that's shared or grows without limit (a customer's orders). Documents are limited to 16 MB. Multi-document transactions exist but are costlier than in SQL. Postgres <code>jsonb</code> covers many "we need flexible fields" cases while keeping relations, so check whether that's enough first.</p>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>101.1 <span class="levels">think</span> Would you model FreshOn orders in MongoDB or Postgres? Justify it with query patterns.</summary><div><p>Postgres: orders relate to customers, stock, payments, riders and stores, and you need transactions (stock and payment) plus ad-hoc reports. MongoDB fits better for, say, flexible product attributes or event payloads.</p></div></details>
+</div>
+`;export{e as default};

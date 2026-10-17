@@ -1,0 +1,20 @@
+const e=`<p class="goal">The layer every program stands on.</p>
+<table>
+<tr><th>Concept</th><th>What to know</th></tr>
+<tr><td><b>Kernel vs user space</b></td><td>The kernel has full hardware access; programs run restricted and ask the kernel for things.</td></tr>
+<tr><td><b>System call</b></td><td>That request: <code>open</code>, <code>read</code>, <code>write</code>, <code>fork</code>, <code>mmap</code>. <code>strace -f python3 x.py</code> shows every one.</td></tr>
+<tr><td><b>Virtual memory</b></td><td>Every process sees its own private address space; the MMU maps it to physical RAM in <b>pages</b> (4 KB). This gives isolation between processes.</td></tr>
+<tr><td><b>Swap / paging</b></td><td>When RAM is full, pages go to disk and everything slows to a crawl ("thrashing"). With 8 GB RAM and a browser plus Remotion, this is what makes your machine lag.</td></tr>
+<tr><td><b>OOM killer</b></td><td>Linux kills a process when memory runs out entirely.</td></tr>
+<tr><td><b>Scheduler</b></td><td>Decides which thread runs on which core and when (time slices, priorities, <code>nice</code>).</td></tr>
+<tr><td><b>File descriptor</b></td><td>An integer handle to an open file, socket or pipe. Limits: <code>ulimit -n</code>.</td></tr>
+<tr><td><b>Signals</b></td><td>Async notifications: SIGINT (Ctrl-C), SIGTERM (polite stop), SIGKILL (forced; can't be caught).</td></tr>
+<tr><td><b>fork/exec</b></td><td>How Unix starts programs: clone the process, then replace it with a new program.</td></tr>
+<tr><td><b>Permissions / users</b></td><td>Owner/group/other with rwx; root; least privilege.</td></tr>
+<tr><td><b>Filesystem</b></td><td>Inodes, directories, hard vs symbolic links, mount points. <code>fsync</code> is what makes data really durable.</td></tr>
+<tr><td><b>Containers</b></td><td>Docker = processes isolated with namespaces + cgroups, sharing the host kernel. Lighter than <b>VMs</b>, which emulate whole machines with their own kernels.</td></tr>
+</table>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>6.1 <span class="levels">basic</span> Run <code>strace -c ls /tmp</code>. Which system calls dominate, and why does a simple <code>ls</code> need so many?</summary><div><p>Mostly <code>openat</code>, <code>mmap</code>, <code>read</code>, <code>fstat</code> and <code>getdents64</code>. Loading the dynamic libraries and locale files happens before any directory is even read, which is why process startup has a real cost.</p></div></details>
+</div>
+`;export{e as default};

@@ -1,0 +1,54 @@
+const e=`<p class="goal">Structuring C code: functions, declarations vs definitions, header files, and how multiple files become one program.</p>
+<h3>Functions</h3>
+<pre data-lang="c"><code class="language-c">static long apply_tax(long paise) {        /* static: visible only in this file */
+    return paise * 105 / 100;
+}
+void swap(int *a, int *b) {                 /* C passes BY VALUE; pointers let a function modify the caller's variables */
+    int t = *a; *a = *b; *b = t;
+}
+int parse_qty(const char *s, int *out) {    /* return a status; put the result through an out-parameter */
+    char *end; long v = strtol(s, &amp;end, 10);
+    if (*end != '\\0' || v &lt; 1 || v &gt; 50) return -1;
+    *out = (int)v; return 0;
+}</code></pre>
+<h3>Declaration vs definition</h3>
+<p>A <b>declaration</b> (a prototype) says "this function exists, with these types". A <b>definition</b> is the body. You can call a function after its declaration; the linker later connects the call to the definition, which may live in another file.</p>
+<h3>Headers: the public interface</h3>
+<pre data-lang="c"><code class="language-c">/* stock.h */
+#ifndef STOCK_H                  /* include guard: prevents double inclusion */
+#define STOCK_H
+#include &lt;stddef.h&gt;
+typedef struct Stock Stock;      /* opaque: users can't see the fields */
+Stock *stock_new(size_t capacity);
+int stock_reserve(Stock *s, const char *sku, int qty);   /* 0 = ok, -1 = error */
+void stock_free(Stock *s);
+#endif
+
+/* stock.c */
+#include "stock.h"
+#include &lt;stdlib.h&gt;
+struct Stock { char (*skus)[16]; int *qty; size_t n, cap; };
+Stock *stock_new(size_t cap) { /* … */ }
+
+/* main.c */
+#include "stock.h"
+int main(void) { Stock *s = stock_new(64); /* … */ stock_free(s); }</code></pre>
+<h3>The build</h3>
+<pre data-lang="plaintext"><code class="language-plaintext"># Makefile (recipe lines must start with a TAB)
+CC = gcc
+CFLAGS = -std=c17 -Wall -Wextra -Wpedantic -g
+OBJS = main.o stock.o
+
+app: $(OBJS)
+	$(CC) $(CFLAGS) -o $@ $(OBJS)
+
+%.o: %.c stock.h
+	$(CC) $(CFLAGS) -c $&lt;
+
+clean:
+	rm -f app $(OBJS)</code></pre>
+<p>Each <code>.c</code> is compiled separately into a <code>.o</code>; the linker joins them. "undefined reference to stock_new" means the definition wasn't linked (a missing <code>.o</code> or <code>-l</code> flag). "implicit declaration" means you forgot the <code>#include</code> (<a class="xref" data-old="x-linking">Linking</a>).</p>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>0.1 <span class="levels">basic</span> Split a C program into <code>main.c</code>, <code>stats.c</code> and <code>stats.h</code> (functions <code>stats_add</code>, <code>stats_mean</code> on an opaque struct), with a Makefile that rebuilds only what changed.</summary><div><p>In the header, declare <code>typedef struct Stats Stats;</code> plus the functions; define the struct only in stats.c. Run <code>make</code> twice: the second run does nothing. Touch stats.c and only stats.o plus the link step rerun.</p></div></details>
+</div>
+`;export{e as default};

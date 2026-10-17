@@ -1,0 +1,46 @@
+const e=`<p class="goal">Using every core. When parallelism pays off, when it can't, and how each language does it.</p>
+<p><a class="xref" data-old="c20">Chapter 26</a> covers concurrency, correctness and races. This chapter is about <b>speed</b>.</p>
+<h3>Amdahl's law: the ceiling</h3>
+<p>If a fraction <i>p</i> of the work can run in parallel on <i>N</i> cores: <code>speedup = 1 / ((1 − p) + p/N)</code>. With p = 0.9, 12 cores (your Ryzen) give 1/(0.1 + 0.075) ≈ <b>5.7×</b>, and infinite cores cap at <b>10×</b>. The serial part dominates quickly, so first shrink the serial part (I/O, locking, merging results).</p>
+<h3>Kinds of parallelism</h3>
+<table>
+<tr><th>Kind</th><th>Idea</th><th>Example</th></tr>
+<tr><td><b>Data parallelism</b></td><td>the same operation on chunks of data</td><td>resize 1,000 images; render video frames (Remotion splits frame ranges across Chrome instances)</td></tr>
+<tr><td><b>Task parallelism</b></td><td>different independent tasks at once</td><td>build frontend and backend simultaneously</td></tr>
+<tr><td><b>Pipeline</b></td><td>stages run concurrently on successive items</td><td>decode → transform → encode</td></tr>
+<tr><td><b>SIMD</b></td><td>one instruction, several numbers (4–16)</td><td>NumPy and compiler auto-vectorisation</td></tr>
+<tr><td><b>GPU</b></td><td>thousands of cores, massive data parallelism</td><td>ML, graphics, video encode</td></tr>
+<tr><td><b>Distributed</b></td><td>many machines</td><td>Spark, render farms, model training</td></tr>
+</table>
+<h3>Embarrassingly parallel work in each language</h3>
+<pre data-lang="python"><code class="language-python">from concurrent.futures import ProcessPoolExecutor   # processes sidestep the GIL
+def work(path): return heavy_cpu(path)
+with ProcessPoolExecutor() as pool:                   # defaults to os.cpu_count() workers
+    results = list(pool.map(work, paths, chunksize=16))   # chunking amortises inter-process overhead</code></pre>
+<pre data-lang="go"><code class="language-go">jobs := make(chan string)
+results := make(chan int)
+var wg sync.WaitGroup
+for w := 0; w &lt; runtime.NumCPU(); w++ {           // a fixed worker pool
+    wg.Add(1)
+    go func() { defer wg.Done(); for p := range jobs { results &lt;- heavy(p) } }()
+}
+go func() { for _, p := range paths { jobs &lt;- p }; close(jobs) }()
+go func() { wg.Wait(); close(results) }()
+for r := range results { total += r }</code></pre>
+<pre data-lang="rust"><code class="language-rust">use rayon::prelude::*;                               // cargo add rayon
+let total: u64 = paths.par_iter().map(|p| heavy(p)).sum();   // change iter → par_iter: work-stealing thread pool</code></pre>
+<pre data-lang="typescript"><code class="language-typescript">import { Worker } from "node:worker_threads";        // JS: separate isolates; communicate by messages
+const w = new Worker(new URL("./heavy.js", import.meta.url), { workerData: chunk });
+w.on("message", result =&gt; merge(result));</code></pre>
+<h3>Why parallel code is often slower than you expect</h3>
+<ul>
+<li><b>Overhead:</b> starting processes, and pickling/copying data between them. Tiny tasks cost more to ship than to compute, so batch them.</li>
+<li><b>Memory bandwidth:</b> cores share RAM bandwidth. Memory-bound loops stop scaling after a few cores.</li>
+<li><b>False sharing:</b> two cores writing different variables that sit on the same 64-byte cache line ping-pong that line between them. Pad or separate per-thread data.</li>
+<li><b>Contention:</b> one shared lock or counter serialises everything. Use per-worker accumulators and merge at the end (map-reduce).</li>
+<li><b>Oversubscription:</b> more CPU-bound threads than cores just adds context switching. Size pools to the core count for CPU work; use larger pools for I/O.</li>
+<li><b>RAM limits:</b> 12 workers each loading a big file can exhaust your 7 GB and push the machine into swap.</li>
+</ul>
+<div class="callout key"><b class="t">Checklist</b><p>Profile first → make sure the work really is CPU-bound → parallelise the outermost independent loop → use a pool sized to the cores → give each worker coarse chunks → merge results at the end, not under a lock → measure the actual speedup against Amdahl's prediction.</p></div>
+<details class="ex"><summary>27.1 <span class="levels">think</span> Hash every file in a directory tree (SHA-256) in Go with a worker pool, and compare 1, 2, 4, 8 and 12 workers. Where does it stop scaling, and why?</summary><div><p>On an NVMe drive with small files it usually scales to around the core count (CPU-bound hashing). With big files, disk bandwidth caps it early. On your failing HDD, it would be seek-bound from about 2 workers onward. Measuring tells you which resource is the bottleneck.</p></div></details>
+`;export{e as default};

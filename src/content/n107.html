@@ -1,0 +1,23 @@
+<p class="goal">Testing critical user journeys in a real browser, without building a flaky test suite.</p>
+<pre data-lang="typescript"><code class="language-typescript">// tests/checkout.spec.ts   run: npx playwright test   (debug: --ui, --headed, trace viewer)
+import { test, expect } from "@playwright/test";
+test("customer can place an order", async ({ page }) =&gt; {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Add Paneer 200g" }).click();     // role-based locators: resilient
+  await page.getByRole("link", { name: /cart/i }).click();
+  await page.getByLabel("Mobile").fill("9876543210");
+  await page.getByRole("button", { name: "Place order" }).click();
+  await expect(page.getByText(/Order #\d+ confirmed/)).toBeVisible();      // auto-waits and retries
+});</code></pre>
+<h3>Avoiding flakiness</h3>
+<ul>
+<li>Never <code>sleep(2000)</code>: use auto-waiting assertions (<code>expect(…).toBeVisible()</code>).</li>
+<li>Locate by role, label or test ID, not by CSS classes or DOM structure.</li>
+<li>Each test creates its own data (via the API, or seeded fixtures) and doesn't depend on test order.</li>
+<li>Mock unstable third parties (<code>page.route("**/razorpay/**", …)</code>) but keep your own backend real.</li>
+<li>On failure, save a trace, screenshot and video (Playwright does this with <code>trace: "on-first-retry"</code>).</li>
+</ul>
+<p><b>Scope:</b> E2E tests are slow and costly, so cover only the <b>money paths</b> (sign-up, checkout, payment, the core admin action). Five solid E2E tests beat 200 flaky ones. Playwright also does visual comparisons, API testing, and mobile viewport emulation.</p>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>107.1 <span class="levels">basic</span> Write a Playwright test for the FreshOn demo landing page: open it, click the POS card, and assert the demo page loads.</summary><div><p>Use <code>page.goto(url)</code>, then <code>page.getByRole("link", {name: /POS/})</code> with <code>page.waitForEvent("popup")</code> (it opens a new tab), then <code>expect(popup).toHaveTitle(/POS/)</code>.</p></div></details>
+</div>

@@ -1,0 +1,101 @@
+const e=`<p class="goal">Bundling data with behaviour, and when that helps versus hurts.</p>
+
+<h3>Core terms</h3>
+<table>
+<tr><th>Term</th><th>Meaning</th></tr>
+<tr><td><b>Class</b></td><td>A blueprint: defines the fields (data) and methods (behaviour) of a kind of object.</td></tr>
+<tr><td><b>Object / instance</b></td><td>One concrete thing made from a class, with its own field values.</td></tr>
+<tr><td><b>Method</b></td><td>A function attached to a class; it receives the object (<code>self</code> / <code>this</code>).</td></tr>
+<tr><td><b>Constructor</b></td><td>Sets up a new object (<code>__init__</code>, <code>constructor</code>, <code>new</code>).</td></tr>
+<tr><td><b>Encapsulation</b></td><td>Hiding internal state behind methods, so the object protects its own <b>invariants</b>.</td></tr>
+<tr><td><b>Inheritance</b></td><td>A class extends another, reusing and overriding its behaviour ("is-a").</td></tr>
+<tr><td><b>Polymorphism</b></td><td>Different types respond to the same call in their own way; the caller doesn't need to know which type it has.</td></tr>
+<tr><td><b>Abstraction</b></td><td>Exposing <i>what</i> something does, not <i>how</i>.</td></tr>
+<tr><td><b>Interface / protocol / trait</b></td><td>A contract: a set of methods a type promises to provide, without saying how.</td></tr>
+<tr><td><b>Composition</b></td><td>Building objects out of other objects ("has-a").</td></tr>
+</table>
+
+<h3>A class that protects its invariants</h3>
+<pre data-lang="python"><code class="language-python">class InsufficientStock(Exception): pass
+
+class StockItem:
+    def __init__(self, sku: str, qty: int = 0):
+        if qty &lt; 0:
+            raise ValueError("qty must be &gt;= 0")
+        self.sku = sku
+        self._qty = qty              # leading underscore: "internal, don't touch"
+
+    @property
+    def qty(self) -&gt; int:            # read-only from outside
+        return self._qty
+
+    def remove(self, n: int) -&gt; None:
+        if n &gt; self._qty:
+            raise InsufficientStock(f"{self.sku}: have {self._qty}, need {n}")
+        self._qty -= n               # the ONLY way qty goes down, so it can never go negative
+
+    def __repr__(self):              # "dunder" methods hook into language features
+        return f"StockItem({self.sku!r}, qty={self._qty})"</code></pre>
+<p>The <b>invariant</b> "qty is never negative" is guaranteed because the only way to change qty is through methods that check it. That's the real point of encapsulation: not secrecy, but <b>making invalid states impossible</b>. Access control varies by language: Java, C# and C++ have <code>private</code>/<code>protected</code>/<code>public</code>; Go uses capitalisation (<code>Name</code> is exported, <code>name</code> isn't); Rust has <code>pub</code>; Python relies on the underscore convention; JS has <code>#private</code> fields.</p>
+
+<h3>Inheritance and polymorphism</h3>
+<pre data-lang="python"><code class="language-python">from abc import ABC, abstractmethod
+
+class Payment(ABC):
+    @abstractmethod
+    def charge(self, amount: int) -&gt; str: ...
+
+class UPI(Payment):
+    def __init__(self, vpa): self.vpa = vpa
+    def charge(self, amount): return f"UPI collect ₹{amount/100:.2f} from {self.vpa}"
+
+class Card(Payment):
+    def __init__(self, last4): self.last4 = last4
+    def charge(self, amount): return f"Card ****{self.last4} charged ₹{amount/100:.2f}"
+
+def checkout(p: Payment, amount: int):
+    print(p.charge(amount))          # POLYMORPHISM: works for any Payment, including future ones
+
+for p in [UPI("asha@okbank"), Card("4242")]:
+    checkout(p, 35200)</code></pre>
+<p><code>checkout</code> never changes when you add <code>Wallet</code> or <code>Cash</code>. That is the core payoff of polymorphism: code that's <b>open for extension but closed for modification</b>.</p>
+<p><b>Duck typing</b> (Python, JS): "if it walks like a duck…". Any object with a <code>charge</code> method works; no base class required. Go formalises this with <b>structural interfaces</b>: a type satisfies an interface just by having the methods, with no <code>implements</code> keyword. Java and C# use <b>nominal</b> interfaces: you must declare <code>implements Payment</code>. Rust uses <b>traits</b>, implemented explicitly.</p>
+<pre data-lang="go"><code class="language-go">type Payment interface { Charge(amount int) string }
+type UPI struct{ VPA string }
+func (u UPI) Charge(amount int) string { return "UPI " + u.VPA }
+// UPI satisfies Payment automatically. There's no class and no inheritance in Go at all.</code></pre>
+
+<h3>Composition over inheritance</h3>
+<p>Inheritance couples a child tightly to its parent's internals. Change the parent and children break (the "fragile base class" problem). Deep hierarchies (<code>Animal → Mammal → Dog → ServiceDog → …</code>) become rigid. The widely accepted guideline is to <b>prefer composition</b>: give an object the parts it needs.</p>
+<pre data-lang="python"><code class="language-python"># inheritance: OrderService IS-A Logger? Nonsense.
+class OrderService(Logger): ...
+
+# composition: OrderService HAS-A logger and a payment method, both swappable
+class OrderService:
+    def __init__(self, payment: Payment, logger):
+        self.payment, self.logger = payment, logger
+    def place(self, amount):
+        self.logger.info("placing order")
+        return self.payment.charge(amount)</code></pre>
+<p>Use inheritance when there is a genuine "is-a" relationship, the hierarchy is shallow (1–2 levels), and subclasses are truly substitutable for the parent (the <b>Liskov substitution principle</b>: anywhere a <code>Payment</code> works, every subclass must work too).</p>
+
+<h3>Special (dunder) methods</h3>
+<pre data-lang="python"><code class="language-python">from dataclasses import dataclass
+@dataclass(order=True, frozen=True)     # generates __init__, __repr__, __eq__, __lt__, __hash__
+class Money:
+    paise: int
+    def __add__(self, other): return Money(self.paise + other.paise)   # operator overloading
+    def __str__(self): return f"₹{self.paise / 100:,.2f}"
+print(Money(1050) + Money(250))          # ₹13.00</code></pre>
+
+<div class="callout key"><b class="t">Trade-offs: OOP</b>
+<p><b>Pros:</b> models real-world entities naturally; encapsulation protects invariants; polymorphism makes code extensible; IDEs navigate it well; it's the dominant style in Java, C#, Python, Swift and Kotlin codebases.</p>
+<p><b>Cons:</b> tempts over-engineering (AbstractFactoryManagerImpl); deep inheritance is brittle; hidden mutable state inside objects makes concurrency and testing harder; not every problem is a "thing with behaviour". Many are data transformations, which suit a functional style better.</p>
+<p><b>Rule of thumb:</b> use classes for things with identity and invariants (an account, a connection, a cart). Use plain functions and data for transformations. Don't create a class that has one method and no state: that's just a function.</p></div>
+
+<div class="exercises"><h3>Exercises</h3>
+<details class="ex"><summary>13.1 <span class="levels">basic</span> Write a <code>BankAccount</code> with deposit, withdraw (no overdraft) and a transaction history. Balance must be read-only from outside.</summary><div><p>Store <code>self._balance</code> and <code>self._history = []</code>; methods validate the amount &gt; 0; withdraw raises if the amount is more than the balance; expose <code>balance</code> as a <code>@property</code>; append <code>(kind, amount)</code> to the history on each change.</p></div></details>
+<details class="ex"><summary>13.2 <span class="levels">basic</span> Shapes: <code>Circle</code>, <code>Rect</code> and <code>Triangle</code>, each with <code>area()</code>. Compute the total area of a mixed list without any <code>isinstance</code> checks.</summary><div><p><code>sum(s.area() for s in shapes)</code>. If you ever write <code>if isinstance(s, Circle): … elif isinstance(s, Rect): …</code>, that's the sign a polymorphic method is missing.</p></div></details>
+<details class="ex"><summary>13.3 <span class="levels">think</span> The classic Square/Rectangle problem: is a Square a Rectangle? If Rectangle has <code>set_width</code>, what goes wrong when Square inherits from it?</summary><div><p>Code that does <code>r.set_width(5); r.set_height(4); assert r.area() == 20</code> breaks for a Square, because setting one side changes both. So Square <b>isn't substitutable</b> for a mutable Rectangle, which violates Liskov. Fixes: make shapes immutable, or don't use inheritance here. Mathematical "is-a" doesn't guarantee a behavioural "is-a".</p></div></details>
+</div>
+`;export{e as default};

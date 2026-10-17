@@ -1,0 +1,52 @@
+const e=`<p class="goal">Debugging as a repeatable method, plus the debuggers for all five of your languages.</p>
+<p>Chapter 15 covers reading tracebacks and the scientific method. This chapter is the toolkit and the harder cases.</p>
+<h3>The method, in one loop</h3>
+<div class="diagram">reproduce → minimise → observe (expected vs actual) → hypothesise → test the hypothesis → fix the cause → add a regression test
+                ▲                                                                      │
+                └──────────────────────── hypothesis wrong ─────────────────────────────┘</div>
+<ul>
+<li><b>Minimise:</b> shrink the failing input and delete unrelated code until the bug is small enough to see. Half of all bugs get solved at this step.</li>
+<li><b>Bisect everything:</b> the data (which record breaks it?), the code (comment out halves), time (<code>git bisect</code>), and config (which env var?).</li>
+<li><b>Question your assumptions:</b> "it can't be X" is where the bug usually is. Print the thing you're sure about.</li>
+<li><b>Check what changed:</b> <code>git diff</code>, <code>git log -p</code>, dependency upgrades, config, data, the environment.</li>
+</ul>
+<h3>Debuggers: the shared vocabulary</h3>
+<table>
+<tr><th>Concept</th><th>Meaning</th></tr>
+<tr><td>Breakpoint</td><td>pause when this line is reached</td></tr>
+<tr><td>Conditional breakpoint</td><td>pause only when <code>order.id == 1048</code>: essential in loops</td></tr>
+<tr><td>Step over / into / out</td><td>run the next line / enter the call / finish the current function</td></tr>
+<tr><td>Watch</td><td>track an expression's value as you step</td></tr>
+<tr><td>Call stack / frames</td><td>move up the stack to inspect a caller's locals</td></tr>
+<tr><td>Watchpoint</td><td>pause when a memory location <i>changes</i> (gdb): finds "who corrupted this?"</td></tr>
+</table>
+<table>
+<tr><th>Language</th><th>Debugger</th><th>Start</th></tr>
+<tr><td>Python</td><td>pdb / debugpy (VS Code)</td><td><code>breakpoint()</code> or <code>python -m pdb app.py</code>; <code>python -X dev</code> for extra runtime checks</td></tr>
+<tr><td>TypeScript/Node</td><td>Chrome DevTools / VS Code</td><td><code>node --inspect-brk app.js</code>, then open chrome://inspect; <code>debugger;</code> statement</td></tr>
+<tr><td>Go</td><td><b>Delve</b></td><td><code>dlv debug ./cmd/app</code>, <code>break main.go:42</code>, <code>continue</code>, <code>print x</code>, <code>goroutines</code></td></tr>
+<tr><td>Rust</td><td>rust-gdb / rust-lldb / CodeLLDB</td><td><code>rust-gdb target/debug/app</code>; <code>dbg!(expr)</code> prints the file, line and value</td></tr>
+<tr><td>C</td><td><b>gdb</b> + sanitizers</td><td><code>gcc -g -O0</code>, then <code>gdb ./a.out</code>: <code>run</code>, <code>bt</code>, <code>frame 2</code>, <code>p *ptr</code>, <code>watch x</code></td></tr>
+</table>
+<h3>Hard bug categories and their tools</h3>
+<table>
+<tr><th>Symptom</th><th>Likely cause</th><th>Tool</th></tr>
+<tr><td>Crash in C / random corruption</td><td>out-of-bounds, use-after-free</td><td><code>-fsanitize=address,undefined</code>, valgrind</td></tr>
+<tr><td>Works sometimes, fails sometimes</td><td>data race, ordering, time, randomness</td><td><code>go test -race</code>, ThreadSanitizer, fixed seeds, logging with timestamps</td></tr>
+<tr><td>Hangs</td><td>deadlock, infinite loop, waiting on I/O</td><td>dump all stacks: <code>py-spy dump --pid</code>, Go SIGQUIT (Ctrl-\\), <code>gdb -p PID</code> + <code>thread apply all bt</code></td></tr>
+<tr><td>Slow</td><td>algorithm, I/O, N+1 queries</td><td>profilers (<code>py-spy</code>, <code>pprof</code>, <code>perf</code>, flame graphs)</td></tr>
+<tr><td>Memory grows forever</td><td>leak, unbounded cache</td><td><code>tracemalloc</code>, heap snapshots, <code>pprof -alloc_space</code></td></tr>
+<tr><td>Works locally, fails in prod</td><td>env/config, data, versions, permissions, timezone</td><td>diff the environments; structured logs; reproduce with prod-like data</td></tr>
+<tr><td>Which commit broke it?</td><td>regression</td><td><code>git bisect start; git bisect bad; git bisect good v1.2</code>, or automate with <code>git bisect run ./test.sh</code></td></tr>
+</table>
+<h3>Logging that helps you debug</h3>
+<pre data-lang="python"><code class="language-python">import logging
+log = logging.getLogger(__name__)
+log.info("order placed", extra={"order_id": o.id, "total": o.total})   # structured: searchable by field
+log.exception("payment failed")    # inside except: logs the full traceback</code></pre>
+<p>Log at the boundaries (inputs, outputs, decisions, errors) and include identifiers (request ID, order ID). Never log secrets or passwords.</p>
+<div class="exercises"><h3>Exercises</h3>
+<details class="ex"><summary>16.1 <span class="levels">basic</span> Put a conditional breakpoint in a loop over 1,000 items so it stops only at item 737. Do it in pdb and in Delve.</summary><div><p>pdb: <code>b file.py:12, i == 737</code>. Delve: <code>break file.go:12</code> then <code>condition 1 i == 737</code>.</p></div></details>
+<details class="ex"><summary>16.2 <span class="levels">think</span> Create a tiny git repo with 20 commits where one introduces a bug that a test detects. Find it with <code>git bisect run</code>.</summary><div><p><code>git bisect start HEAD HEAD~20 &amp;&amp; git bisect run python3 -m pytest -q</code>. Git binary-searches: about 5 test runs instead of 20.</p></div></details>
+</div>
+`;export{e as default};

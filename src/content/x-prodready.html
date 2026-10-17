@@ -1,0 +1,22 @@
+<p class="goal">One checklist for "is this service ready for real users?", pulling together the production skills spread across the curriculum.</p>
+<table>
+<tr><th>Area</th><th>Ready means</th><th>Chapters</th></tr>
+<tr><td>Configuration</td><td>all config from the environment, validated at startup; same artifact in every environment</td><td><a class="xref" data-old="n40">Configuration</a></td></tr>
+<tr><td>Secrets</td><td>in a secret manager, never in git or logs; rotatable</td><td><a class="xref" data-old="n165">Secrets Management</a></td></tr>
+<tr><td>Health and lifecycle</td><td>liveness/readiness endpoints; graceful shutdown on SIGTERM; fast startup</td><td><a class="xref" data-old="x-health">Health Checks &amp; Graceful Shutdown</a></td></tr>
+<tr><td>Observability</td><td>structured logs with request IDs; RED metrics; tracing; dashboards</td><td><a class="xref" data-old="n154">Logging</a>, <a class="xref" data-old="n155">Metrics</a>, <a class="xref" data-old="n156">Tracing</a></td></tr>
+<tr><td>Alerting</td><td>SLOs defined; burn-rate alerts; every alert has a runbook</td><td><a class="xref" data-old="n161">SLOs</a>, <a class="xref" data-old="n160">Alerting</a></td></tr>
+<tr><td>Resilience</td><td>timeouts on all calls; retries with backoff only for idempotent work; circuit breakers</td><td><a class="xref" data-old="n177">Resilience</a></td></tr>
+<tr><td>Load protection</td><td>rate limits; request size limits; bounded queues; load shedding</td><td><a class="xref" data-old="x-ratelimit">Rate Limiting</a></td></tr>
+<tr><td>Async work</td><td>queues and background workers for slow tasks; idempotent consumers; dead-letter queues</td><td><a class="xref" data-old="n90">Queues</a>, <a class="xref" data-old="n91">Background Jobs</a></td></tr>
+<tr><td>Correctness under retries</td><td>idempotency keys on writes; outbox for events</td><td><a class="xref" data-old="n83">API Design</a>, <a class="xref" data-old="n173">Distributed Queues</a></td></tr>
+<tr><td>Performance</td><td>load-tested to known capacity; caching where measured; profiled hot paths</td><td><a class="xref" data-old="n110">Load Testing</a>, <a class="xref" data-old="n182">Caching</a>, <a class="xref" data-old="n186">Profiling</a></td></tr>
+<tr><td>Data safety</td><td>zero-downtime migrations; automated backups with tested restores; disaster-recovery plan with RPO/RTO</td><td><a class="xref" data-old="n99">Migrations</a>, <a class="xref" data-old="n152">Backups</a>, <a class="xref" data-old="n153">Disaster Recovery</a></td></tr>
+<tr><td>Delivery</td><td>CI gates; automated deploys; canary or rolling release; one-click rollback; feature flags</td><td><a class="xref" data-old="x-path">The Path to Production</a>, <a class="xref" data-old="n125">Deployment Strategies</a></td></tr>
+<tr><td>Security</td><td>threat model done; auth and authorisation tested; dependencies scanned; least privilege</td><td><a class="xref" data-old="x-secmap">Security Across the Stack</a></td></tr>
+<tr><td>Operations</td><td>an owner, on-call, runbooks, incident process</td><td><a class="xref" data-old="x-operate">Operating a Service</a>, <a class="xref" data-old="n251">Incident Response</a></td></tr>
+</table>
+<p>Use it as a <b>launch review</b>: go row by row, mark each ✓, ✗ or "accepted risk", and give every ✗ an owner and a date. Google calls this a Production Readiness Review.</p>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>0.1 <span class="levels">basic</span> Run this checklist against one of your real projects (the printer doctor or the Floor TV app). How many rows pass?</summary><div><p>Most personal projects pass configuration and not much else. Pick the three cheapest ✗ rows (usually a health endpoint, structured logs, and a timeout on every network call) and fix them this week.</p></div></details>
+</div>

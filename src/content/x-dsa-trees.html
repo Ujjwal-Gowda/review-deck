@@ -1,0 +1,52 @@
+<p class="goal">Hierarchies: folders, HTML, org charts, JSON, syntax trees. The vocabulary, and the four ways to walk a tree.</p>
+<div class="diagram">                 ┌─────────── root (no parent)
+                 ▼
+                (A)                 depth 0
+              /     \
+           (B)       (C)            depth 1      B and C are CHILDREN of A; siblings of each other
+          /   \         \
+        (D)   (E)       (F)         depth 2      D, E, F are LEAVES (no children)
+height of the tree = 2 (longest root-to-leaf path, counted in edges)
+a SUBTREE = any node plus all of its descendants (B, D, E is the subtree rooted at B)</div>
+<p>A <b>binary tree</b> is one where every node has at most two children, left and right.</p>
+<pre data-lang="python"><code class="language-python">class TreeNode:
+    def __init__(self, val, left=None, right=None):
+        self.val, self.left, self.right = val, left, right
+
+root = TreeNode("A", TreeNode("B", TreeNode("D"), TreeNode("E")), TreeNode("C", None, TreeNode("F")))</code></pre>
+<h3>The four traversals (for the tree above)</h3>
+<table>
+<tr><th>Order</th><th>Rule</th><th>Visits</th><th>Used for</th></tr>
+<tr><td>Pre-order</td><td>node, left, right</td><td>A B D E C F</td><td>copying a tree, printing folder structures</td></tr>
+<tr><td>In-order</td><td>left, node, right</td><td>D B E A C F</td><td>a BST in <b>sorted</b> order</td></tr>
+<tr><td>Post-order</td><td>left, right, node</td><td>D E B F C A</td><td>deleting or freeing a tree, computing folder sizes (children first)</td></tr>
+<tr><td>Level-order</td><td>row by row (BFS with a queue)</td><td>A B C D E F</td><td>shortest depth, printing by level</td></tr>
+</table>
+<pre data-lang="python"><code class="language-python">def preorder(n):
+    if n is None: return []
+    return [n.val] + preorder(n.left) + preorder(n.right)
+
+def inorder(n):
+    if n is None: return []
+    return inorder(n.left) + [n.val] + inorder(n.right)
+
+from collections import deque
+def level_order(root):
+    out, q = [], deque([root] if root else [])
+    while q:
+        n = q.popleft(); out.append(n.val)
+        if n.left: q.append(n.left)
+        if n.right: q.append(n.right)
+    return out</code></pre>
+<h3>Thinking recursively about trees</h3>
+<p>Almost every tree question has the same shape: "answer for this node = combine(answer for left, answer for right)". Trust the recursion (<a class="xref" data-old="n21">Recursion</a>):</p>
+<pre data-lang="python"><code class="language-python">def height(n):  return -1 if n is None else 1 + max(height(n.left), height(n.right))
+def count(n):   return 0 if n is None else 1 + count(n.left) + count(n.right)
+def mirror(n):
+    if n: n.left, n.right = mirror(n.right), mirror(n.left)
+    return n</code></pre>
+<h3>Trees you use every day</h3>
+<p>The filesystem, the browser's DOM, JSON and YAML documents, compiler ASTs (<a class="xref" data-old="c22">Source Code → Machine</a>), React's component tree, org charts, category menus in the FreshOn app, and database B-trees.</p>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>0.1 <span class="levels">basic</span> Write <code>max_depth</code>, <code>is_symmetric</code> (a mirror of itself), and <code>paths</code> (all root-to-leaf paths, like ["A→B→D", …]) for binary trees.</summary><div><p>Symmetric: a helper <code>mirror(a, b)</code> compares <code>a.val == b.val</code>, then <code>mirror(a.left, b.right)</code> and <code>mirror(a.right, b.left)</code>. Paths: DFS carrying the path so far, and at a leaf, record the path joined with arrows.</p></div></details>
+</div>

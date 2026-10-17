@@ -1,0 +1,62 @@
+const e=`<p class="goal">Cargo, crates and modules, testing and documentation: the everyday Rust workflow.</p>
+<h3>Cargo</h3>
+<pre data-lang="shell"><code class="language-bash">cargo new shop                 # binary (src/main.rs); --lib for a library
+cargo add serde --features derive; cargo add anyhow clap --features clap/derive
+cargo check                    # fast type-check, no binary (use constantly)
+cargo run -- --store 7         # arguments after --
+cargo build --release          # optimised build in target/release/
+cargo test; cargo clippy -- -D warnings; cargo fmt; cargo doc --open</code></pre>
+<pre data-lang="toml"><code class="language-ini">[package]
+name = "shop"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+anyhow = "1"
+
+[dev-dependencies]
+proptest = "1"
+
+[profile.release]
+lto = true                     # smaller and faster binaries</code></pre>
+<h3>Modules and visibility</h3>
+<pre data-lang="plaintext"><code class="language-plaintext">src/lib.rs          mod orders; mod stock; pub use orders::Order;
+src/orders.rs       pub struct Order { pub id: u64, items: Vec&lt;Item&gt; }   ← items is private to the module
+src/stock/mod.rs    (or src/stock.rs + src/stock/…) for nested modules
+src/main.rs         use shop::Order;   (the binary uses the library crate by name)</code></pre>
+<p>Everything is private by default. <code>pub</code> exposes it; <code>pub(crate)</code> exposes it within this crate only. Paths: <code>crate::orders::Order</code>, <code>super::helper</code>, <code>self::x</code>.</p>
+<h3>Tests</h3>
+<pre data-lang="rust"><code class="language-rust">pub fn total(items: &amp;[Item]) -&gt; u64 { items.iter().map(Item::total).sum() }
+
+#[cfg(test)]                         // compiled only for \`cargo test\`
+mod tests {
+    use super::*;
+    #[test]
+    fn totals_items() { assert_eq!(total(&amp;[Item::new("milk", 6000)]), 6000); }
+    #[test]
+    #[should_panic(expected = "overflow")]
+    fn detects_overflow() { /* … */ }
+    #[test]
+    fn returns_result() -&gt; Result&lt;(), String&gt; { let q: u32 = "3".parse().map_err(|e| format!("{e}"))?; assert_eq!(q, 3); Ok(()) }
+}
+// tests/api.rs = integration tests using only the public API
+// doc comments with \`\`\` examples are run as tests too</code></pre>
+<h3>Documentation</h3>
+<pre data-lang="rust"><code class="language-rust">/// Reserves \`n\` units of \`sku\`.
+///
+/// # Errors
+/// Returns [\`StockError::Insufficient\`] when fewer than \`n\` are available.
+///
+/// # Examples
+/// \`\`\`
+/// let mut s = shop::Stock::default();
+/// assert!(s.reserve("milk", 1).is_err());
+/// \`\`\`
+pub fn reserve(&amp;mut self, sku: &amp;str, n: u32) -&gt; Result&lt;(), StockError&gt; { … }</code></pre>
+<h3>Useful ecosystem</h3>
+<p>serde (serialisation), clap (CLIs), anyhow/thiserror (errors), tokio + axum/reqwest (async web), rayon (parallelism), sqlx (compile-time-checked SQL), tracing (logging), criterion (benchmarks), proptest (property tests).</p>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>0.1 <span class="levels">basic</span> Turn the stock library into a crate with lib + bin, 5 unit tests, 1 integration test in <code>tests/</code>, 1 doc-test, clippy clean with <code>-D warnings</code>, and a <code>--help</code> via clap derive.</summary><div><p><code>#[derive(Parser)] struct Args { #[arg(long)] file: PathBuf, sku: String, qty: u32 }</code>, then <code>Args::parse()</code>. <code>cargo test</code> runs the unit, integration and doc tests together. Fix clippy suggestions (they teach idiomatic Rust).</p></div></details>
+</div>
+`;export{e as default};

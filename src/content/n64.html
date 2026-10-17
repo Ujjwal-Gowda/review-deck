@@ -1,0 +1,30 @@
+<p class="goal">How HTTPS gives you encryption, integrity and server identity, and what to do when certificates break.</p>
+<h3>What TLS provides</h3>
+<ul>
+<li><b>Confidentiality:</b> nobody on the path can read the traffic (coffee-shop Wi-Fi, your ISP).</li>
+<li><b>Integrity:</b> nobody can modify it without detection.</li>
+<li><b>Authentication:</b> you're really talking to <code>api.freshon.in</code>, not an impostor.</li>
+</ul>
+<h3>The TLS 1.3 handshake (simplified)</h3>
+<div class="diagram">client ── ClientHello (supported ciphers, key share, SNI: "api.freshon.in") ──►
+       ◄── ServerHello (key share) + certificate chain + signature + Finished ── server
+   both sides derive the same symmetric session keys (ECDHE key exchange: never sent over the wire)
+client checks: chain → a trusted root CA? name matches? not expired? signature valid?
+       ── Finished ──►   then application data, encrypted with AES-GCM or ChaCha20   (1 round trip total)</div>
+<p>Asymmetric crypto (the certificate's key pair) proves identity and agrees on keys. Fast symmetric crypto then encrypts the data. <b>Forward secrecy:</b> ephemeral keys mean a server key stolen later can't decrypt recorded past traffic.</p>
+<h3>Certificates</h3>
+<p>A certificate binds a public key to domain names, and is signed by a <b>Certificate Authority</b>. Your OS and browser ship with about 150 trusted root CAs. Chain: leaf certificate (freshon.in) ← intermediate CA ← root CA. <b>Let's Encrypt</b> issues free 90-day certificates via the ACME protocol, which Caddy, Netlify and certbot automate.</p>
+<pre data-lang="shell"><code class="language-bash">openssl s_client -connect api.freshon.in:443 -servername api.freshon.in &lt;/dev/null | openssl x509 -noout -subject -issuer -dates -ext subjectAltName
+curl -vI https://site 2&gt;&amp;1 | grep -E 'expire|subject|issuer|SSL'</code></pre>
+<table>
+<tr><th>Error</th><th>Cause</th></tr>
+<tr><td>certificate has expired</td><td>renewal failed. Automate it and monitor expiry.</td></tr>
+<tr><td>hostname mismatch</td><td>the certificate doesn't list this name (e.g. www vs apex)</td></tr>
+<tr><td>unable to get local issuer</td><td>the server didn't send the intermediate certificate (it needs to serve <code>fullchain.pem</code>)</td></tr>
+<tr><td>self-signed</td><td>dev certificates. Use <code>mkcert</code> locally rather than disabling verification.</td></tr>
+</table>
+<p><b>HSTS</b> (<code>Strict-Transport-Security</code>) tells browsers to always use HTTPS for your site. <b>mTLS</b> means the client presents a certificate too; it's used between services.</p>
+<div class="callout warn"><b class="t">Never</b><p>Never ship <code>verify=False</code>, <code>rejectUnauthorized: false</code> or <code>InsecureSkipVerify: true</code>. It silently removes the "authentication" guarantee, so any attacker in the middle can impersonate the server.</p></div>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>64.1 <span class="levels">basic</span> Inspect the certificate chain of github.com with <code>openssl s_client</code>. Who issued it, and when does it expire?</summary><div><p>The output shows the leaf certificate (github.com), an intermediate CA and the root. <code>openssl x509 -noout -dates</code> gives notBefore and notAfter. Check the SAN list includes www.github.com.</p></div></details>
+</div>

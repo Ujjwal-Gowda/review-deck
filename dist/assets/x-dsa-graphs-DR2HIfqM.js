@@ -1,0 +1,52 @@
+const e=`<p class="goal">Things plus connections: roads, friendships, package dependencies, delivery zones. How to store a graph and explore it.</p>
+<h3>Vocabulary</h3>
+<div class="diagram">   store ───5km─── hub            vertices (nodes): store, hub, zone1, zone2
+     │              │  \\           edges: connections, possibly with WEIGHTS (distances)
+    2km            3km  4km        directed: one-way (A → B); undirected: two-way
+     │              │     \\        degree: the number of edges at a vertex
+   zone1 ───6km── zone2   zone3    path, cycle, connected component</div>
+<h3>Two ways to store it</h3>
+<pre data-lang="python"><code class="language-python"># adjacency LIST: each vertex → its neighbours. The usual choice (memory ∝ edges).
+graph = {
+    "store": [("hub", 5), ("zone1", 2)],
+    "hub":   [("store", 5), ("zone2", 3), ("zone3", 4)],
+    "zone1": [("store", 2), ("zone2", 6)],
+    "zone2": [("hub", 3), ("zone1", 6)],
+    "zone3": [("hub", 4)],
+}
+# adjacency MATRIX: m[i][j] = weight, or 0. O(1) "is there an edge?", but V² memory: fine for small dense graphs.</code></pre>
+<h3>Breadth-first search (BFS): explore in rings</h3>
+<p>Visit all neighbours first, then their neighbours, and so on, using a <b>queue</b>. In an unweighted graph, BFS finds the path with the <b>fewest edges</b>.</p>
+<pre data-lang="python"><code class="language-python">from collections import deque
+def bfs(graph, start):
+    dist = {start: 0}
+    q = deque([start])
+    while q:
+        v = q.popleft()
+        for nxt, _w in graph[v]:
+            if nxt not in dist:              # the "visited" check stops infinite loops on cycles
+                dist[nxt] = dist[v] + 1
+                q.append(nxt)
+    return dist                             # the number of hops from start to each reachable vertex</code></pre>
+<div class="diagram">BFS from store:  ring 0: store │ ring 1: hub, zone1 │ ring 2: zone2, zone3</div>
+<h3>Depth-first search (DFS): go deep, then backtrack</h3>
+<pre data-lang="python"><code class="language-python">def dfs(graph, v, seen=None):
+    seen = set() if seen is None else seen
+    seen.add(v)
+    for nxt, _ in graph[v]:
+        if nxt not in seen:
+            dfs(graph, nxt, seen)
+    return seen
+# iterative version: swap the BFS queue for a STACK (avoids recursion limits on big graphs)</code></pre>
+<h3>What each is good for</h3>
+<table>
+<tr><th>Task</th><th>Use</th></tr>
+<tr><td>fewest hops, shortest path when edges are unweighted, "levels"</td><td>BFS</td></tr>
+<tr><td>reachability, connected components, detecting cycles, topological order, maze solving, backtracking</td><td>DFS</td></tr>
+<tr><td>shortest path with weights</td><td>Dijkstra (<a class="xref" data-old="x-dsa-paths">Shortest Paths</a>)</td></tr>
+</table>
+<p>Both run in <b>O(V + E)</b>: every vertex and edge is looked at once. Grids are graphs too: each cell is a vertex, and its four neighbours are its edges, which is how flood-fill and maze problems work.</p>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>0.1 <span class="levels">basic</span> Count the islands in a grid of "1" (land) and "0" (water), where land connects horizontally or vertically. Solve it with BFS and with DFS.</summary><div><p>Loop over the cells. For each unvisited "1", count one island and flood-fill all its connected land (BFS with a queue, or DFS), marking cells visited. Total work is O(rows × cols).</p></div></details>
+</div>
+`;export{e as default};

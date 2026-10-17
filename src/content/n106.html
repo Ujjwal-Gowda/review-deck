@@ -1,0 +1,28 @@
+<p class="goal">Testing your code together with the real things it talks to: databases, queues, HTTP.</p>
+<p>Unit tests with fakes (<a class="xref" data-old="c16">chapter 105</a>) can't catch wrong SQL, missing migrations, transaction bugs or serialisation mismatches. Integration tests run against <b>real dependencies</b>, usually in containers.</p>
+<pre data-lang="go"><code class="language-go">func TestOrderRepo(t *testing.T) {
+    ctx := context.Background()
+    pg, err := postgres.Run(ctx, "postgres:17", postgres.WithDatabase("test"),   // testcontainers-go
+        postgres.BasicWaitStrategies())
+    if err != nil { t.Fatal(err) }
+    t.Cleanup(func() { pg.Terminate(ctx) })
+    dsn, _ := pg.ConnectionString(ctx, "sslmode=disable")
+    db := mustMigrate(t, dsn)                         // run the REAL migrations
+    repo := NewRepo(db)
+    id, err := repo.Create(ctx, Order{StoreID: 7, Items: []Item{{SKU: "milk", Qty: 2}}})
+    require.NoError(t, err)
+    got, _ := repo.Get(ctx, id)
+    require.Equal(t, 2, got.Items[0].Qty)
+}</code></pre>
+<h3>Keeping them fast and isolated</h3>
+<ul>
+<li>Start the container <b>once per test run</b> (package or suite level), not per test.</li>
+<li>Isolate each test: wrap it in a transaction that's rolled back, truncate tables, or use a fresh schema or database per test.</li>
+<li><b>Fixtures / factories</b> build valid test data in one line (<code>makeOrder({status: "paid"})</code>). Keep them minimal and explicit.</li>
+<li>Test the HTTP layer with an in-process server (Go <code>httptest</code>, FastAPI <code>TestClient</code>, supertest) instead of a real port.</li>
+<li>Stub only <b>third-party</b> services you don't control (payment gateway, SMS), using recorded responses or a local fake server (WireMock, MSW).</li>
+</ul>
+<p><b>Contract tests</b> (Pact) check that a client and a service agree on request and response shapes without running both together, which is useful between separately deployed services.</p>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>106.1 <span class="levels">basic</span> Write one integration test that runs your real migrations against a Postgres testcontainer and round-trips an order.</summary><div><p>Start the container once per suite, run the migrations, insert through the repository, read it back, and assert on the fields. Roll back or truncate between tests.</p></div></details>
+</div>

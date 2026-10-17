@@ -1,0 +1,32 @@
+const t=`<p class="goal">How bytes actually cross networks: addressing, routing, and the reliable stream TCP builds on top of unreliable packets.</p>
+<h3>Addresses on your LAN</h3>
+<table>
+<tr><th>Thing</th><th>Example</th><th>Role</th></tr>
+<tr><td>MAC address</td><td><code>3c:52:82:…</code></td><td>hardware address, used only on the local link</td></tr>
+<tr><td>IP + subnet</td><td><code>192.168.68.105/22</code></td><td>/22 = the first 22 bits are the network part, so 1022 usable hosts on this LAN</td></tr>
+<tr><td>Gateway</td><td><code>192.168.68.1</code></td><td>the router: anything off-subnet goes here</td></tr>
+<tr><td>DHCP</td><td>…</td><td>the router hands out IP, gateway and DNS automatically</td></tr>
+<tr><td>ARP</td><td>…</td><td>"who has 192.168.68.222?" → learns its MAC address</td></tr>
+<tr><td>NAT</td><td>…</td><td>the router rewrites private IPs to its one public IP; that's why inbound connections need port forwarding (or Tailscale)</td></tr>
+</table>
+<p>Private ranges: <code>10.0.0.0/8</code>, <code>172.16.0.0/12</code>, <code>192.168.0.0/16</code>. <code>127.0.0.1</code> is loopback (this machine). <code>0.0.0.0</code> in a listen address means "all interfaces".</p>
+<h3>TCP vs UDP</h3>
+<table>
+<tr><th></th><th>TCP</th><th>UDP</th></tr>
+<tr><td>Connection</td><td>3-way handshake (SYN, SYN-ACK, ACK)</td><td>none</td></tr>
+<tr><td>Delivery</td><td>reliable, ordered; lost segments are retransmitted</td><td>best-effort; may be lost or reordered</td></tr>
+<tr><td>Flow / congestion control</td><td>yes: slows down when the network is congested</td><td>no</td></tr>
+<tr><td>Used by</td><td>HTTP/1–2, SSH, databases, IPP</td><td>DNS, video calls, games, QUIC (HTTP/3)</td></tr>
+</table>
+<h3>Sockets: the programming interface</h3>
+<pre data-lang="python"><code class="language-python">import socket
+srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)       # TCP
+srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+srv.bind(("0.0.0.0", 9000)); srv.listen()
+conn, addr = srv.accept()                                      # blocks until a client connects
+data = conn.recv(1024); conn.sendall(data.upper()); conn.close()
+# test from another terminal:  echo hello | nc localhost 9000</code></pre>
+<p>A connection is identified by 4 values: (src IP, src port, dst IP, dst port). That's how one server port handles thousands of clients. TCP is a <b>byte stream</b>, not messages: one <code>send</code> can arrive as two <code>recv</code>s, or two as one, so protocols add framing (length prefixes, newlines, HTTP headers).</p>
+<details class="ex"><summary>62.1 <span class="levels">think</span> Why is the first request to a new server slower than later ones on the same connection?</summary><div><p>DNS lookup, then the TCP handshake (one round trip), then the TLS handshake (1–2 more round trips), and TCP slow-start begins with a small send window. Keep-alive and connection pooling reuse the connection to skip all of that.</p></div></details>
+<div class="callout seclens"><b class="t">Security lens · TCP/IP</b><p>Every listening port is attack surface. Check <code>ss -ltnp</code>, and bind internal services to 127.0.0.1 or a private interface, never 0.0.0.0 on a public host.</p></div>
+`;export{t as default};

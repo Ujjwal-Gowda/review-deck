@@ -1,0 +1,35 @@
+const e=`<p class="goal">The CSS mental models that stop layout from feeling like guesswork.</p>
+<h3>The box model</h3>
+<p>Every element is a box: content, then padding, then border, then margin. Always set <code>*, *::before, *::after { box-sizing: border-box; }</code> so <code>width</code> includes padding and border. Vertical margins between blocks <b>collapse</b> (the larger one wins).</p>
+<h3>The cascade: which rule wins?</h3>
+<ol><li><code>!important</code> (avoid it)</li><li><b>specificity</b>: inline style &gt; #id &gt; .class / [attr] / :hover &gt; element</li><li>later in the source wins a tie</li></ol>
+<p>Keep specificity low and flat (single classes). <code>:where()</code> has zero specificity; cascade <code>@layer</code>s order whole stylesheets.</p>
+<h3>Layout: pick the right tool</h3>
+<pre data-lang="css"><code class="language-css">/* Flexbox: ONE dimension (a row or a column). Navbars, toolbars, centring */
+.toolbar { display: flex; gap: 8px; align-items: center; justify-content: space-between; }
+.center  { display: grid; place-items: center; }     /* the easiest centring */
+
+/* Grid: TWO dimensions. Page layouts, card grids */
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+.page  { display: grid; grid-template: "side main" 1fr / 300px 1fr; }
+
+/* Positioning */
+.badge  { position: absolute; top: 8px; right: 8px; }  /* relative to the nearest positioned ancestor */
+.header { position: sticky; top: 0; }
+.modal  { position: fixed; inset: 0; }</code></pre>
+<h3>Responsive design</h3>
+<pre data-lang="css"><code class="language-css">.layout { padding: clamp(16px, 4vw, 48px); }            /* fluid values instead of breakpoints */
+@media (max-width: 900px) { .side { display: none; } }  /* viewport-based */
+.card-list { container-type: inline-size; }
+@container (min-width: 500px) { .card { display: flex; } }   /* based on the COMPONENT's size */
+@media (prefers-color-scheme: dark) { :root { --bg: #131417; } }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; } }</code></pre>
+<h3>Things that confuse everyone</h3>
+<ul>
+<li><b>Stacking contexts:</b> <code>z-index: 9999</code> can't escape a parent that has <code>transform</code>, <code>opacity &lt; 1</code> or its own <code>z-index</code>. Stacking is per context.</li>
+<li><b>Percentage heights</b> need a parent with a defined height. In flex or grid, add <code>min-height: 0</code> so children can scroll.</li>
+<li><b>Custom properties</b> (<code>--brand: #2FA24F</code>) are inherited and live at runtime. That's how this site's light/dark theme works.</li>
+<li>Animate only <code>transform</code> and <code>opacity</code> (<a class="xref" data-old="n65">chapter 65</a>).</li>
+</ul>
+<details class="ex"><summary>67.1 <span class="levels">basic</span> Build a responsive product grid: 1 column on phones, as many 220px-minimum columns as fit on larger screens, with no media queries.</summary><div><p><code>display:grid; grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr)); gap:16px;</code>. The <code>min()</code> prevents overflow on very narrow screens.</p></div></details>
+`;export{e as default};

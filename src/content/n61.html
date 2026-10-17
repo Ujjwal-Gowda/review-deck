@@ -1,0 +1,27 @@
+<p class="goal">The internet's phone book: how names become addresses, and why "it's always DNS".</p>
+<h3>Resolution, step by step</h3>
+<div class="diagram">browser cache → OS cache (systemd-resolved) → recursive resolver (ISP, 1.1.1.1, 8.8.8.8)
+   resolver asks:  root (.)  →  "ask the .in servers"  →  .in TLD  →  "ask freshon.in's nameservers"
+                →  authoritative NS for freshon.in  →  "A 203.0.113.10, TTL 300"
+   each answer is cached for its TTL (time to live) at every layer</div>
+<table>
+<tr><th>Record</th><th>Maps</th><th>Example</th></tr>
+<tr><td>A / AAAA</td><td>name → IPv4 / IPv6</td><td><code>api → 203.0.113.10</code></td></tr>
+<tr><td>CNAME</td><td>name → another name (alias)</td><td><code>www → freshon-demos.netlify.app</code></td></tr>
+<tr><td>MX</td><td>where email for the domain goes</td><td><code>10 mx.zoho.in</code></td></tr>
+<tr><td>TXT</td><td>arbitrary text: domain verification, SPF/DKIM/DMARC email auth</td><td><code>v=spf1 include:…</code></td></tr>
+<tr><td>NS</td><td>which servers are authoritative for the zone</td><td>the registrar's or Cloudflare's</td></tr>
+<tr><td>SRV / CAA</td><td>service locations / which CAs may issue certificates</td><td>…</td></tr>
+</table>
+<pre data-lang="shell"><code class="language-bash">dig freshon.in +short
+dig freshon.in NS
+dig @1.1.1.1 api.freshon.in      # ask a specific resolver (bypasses your local cache)
+dig +trace freshon.in            # follow the chain from the root</code></pre>
+<h3>Practical rules</h3>
+<ul>
+<li><b>Lower the TTL</b> (e.g. to 300 s) a day <i>before</i> migrating a server; the old TTL has to expire first.</li>
+<li>A CNAME can't sit at the apex (<code>freshon.in</code> itself). Providers offer ALIAS/ANAME/flattening to get around this.</li>
+<li><code>/etc/hosts</code> overrides DNS locally: handy for testing a new server before switching DNS.</li>
+<li>Plain DNS is unencrypted and spoofable. DoH/DoT encrypt it; DNSSEC signs it.</li>
+</ul>
+<details class="ex"><summary>61.1 <span class="levels">basic</span> Point a custom subdomain <code>demo.yourdomain</code> at the Netlify landing site. Which record type, and what value?</summary><div><p>A <b>CNAME</b> from <code>demo</code> to <code>freshon-demos.netlify.app</code>, then add the domain in Netlify's domain settings so it issues a TLS certificate for it.</p></div></details>

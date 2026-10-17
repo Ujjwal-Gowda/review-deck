@@ -1,0 +1,27 @@
+const e=`<p class="goal">How a logged-in state survives across requests: sessions, tokens and delegated login.</p>
+<table>
+<tr><th></th><th>Server session + cookie</th><th>JWT (self-contained token)</th></tr>
+<tr><td>What the client holds</td><td>a random ID</td><td>a signed JSON payload (<code>{"sub":42,"role":"manager","exp":…}</code>)</td></tr>
+<tr><td>Server lookup per request</td><td>yes (Redis/DB)</td><td>no: just verify the signature</td></tr>
+<tr><td>Revoke (logout, a stolen token)</td><td>instant: delete the row</td><td>hard until it expires (needs a denylist)</td></tr>
+<tr><td>Best for</td><td>web apps (the default choice)</td><td>service-to-service calls; stateless APIs; mobile with short-lived tokens</td></tr>
+</table>
+<h3>Access + refresh tokens</h3>
+<p>A short-lived <b>access token</b> (5–15 min) is sent on every API call. A long-lived <b>refresh token</b> (days) is stored securely (an HttpOnly cookie, or mobile secure storage) and used only to get new access tokens. Rotate the refresh token on every use and detect reuse (a reused old token means theft: revoke the whole family).</p>
+<h3>JWT pitfalls</h3>
+<ul>
+<li>JWTs are <b>signed, not encrypted</b>. Anyone can base64-decode the payload, so put no secrets in it.</li>
+<li>Pin the algorithm on verify (reject <code>alg: none</code> and HS/RS confusion); check <code>exp</code>, <code>iss</code> and <code>aud</code>.</li>
+<li>Don't keep them in localStorage (XSS can read it); use HttpOnly cookies for browsers.</li>
+</ul>
+<h3>OAuth 2.0 and OpenID Connect ("Log in with Google")</h3>
+<div class="diagram">1. your app → redirect the browser to Google /authorize?client_id&amp;redirect_uri&amp;scope=openid email&amp;state&amp;code_challenge (PKCE)
+2. the user logs in at GOOGLE (your app never sees the password) and consents
+3. Google → redirect back to redirect_uri?code=…&amp;state=…   (check that state matches: CSRF protection)
+4. your SERVER exchanges code + code_verifier (+ client secret) → access_token + id_token (a JWT: who the user is)
+5. verify the id_token → find or create the local user → create YOUR session as usual</div>
+<p><b>OAuth</b> is for <i>authorisation</i> (the app may access the user's Google Drive). <b>OIDC</b> adds <i>authentication</i> (the id_token says who they are). <b>PKCE</b> protects the code exchange, and is required for mobile and SPAs.</p>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>86.1 <span class="levels">basic</span> Decode a JWT from any site you use (DevTools → Application → storage) at jwt.io. What's in the payload, and why isn't it secret?</summary><div><p>You'll see <code>sub</code>, <code>exp</code>, <code>iat</code>, roles and so on. It's only base64url-encoded; the signature prevents <i>tampering</i>, not reading. Never put secrets in it.</p></div></details>
+</div>
+`;export{e as default};

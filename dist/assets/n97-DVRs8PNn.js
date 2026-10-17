@@ -1,0 +1,32 @@
+const t=`<p class="goal">Keeping data correct when several things happen at once.</p>
+<pre data-lang="sql"><code class="language-sql">BEGIN;
+UPDATE stock  SET qty = qty - 2 WHERE sku = 'paneer' AND qty &gt;= 2;   -- check rows affected = 1!
+INSERT INTO order_items (order_id, sku, qty) VALUES (42, 'paneer', 2);
+COMMIT;   -- both happen or neither does (on error: ROLLBACK)</code></pre>
+<h3>Anomalies and isolation levels</h3>
+<table>
+<tr><th>Anomaly</th><th>Example</th></tr>
+<tr><td>Dirty read</td><td>seeing another transaction's uncommitted change</td></tr>
+<tr><td>Non-repeatable read</td><td>reading the same row twice in one transaction and getting different values</td></tr>
+<tr><td>Phantom</td><td>re-running a range query and getting new rows</td></tr>
+<tr><td><b>Lost update</b></td><td>two cashiers read stock = 5, both write 5 − 1 = 4: one sale vanishes</td></tr>
+<tr><td>Write skew</td><td>two managers each check "at least one manager is on shift", then both clock out</td></tr>
+</table>
+<table>
+<tr><th>Level (Postgres)</th><th>Prevents</th></tr>
+<tr><td>Read Committed (default)</td><td>dirty reads. Each <i>statement</i> sees fresh committed data.</td></tr>
+<tr><td>Repeatable Read</td><td>+ non-repeatable reads and phantoms (a snapshot per transaction); may raise serialisation errors</td></tr>
+<tr><td>Serializable</td><td>everything, including write skew; you <b>must retry</b> on error 40001</td></tr>
+</table>
+<h3>Preventing lost updates</h3>
+<ol>
+<li><b>Atomic updates:</b> <code>SET qty = qty - 1</code>, not read-modify-write in application code.</li>
+<li><b>Conditional updates:</b> <code>… WHERE qty &gt;= 2</code>, then check the affected row count.</li>
+<li><b>Pessimistic locking:</b> <code>SELECT … FOR UPDATE</code> locks the row until commit.</li>
+<li><b>Optimistic locking:</b> a <code>version</code> column; <code>UPDATE … SET version = version + 1 WHERE id = $1 AND version = $2</code>, and retry if 0 rows changed.</li>
+</ol>
+<p><b>Deadlocks:</b> T1 locks A then wants B; T2 locks B then wants A. Postgres detects this and aborts one of them. Prevent it by locking in a consistent order (e.g. sort SKUs before updating stock). Keep transactions <b>short</b>: never wait for HTTP calls or user input while holding one.</p>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>97.1 <span class="levels">basic</span> In two psql sessions, reproduce a lost update with read-then-write, then fix it with an atomic UPDATE and with <code>SELECT … FOR UPDATE</code>.</summary><div><p>Both sessions read qty=5 and both write 4, so one decrement is lost. <code>UPDATE … SET qty = qty-1</code>, or locking the row first, serialises them and gives 3.</p></div></details>
+</div>
+`;export{t as default};

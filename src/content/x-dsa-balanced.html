@@ -1,0 +1,24 @@
+<p class="goal">How real ordered maps and databases keep trees short no matter what order the data arrives in.</p>
+<h3>Rotations: the basic move</h3>
+<div class="diagram">right rotation at y:           y                 x
+                              / \               / \
+                             x   C     ──►     A   y
+                            / \                   / \
+                           A   B                 B   C
+In-order stays A x B y C (still a valid BST), but the height on the left shrinks by one.</div>
+<table>
+<tr><th>Tree</th><th>Balance rule</th><th>Trade-off</th><th>Where you meet it</th></tr>
+<tr><td><b>AVL</b></td><td>at every node, the subtree heights differ by at most 1</td><td>very balanced, so the fastest lookups; more rotations on insert</td><td>read-heavy in-memory indexes</td></tr>
+<tr><td><b>Red-black</b></td><td>nodes are coloured; no two reds in a row; every path has equal black count, so height ≤ 2 log n</td><td>fewer rotations; slightly taller</td><td>Java TreeMap, C++ std::map, the Linux kernel scheduler</td></tr>
+<tr><td><b>B-tree / B+ tree</b></td><td>nodes hold <b>hundreds of keys</b> (a whole disk page); all leaves at the same depth</td><td>very shallow (3–4 levels for billions of rows), so few disk reads</td><td>PostgreSQL/MySQL indexes, filesystems, SQLite, Rust BTreeMap (in memory)</td></tr>
+<tr><td>Skip list</td><td>layered linked lists with random "express lanes"</td><td>simple, and friendly to concurrency</td><td>Redis sorted sets, LevelDB/RocksDB memtables</td></tr>
+</table>
+<div class="diagram">B+ tree (order 4), roughly how a database index looks:
+                    [ 30 | 60 ]
+          ┌────────────┼────────────┐
+     [10|20]        [40|50]       [70|80|90]     ← leaves hold the keys (and row pointers) and are LINKED
+      ↔               ↔              ↔             left-to-right for fast range scans (WHERE x BETWEEN …)</div>
+<p>You'll almost never implement these at work. Understand the <i>guarantee</i> (O(log n) regardless of insertion order) and the <i>shape</i> (why a database index is only 3–4 levels deep, which explains why indexed lookups are fast: <a class="xref" data-old="n95">Indexes</a>). Implementing an AVL tree once is still excellent practice in careful pointer manipulation.</p>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>0.1 <span class="levels">think</span> A B+ tree node fits 200 keys. How many levels are needed for 1 billion rows? What does that mean for disk reads per lookup?</summary><div><p>200¹ = 200, 200² = 40,000, 200³ = 8 million, 200⁴ = 1.6 billion. So 4 levels. The top levels stay cached in RAM, so a lookup usually costs 1–2 actual disk reads.</p></div></details>
+</div>

@@ -1,0 +1,18 @@
+<p class="goal">Choosing where your code runs in the cloud, and how it scales.</p>
+<table>
+<tr><th>Option</th><th>Scaling</th><th>Good for</th><th>Watch</th></tr>
+<tr><td>VM (EC2)</td><td>Auto Scaling Groups add or remove identical VMs based on CPU, requests or a schedule</td><td>full control, long-running processes, GPUs</td><td>you patch the OS; pick the instance type (vCPU, RAM, burstable "t" instances run out of CPU credits)</td></tr>
+<tr><td>Containers (ECS Fargate / Cloud Run)</td><td>per-service task counts; Cloud Run scales on concurrency, down to zero</td><td>most web APIs and workers</td><td>cold starts when scaled to zero; per-vCPU pricing</td></tr>
+<tr><td>Functions (Lambda)</td><td>per request, automatically</td><td>event handlers, spiky or low traffic, glue code</td><td>time limits (15 min), cold starts, DB connection storms</td></tr>
+<tr><td>Kubernetes (EKS/GKE)</td><td>HPA and cluster autoscaler</td><td>many services, a platform team</td><td>operational complexity (<a class="xref" data-old="n135">chapter 135</a>)</td></tr>
+</table>
+<h3>Autoscaling basics</h3>
+<ul>
+<li>Scale on the signal that reflects load: CPU for compute-bound work, queue depth for workers, concurrency or latency for APIs.</li>
+<li>Instances must be <b>stateless</b> and start fast; add health checks so the load balancer only sends traffic to ready instances.</li>
+<li>Set minimum and maximum limits (the max protects your bill and your database); scale out fast and in slowly.</li>
+<li><b>Spot/preemptible</b> instances cost 60–90% less but can be taken back at short notice: fine for batch jobs, renders and CI.</li>
+</ul>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>128.1 <span class="levels">think</span> The worker processing renders needs 4 GB of RAM for 10 minutes, twice a day. Which compute option fits best?</summary><div><p>A serverless container job (Cloud Run jobs, ECS Fargate task) or a spot VM started by a scheduler: you pay only while it runs. Lambda's limits (memory, 15-minute timeout) make it a poor fit.</p></div></details>
+</div>

@@ -1,0 +1,4 @@
+const e=`<p class="goal">Building in-app analytics and metric dashboards: time-series rollups, Recharts visualization, MRR, churn, and tenant activity metrics.</p>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>384.1 <span class="levels">basic</span> Write a PostgreSQL query that aggregates daily active users (DAU) over the last 30 days using <code>generate_series</code>.</summary><div><p>Use <code>generate_series(now() - interval '30 days', now(), '1 day')</code> left-joined to events.</p></div></details>
+</div>`;export{e as default};

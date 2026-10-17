@@ -1,0 +1,19 @@
+const e=`<p class="goal">Defining the entities and the interfaces between components before choosing technology.</p>
+<ol>
+<li><b>Entities and relationships:</b> Store, Product, Order, OrderItem, Rider, Delivery. Which ones are hot? Which are large?</li>
+<li><b>Core APIs</b> for the key use cases, as signatures:</li>
+</ol>
+<pre data-lang="plaintext"><code class="language-plaintext">POST /orders            {store_id, items[], address_id, idempotency_key}  → 201 {order_id, eta}
+GET  /orders/{id}                                                          → {status, items, rider?}
+GET  /stores/{id}/orders?status=pending&amp;cursor=…                          → paginated list
+POST /deliveries/{id}/location  {lat, lng, ts}   (rider app, every 5 s)    → 204
+WS   /orders/{id}/live                                                     → status + location events</code></pre>
+<ul>
+<li>Note which calls are synchronous, and which work happens asynchronously (events: <code>OrderPlaced → reserve stock, notify store, assign rider</code>).</li>
+<li>Mark idempotency, pagination, authentication and rate limits on each API.</li>
+<li>High-frequency writes (rider locations) often deserve a different path from core transactions (orders): a separate store, batching, or approximate data.</li>
+</ul>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>179.1 <span class="levels">basic</span> Design the API for store-to-rider assignment: endpoints, events and payloads.</summary><div><p><code>POST /deliveries/{id}/offer</code>; rider <code>POST /offers/{id}/accept</code> (409 if already taken); events <code>DeliveryAssigned</code>, <code>RiderArrivedAtStore</code>, <code>Delivered</code>; a WebSocket channel per rider.</p></div></details>
+</div>
+`;export{e as default};

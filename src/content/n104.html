@@ -1,0 +1,26 @@
+<p class="goal">Storing and searching embeddings: the retrieval half of RAG and semantic search. The AI side is covered in the RAG part.</p>
+<pre data-lang="sql"><code class="language-sql">CREATE EXTENSION vector;                                    -- pgvector
+CREATE TABLE docs (id bigserial PRIMARY KEY, store_id int, body text, embedding vector(1024));
+CREATE INDEX ON docs USING hnsw (embedding vector_cosine_ops);   -- approximate nearest-neighbour index
+SELECT id, body, 1 - (embedding &lt;=&gt; $1) AS similarity          -- &lt;=&gt; cosine distance, &lt;-&gt; L2, &lt;#&gt; inner product
+FROM docs WHERE store_id = 7                                 -- metadata filter alongside the vector search
+ORDER BY embedding &lt;=&gt; $1 LIMIT 5;</code></pre>
+<h3>How ANN indexes work</h3>
+<ul>
+<li>Exact nearest neighbours means comparing against every vector: O(n × dimensions). That's too slow beyond ~100K vectors.</li>
+<li><b>HNSW</b> builds a multi-layer "small-world" graph and greedily walks toward the query. Fast and high-recall, but memory-hungry. Tunables: <code>m</code>, <code>ef_construction</code>, and <code>hnsw.ef_search</code> (higher means better recall, slower).</li>
+<li><b>IVF</b> clusters the vectors and searches only the nearest clusters. Less memory, and needs training.</li>
+<li><b>Quantisation</b> (int8, binary, product quantisation) shrinks vectors 4–32×, with some recall loss.</li>
+</ul>
+<h3>Sizing</h3>
+<p>1M vectors × 1024 dims × 4 bytes ≈ <b>4 GB</b> of raw floats, plus the HNSW graph overhead. <code>halfvec</code> (float16) halves that.</p>
+<table>
+<tr><th>Option</th><th>Pick when</th></tr>
+<tr><td>pgvector</td><td>you already run Postgres; you want joins and filters and transactions with your data. <b>The default.</b></td></tr>
+<tr><td>Qdrant / Weaviate / Milvus</td><td>tens of millions of vectors or more, heavy filtering, dedicated scaling</td></tr>
+<tr><td>Pinecone / managed services</td><td>zero ops</td></tr>
+<tr><td>FAISS / hnswlib</td><td>an in-process library, offline batch work</td></tr>
+</table>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>104.1 <span class="levels">basic</span> Store 1,000 sentence embeddings in pgvector and compare exact search with HNSW search for 20 queries. What's the recall?</summary><div><p>Run exact search with the index disabled (<code>SET enable_indexscan=off</code>) as ground truth, then compare the top 10 overlap. Raising <code>hnsw.ef_search</code> should push recall close to 100%.</p></div></details>
+</div>

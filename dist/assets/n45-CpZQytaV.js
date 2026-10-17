@@ -1,0 +1,45 @@
+const e=`<p class="goal">Resolving conflicts calmly, rewriting local history cleanly, and the power tools.</p>
+<h3>Merge conflicts</h3>
+<p>A conflict happens when both sides changed the same lines (or one side edited a file the other deleted). Git stops and marks the file:</p>
+<pre data-lang="plaintext"><code class="language-plaintext">&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD
+const DELIVERY_FEE = 3000;
+=======
+const DELIVERY_FEE = calcFee(zone);
+&gt;&gt;&gt;&gt;&gt;&gt;&gt; feature/zone-fees</code></pre>
+<ol>
+<li><code>git status</code> lists the conflicted files.</li>
+<li>Edit each one to the <b>correct combined result</b> (not just "mine" or "theirs"), and delete the markers.</li>
+<li>Run the tests. A clean merge can still be semantically wrong.</li>
+<li><code>git add file</code>, then <code>git merge --continue</code> (or <code>git rebase --continue</code>). To bail out: <code>git merge --abort</code>.</li>
+</ol>
+<p>Tip: <code>git config --global merge.conflictstyle zdiff3</code> also shows the common ancestor, which makes it much easier to see what each side intended.</p>
+<h3>Rebase: replay your commits on a new base</h3>
+<div class="diagram">before:  A ── B ── C  ◄── main           after \`git rebase main\` on feature:
+               \\                         A ── B ── C ── D' ── E'  ◄── feature
+                D ── E  ◄── feature                     (new commits, new SHAs, linear history)</div>
+<pre data-lang="shell"><code class="language-bash">git switch feature
+git fetch origin
+git rebase origin/main           # update your branch on top of the latest main</code></pre>
+<div class="callout warn"><b class="t">The golden rule</b><p><b>Never rebase commits that others have already pulled.</b> Rebasing creates new commits, and anyone who built on the old ones gets a tangled history. Rebase your own unpushed or personal branch freely; if you must update an already-pushed PR branch, use <code>git push --force-with-lease</code>, which refuses if someone else pushed in the meantime.</p></div>
+<h3>Interactive rebase: tidy up before sharing</h3>
+<pre data-lang="shell"><code class="language-bash">git rebase -i HEAD~4       # opens an editor listing the last 4 commits:
+# pick   a1b2 Add stock reservation
+# squash c3d4 fix typo              ← fold into the previous commit
+# reword e5f6 wip                   ← change the message
+# drop   g7h8 debug prints          ← delete the commit
+git commit --fixup a1b2  &amp;&amp;  git rebase -i --autosquash main    # mark fixups as you go; squash them automatically</code></pre>
+<h3>Power tools</h3>
+<table>
+<tr><th>Command</th><th>Use</th></tr>
+<tr><td><code>git cherry-pick &lt;sha&gt;</code></td><td>copy one commit onto the current branch (e.g. a hotfix to a release branch)</td></tr>
+<tr><td><code>git stash push -m "wip"</code> / <code>stash pop</code></td><td>shelve uncommitted work to switch branches</td></tr>
+<tr><td><code>git bisect</code></td><td>binary-search history for the commit that introduced a bug (<a class="xref" data-old="n16">chapter 16</a>)</td></tr>
+<tr><td><code>git worktree add ../hotfix main</code></td><td>a second working directory on another branch, with no stashing needed</td></tr>
+<tr><td><code>git tag -a v1.2.0 -m "…"</code></td><td>annotated tag marking a release (<code>git push --tags</code>)</td></tr>
+<tr><td><code>git blame -w -C file</code></td><td>who last changed each line, and in which commit (the <i>why</i> is in that commit)</td></tr>
+<tr><td><code>git log -S "DELIVERY_FEE"</code></td><td>find the commits that added or removed a string ("pickaxe")</td></tr>
+<tr><td><code>git reflog</code></td><td>the undo-everything safety net</td></tr>
+</table>
+<div class="callout key"><b class="t">Trade-offs: merge vs rebase</b><p><b>Merge:</b> preserves exactly what happened and is safe on shared branches, but history gets noisy with merge commits. <b>Rebase:</b> a clean linear history that's easy to bisect and read, but it rewrites commits, so use it only on your own branches. A common team setup: rebase your feature branch locally, then "squash and merge" or "rebase and merge" the PR on GitHub.</p></div>
+<details class="ex"><summary>45.1 <span class="levels">think</span> Create a conflict on purpose (edit the same line on two branches), resolve it with a merge, reset, then resolve it with a rebase. Compare the two graphs.</summary><div><p>The merge leaves a merge commit containing the resolution; the rebase leaves a linear history where your commit's diff includes the resolution. <code>git reset --hard ORIG_HEAD</code> undoes a finished merge or rebase so you can retry.</p></div></details>
+`;export{e as default};

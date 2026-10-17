@@ -1,0 +1,63 @@
+<p class="goal">How a Go program is organised, and Go's types, zero values, constants and conversions.</p>
+<h3>Anatomy of a program</h3>
+<pre data-lang="go"><code class="language-go">package main                        // every file belongs to a package; "main" + func main() = an executable
+
+import (
+    "fmt"
+    "os"
+    "strconv"
+)
+
+const taxPercent = 5                // untyped constant
+
+func main() {
+    if len(os.Args) &lt; 2 {
+        fmt.Fprintln(os.Stderr, "usage: bill AMOUNT_PAISE")
+        os.Exit(2)
+    }
+    amount, err := strconv.Atoi(os.Args[1])
+    if err != nil {
+        fmt.Fprintln(os.Stderr, "amount must be a whole number:", err)
+        os.Exit(1)
+    }
+    fmt.Printf("total: ₹%.2f\n", float64(amount*(100+taxPercent))/10000)
+}</code></pre>
+<p>Unused variables and unused imports are <b>compile errors</b>, and <code>gofmt</code> decides the formatting, so every Go codebase looks the same.</p>
+<h3>Declarations and zero values</h3>
+<pre data-lang="go"><code class="language-go">var count int          // 0         every type has a usable ZERO VALUE
+var name string        // ""
+var ok bool            // false
+var p *Item            // nil
+var m map[string]int   // nil map: reading is fine, WRITING panics, so use make()
+qty := 3               // := declares and infers (inside functions only)
+var a, b = 1, "x"
+x, y := 1, 2; x, y = y, x</code></pre>
+<h3>Types</h3>
+<table>
+<tr><th>Kind</th><th>Types</th><th>Notes</th></tr>
+<tr><td>integers</td><td><code>int</code> (64-bit here), <code>int8/16/32/64</code>, <code>uint…</code>, <code>byte</code> (= uint8), <code>rune</code> (= int32)</td><td>overflow wraps silently</td></tr>
+<tr><td>floats</td><td><code>float64</code>, <code>float32</code></td><td>use int paise for money</td></tr>
+<tr><td>text</td><td><code>string</code> (immutable UTF-8 bytes)</td><td><code>len</code> = bytes</td></tr>
+<tr><td>composite</td><td>arrays <code>[4]int</code>, slices <code>[]int</code>, maps, structs, pointers, funcs, channels, interfaces</td><td></td></tr>
+</table>
+<h3>Constants and iota</h3>
+<pre data-lang="go"><code class="language-go">type Status int
+const (
+    Placed Status = iota   // 0
+    Paid                   // 1
+    Shipped                // 2
+)
+func (s Status) String() string { return [...]string{"placed", "paid", "shipped"}[s] }   // fmt prints the name
+const KB = 1 &lt;&lt; 10</code></pre>
+<h3>Conversions are always explicit</h3>
+<pre data-lang="go"><code class="language-go">var i int = 10; var f float64 = float64(i) * 1.5
+var total int64 = int64(i) + 5      // int + int64 is a compile error without converting
+s := strconv.Itoa(42); n, err := strconv.Atoi("42")
+b := []byte("hi"); str := string(b)</code></pre>
+<h3>fmt verbs you'll use daily</h3>
+<pre data-lang="plaintext"><code class="language-plaintext">%v  any value        %+v  struct with field names   %#v Go syntax   %T  the type
+%d  int   %05d  zero-padded   %f %.2f floats   %s string   %q quoted string   %x hex   %p pointer
+fmt.Println / Printf / Sprintf / Errorf / Fprintln(os.Stderr, …)</code></pre>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>0.1 <span class="levels">basic</span> Write <code>bill</code>: read <code>sku qty price</code> lines from stdin with <code>bufio.Scanner</code>, handle parse errors with the line number, and print an aligned receipt using <code>fmt.Printf("%-10s %4d %10.2f\n", …)</code>.</summary><div><p>Use <code>sc := bufio.NewScanner(os.Stdin)</code>, <code>for n := 1; sc.Scan(); n++ { f := strings.Fields(sc.Text()) … }</code>. Check <code>len(f) == 3</code> and each <code>strconv.Atoi</code>; on error, <code>fmt.Fprintf(os.Stderr, "line %d: %v\n", n, err)</code>, then <code>os.Exit(1)</code>.</p></div></details>
+</div>

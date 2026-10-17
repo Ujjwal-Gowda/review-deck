@@ -1,0 +1,56 @@
+<p class="goal">Rust's syntax and types: variables, mutability, shadowing, scalar and compound types, and expressions.</p>
+<h3>A first program</h3>
+<pre data-lang="rust"><code class="language-rust">use std::io::{self, BufRead};
+
+const TAX_PERCENT: u64 = 5;
+
+fn with_tax(paise: u64) -&gt; u64 {
+    paise * (100 + TAX_PERCENT) / 100          // no semicolon = this expression is the return value
+}
+
+fn main() {
+    let stdin = io::stdin();
+    let mut total: u64 = 0;
+    for line in stdin.lock().lines() {
+        let line = line.expect("read error");  // shadowing: a new `line` of a different type
+        match line.trim().parse::&lt;u64&gt;() {
+            Ok(p) =&gt; total += p,
+            Err(e) =&gt; eprintln!("skipping {line:?}: {e}"),
+        }
+    }
+    println!("total with tax: ₹{:.2}", with_tax(total) as f64 / 100.0);
+}</code></pre>
+<h3>Variables</h3>
+<pre data-lang="rust"><code class="language-rust">let qty = 2;            // immutable by default
+// qty = 3;             // error: cannot assign twice to immutable variable
+let mut total = 0;      // mutable
+total += qty;
+let qty = qty * 10;     // SHADOWING: a new binding (can even change type), handy for transformations
+let price: u32;         // declare now, assign once later (the compiler checks it's set before use)</code></pre>
+<h3>Scalar and compound types</h3>
+<table>
+<tr><th>Type</th><th>Notes</th></tr>
+<tr><td><code>i8…i128</code>, <code>u8…u128</code>, <code>isize/usize</code></td><td>explicit sizes; <code>usize</code> for indexes and lengths; overflow panics in debug builds</td></tr>
+<tr><td><code>f64</code>, <code>f32</code></td><td>floats</td></tr>
+<tr><td><code>bool</code>, <code>char</code></td><td><code>char</code> is a 4-byte Unicode scalar value (<code>'₹'</code>)</td></tr>
+<tr><td>tuples <code>(u32, &amp;str)</code></td><td><code>t.0</code>, destructure with <code>let (a, b) = t;</code>; <code>()</code> is the "unit" (nothing)</td></tr>
+<tr><td>arrays <code>[i32; 3]</code></td><td>fixed size, on the stack; <code>Vec&lt;T&gt;</code> for growable lists</td></tr>
+</table>
+<pre data-lang="rust"><code class="language-rust">let big = 1_000_000u64; let byte = b'A'; let hex = 0xff;
+let f = 7 as f64 / 2.0;                         // 'as' for numeric casts (can truncate)
+let small: u8 = u8::try_from(300).unwrap_or(u8::MAX);   // checked conversion
+let x: i32 = "42".parse().unwrap();             // the target type drives parse
+x.checked_add(1); x.saturating_sub(10); x.wrapping_mul(3);   // explicit overflow behaviour</code></pre>
+<h3>Everything is an expression</h3>
+<pre data-lang="rust"><code class="language-rust">let fee = if total &gt;= 49_900 { 0 } else { 3_000 };
+let label = match qty { 0 =&gt; "none", 1..=9 =&gt; "few", _ =&gt; "many" };
+let doubled = { let x = 3; x * 2 };           // a block evaluates to its last expression
+let first_neg = loop { if let Some(n) = it.next() { if n &lt; 0 { break Some(n); } } else { break None; } };</code></pre>
+<h3>Printing</h3>
+<pre data-lang="rust"><code class="language-rust">println!("{} {}", a, b); println!("{a} {b}");          // inline names
+println!("{:?}", vec);  println!("{:#?}", order);      // Debug (derive(Debug)), pretty-printed
+println!("{:&gt;8.2} {:05} {:x}", 3.14159, 42, 255);      // alignment, padding, hex
+eprintln!("error"); let s = format!("{sku}-{qty}");    // stderr; build a String</code></pre>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>0.1 <span class="levels">basic</span> Write a temperature table (Celsius −10 to 40 in steps of 5, with Fahrenheit) using a range with <code>step_by</code>, an <code>as f64</code> cast and <code>println!</code> alignment. Then make it read the range from the command-line arguments.</summary><div><p>Loop <code>for c in (-10..=40).step_by(5)</code> and print <code>{c:&gt;4} {f:&gt;7.1}</code>. Arguments: <code>std::env::args().nth(1)</code>, then <code>.parse::&lt;i32&gt;()</code>, handling the error with <code>unwrap_or_else(|e| { eprintln!(...); std::process::exit(1) })</code>.</p></div></details>
+</div>

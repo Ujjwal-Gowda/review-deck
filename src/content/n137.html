@@ -1,0 +1,27 @@
+<p class="goal">The workload controllers that create and manage pods for you.</p>
+<pre data-lang="yaml"><code class="language-yaml">apiVersion: apps/v1
+kind: Deployment
+metadata: { name: api }
+spec:
+  replicas: 3
+  selector: { matchLabels: { app: api } }
+  strategy: { rollingUpdate: { maxUnavailable: 0, maxSurge: 1 } }   # zero-downtime rolling update
+  template:
+    metadata: { labels: { app: api } }
+    spec:
+      containers: [{ name: api, image: "ghcr.io/ujjwal/shop-api:1.4.2" }]   # + probes/resources as in <a class="xref" data-old="n136">chapter 136</a></code></pre>
+<pre data-lang="shell"><code class="language-bash">kubectl set image deploy/api api=ghcr.io/ujjwal/shop-api:1.4.3   # (in real life: change the YAML in git)
+kubectl rollout status deploy/api
+kubectl rollout undo deploy/api                                  # roll back to the previous ReplicaSet
+kubectl scale deploy/api --replicas=5</code></pre>
+<table>
+<tr><th>Controller</th><th>Use for</th></tr>
+<tr><td><b>Deployment</b> → ReplicaSet → Pods</td><td>stateless services (almost everything)</td></tr>
+<tr><td><b>StatefulSet</b></td><td>stable identities and per-pod storage (<code>db-0</code>, <code>db-1</code>): databases, Kafka. Prefer managed databases where you can.</td></tr>
+<tr><td><b>DaemonSet</b></td><td>one pod per node: log collectors, monitoring agents, CNI</td></tr>
+<tr><td><b>Job</b></td><td>run to completion (a migration, a batch import), with retries</td></tr>
+<tr><td><b>CronJob</b></td><td>Jobs on a schedule (<code>schedule: "0 23 * * *"</code>)</td></tr>
+</table>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>137.1 <span class="levels">basic</span> Roll out a new image version, then roll back, watching the ReplicaSets change.</summary><div><p><code>kubectl set image deploy/web nginx=nginx:1.27</code>, then <code>kubectl rollout status</code>, <code>kubectl get rs</code>, and <code>kubectl rollout undo deploy/web</code>.</p></div></details>
+</div>

@@ -1,0 +1,20 @@
+const e=`<p class="goal">Measuring a RAG system, so changes are improvements rather than guesses.</p>
+<h3>Build a golden set first</h3>
+<p>50–200 real questions (from users, support tickets and docs), each with the expected answer and the IDs of the chunks that contain it. Include tricky ones: questions with no answer in the docs, ambiguous questions, multi-hop questions, and other languages.</p>
+<table>
+<tr><th>Stage</th><th>Metric</th><th>Question it answers</th></tr>
+<tr><td>Retrieval</td><td>recall@k, MRR, nDCG</td><td>was the right chunk retrieved, and how high did it rank?</td></tr>
+<tr><td>Generation</td><td><b>faithfulness / groundedness</b></td><td>is every claim supported by the retrieved context (no hallucination)?</td></tr>
+<tr><td>Generation</td><td>answer relevance / correctness</td><td>does it answer the question correctly?</td></tr>
+<tr><td>Behaviour</td><td>refusal on unanswerable questions; citation accuracy</td><td>does it say "I don't know" instead of inventing an answer?</td></tr>
+<tr><td>Operations</td><td>latency, cost per query</td><td>…</td></tr>
+</table>
+<ul>
+<li>Measure <b>retrieval separately first</b>: if the right chunk isn't retrieved, no prompt can fix the answer.</li>
+<li><b>LLM-as-judge</b> scores faithfulness and correctness at scale (<a class="xref" data-old="n227">chapter 227</a>). Validate the judge against human labels on a sample.</li>
+<li>Run the evaluation on every change to chunking, the embedding model, k, the reranker, or the prompt. Tools: Ragas, DeepEval, promptfoo, or a simple script plus a spreadsheet.</li>
+</ul>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>214.1 <span class="levels">basic</span> Create a 30-question golden set for a document collection you know, with expected source chunks, and compute recall@5 for your current pipeline.</summary><div><p>Store the question, answer and chunk IDs in JSON; retrieve; count how often any expected chunk appears in the top 5. That number is your baseline.</p></div></details>
+</div>
+`;export{e as default};

@@ -1,0 +1,24 @@
+const e=`<p class="goal">The single biggest lever on database performance: which indexes to create, and why a query does or doesn't use them.</p>
+<p>A B-tree index is a sorted structure (<a class="xref" data-old="c12">chapter 18</a>) mapping column values to row locations. It turns a full scan (O(n)) into a tree lookup (O(log n)), and also serves <code>ORDER BY</code> and range queries.</p>
+<pre data-lang="sql"><code class="language-sql">CREATE INDEX CONCURRENTLY idx_orders_store_created ON orders (store_id, created_at DESC);  -- CONCURRENTLY: no write lock
+-- serves:  WHERE store_id = $1 ORDER BY created_at DESC LIMIT 20      ✓ (leftmost column + sort order)
+--          WHERE store_id = $1 AND created_at &gt; $2                   ✓
+--          WHERE created_at &gt; $2                                      ✗ (skips the leftmost column)
+CREATE INDEX ON orders (customer_id) INCLUDE (total_paise);         -- covering: index-only scans
+CREATE INDEX ON orders (created_at) WHERE status = 'pending';       -- partial: small, targeted
+CREATE INDEX ON customers (lower(email));                           -- expression index for WHERE lower(email) = …
+CREATE INDEX ON products USING gin (tags);                           -- GIN for arrays / jsonb / full-text
+CREATE UNIQUE INDEX ON users (phone);                                -- also enforces uniqueness</code></pre>
+<h3>Why an index isn't used</h3>
+<ul>
+<li>A function or cast on the column: <code>WHERE date(created_at) = …</code> (use a range, or an expression index).</li>
+<li>Leading wildcards: <code>LIKE '%paneer'</code> (use <code>pg_trgm</code> GIN).</li>
+<li>Low selectivity: if 60% of rows match, a sequential scan really is faster.</li>
+<li>A type mismatch between the parameter and the column; stale statistics (run <code>ANALYZE</code>).</li>
+</ul>
+<h3>The cost of indexes</h3>
+<p>Every index slows INSERT/UPDATE, uses disk and RAM, and needs vacuuming. Index for real queries: find them with <code>pg_stat_statements</code>, and remove unused ones (<code>pg_stat_user_indexes</code> with <code>idx_scan = 0</code>). Always index foreign-key columns you join or delete on.</p>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>95.1 <span class="levels">basic</span> Load 1M rows into an orders table. Time a query by customer_id before and after adding an index, using EXPLAIN ANALYZE.</summary><div><p>Generate data with <code>generate_series</code>. Before: a Seq Scan taking tens of ms. After <code>CREATE INDEX</code>: an Index Scan taking well under 1 ms. The plan shows why.</p></div></details>
+</div>
+`;export{e as default};

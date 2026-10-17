@@ -1,0 +1,26 @@
+const e=`<p class="goal">Test doubles: the right kind for each job, and the smell of too many.</p>
+<table>
+<tr><th>Double</th><th>What it does</th><th>Example</th></tr>
+<tr><td>Dummy</td><td>fills a parameter, never used</td><td><code>nil</code> logger</td></tr>
+<tr><td><b>Stub</b></td><td>returns canned answers</td><td>clock that always says 10:00; rates API that returns 1.18</td></tr>
+<tr><td><b>Fake</b></td><td>a working lightweight implementation</td><td>in-memory repository, fake SMS that stores messages in a list</td></tr>
+<tr><td>Spy</td><td>records calls for later assertions</td><td>"SMS was sent once to 98765…"</td></tr>
+<tr><td><b>Mock</b></td><td>pre-programmed expectations that fail the test if not met</td><td><code>expect(payments.charge).toHaveBeenCalledWith(35200)</code></td></tr>
+</table>
+<pre data-lang="typescript"><code class="language-typescript">import { vi } from "vitest";
+const sms = { send: vi.fn().mockResolvedValue({ id: "m1" }) };           // spy/stub
+const svc = makeOrderService({ repo: new InMemoryRepo(), sms, now: () =&gt; new Date("2026-09-27T10:00:00Z") });
+await svc.place(cart);
+expect(sms.send).toHaveBeenCalledOnce();
+expect(sms.send).toHaveBeenCalledWith("9876543210", expect.stringContaining("#"));</code></pre>
+<h3>When not to mock</h3>
+<ul>
+<li><b>Don't mock what you own and can run cheaply:</b> pure functions, value objects, your own in-process modules.</li>
+<li><b>Don't mock types you don't own</b> (mocking the Postgres driver's API). Wrap them in your own interface and fake <i>that</i>, or use a real instance (<a class="xref" data-old="n106">chapter 106</a>).</li>
+<li>Tests that assert on every internal call break with every refactor even when behaviour is unchanged. Prefer asserting on <b>outcomes</b> (state, return values) over interactions.</li>
+<li>Needing many mocks for one test means the unit has too many dependencies: a design smell (<a class="xref" data-old="n37">chapter 37</a>).</li>
+</ul>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>108.1 <span class="levels">think</span> A unit test mocks 6 collaborators and breaks every time you refactor. What does that tell you, and how do you fix it?</summary><div><p>The unit has too many dependencies and the test is checking interactions rather than outcomes. Split the unit, use fakes for its own boundaries, and assert on results and state.</p></div></details>
+</div>
+`;export{e as default};

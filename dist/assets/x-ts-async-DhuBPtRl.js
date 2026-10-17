@@ -1,0 +1,52 @@
+const e=`<p class="goal">Promises and async/await in depth: parallel vs sequential, timeouts, cancellation, and the classic mistakes.</p>
+<h3>What a promise is</h3>
+<p>A promise is a placeholder for a value that will arrive later. It's <b>pending</b> until it's <b>fulfilled</b> (with a value) or <b>rejected</b> (with an error). <code>await</code> pauses the async function until it settles, without blocking the thread: other work runs meanwhile (<a class="xref" data-old="n68">JavaScript</a>).</p>
+<h3>Sequential vs parallel</h3>
+<pre data-lang="typescript"><code class="language-typescript">// sequential: ~3 × latency. Only when each step needs the previous result
+const user = await getUser(id);
+const orders = await getOrders(user.id);
+
+// parallel: ~1 × latency. Independent requests
+const [prices, stock, promos] = await Promise.all([getPrices(), getStock(), getPromos()]);
+
+// don't await inside a loop for independent work:
+for (const id of ids) await refresh(id);                  // slow: one at a time
+await Promise.all(ids.map(id =&gt; refresh(id)));           // fast: all at once (limit concurrency for big lists)</code></pre>
+<table>
+<tr><th>Combinator</th><th>Resolves when</th><th>Rejects when</th></tr>
+<tr><td><code>Promise.all</code></td><td>all succeed (array of values)</td><td>the first one fails</td></tr>
+<tr><td><code>Promise.allSettled</code></td><td>all finish (each with a status)</td><td>never</td></tr>
+<tr><td><code>Promise.race</code></td><td>the first settles (either way)</td><td>the first settles with an error</td></tr>
+<tr><td><code>Promise.any</code></td><td>the first succeeds</td><td>all fail</td></tr>
+</table>
+<h3>Timeouts and cancellation</h3>
+<pre data-lang="typescript"><code class="language-typescript">const res = await fetch(url, { signal: AbortSignal.timeout(5_000) });   // throws a TimeoutError after 5 s
+
+const ctrl = new AbortController();
+const p = fetch(url, { signal: ctrl.signal });
+cancelButton.onclick = () =&gt; ctrl.abort();                                // cancel on demand
+
+async function withTimeout&lt;T&gt;(p: Promise&lt;T&gt;, ms: number): Promise&lt;T&gt; {
+  let t: ReturnType&lt;typeof setTimeout&gt;;
+  const timeout = new Promise&lt;never&gt;((_, rej) =&gt; { t = setTimeout(() =&gt; rej(new Error("timeout")), ms); });
+  try { return await Promise.race([p, timeout]); } finally { clearTimeout(t!); }
+}</code></pre>
+<h3>Classic mistakes</h3>
+<ul>
+<li><b>Forgetting <code>await</code>:</b> you get a Promise instead of the value, and errors go unhandled. Enable ESLint's <code>no-floating-promises</code>.</li>
+<li><b><code>array.forEach(async …)</code></b> doesn't wait for anything. Use <code>for…of</code> with await, or <code>Promise.all(array.map(…))</code>.</li>
+<li><b>Unbounded parallelism:</b> <code>Promise.all</code> over 10,000 URLs opens 10,000 connections. Use a worker-pool limit (<a class="xref" data-old="x-lang-concurrency">Concurrency Across Languages</a>).</li>
+<li><b>Blocking the event loop</b> with CPU work (a big JSON.parse, heavy loops) freezes everything: use worker_threads.</li>
+</ul>
+<h3>Streams and async iteration</h3>
+<pre data-lang="typescript"><code class="language-typescript">const res = await fetch(url);
+for await (const chunk of res.body!) process(chunk);         // stream a large response
+async function* pages(url: string) {                          // async generator: paginate lazily
+  let next: string | null = url;
+  while (next) { const r = await (await fetch(next)).json(); yield* r.items; next = r.next; }
+}
+for await (const item of pages("/api/orders")) { /* … */ }</code></pre>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>0.1 <span class="levels">basic</span> Write <code>mapLimit(items, limit, fn)</code> that runs async fn over the items with at most <code>limit</code> in flight and returns the results in input order. Test it with a fake 100 ms task.</summary><div><p>Keep a shared index; start <code>limit</code> workers, each looping <code>while (i &lt; items.length) { const k = i++; results[k] = await fn(items[k]); }</code>; then <code>await Promise.all(workers)</code>. 20 items with limit 5 take about 400 ms.</p></div></details>
+</div>
+`;export{e as default};

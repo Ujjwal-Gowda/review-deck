@@ -1,0 +1,18 @@
+<p class="goal">Getting and renewing certificates automatically, so they never expire in production.</p>
+<p><b>ACME</b> is the protocol Let's Encrypt uses. Your server proves it controls the domain, then gets a 90-day certificate. There are two main ways to prove control:</p>
+<table>
+<tr><th>Challenge</th><th>How</th><th>Use when</th></tr>
+<tr><td>HTTP-01</td><td>serve a token at <code>http://domain/.well-known/acme-challenge/…</code></td><td>a public web server on port 80</td></tr>
+<tr><td>DNS-01</td><td>create a TXT record <code>_acme-challenge.domain</code> via your DNS provider's API</td><td>wildcard certificates (<code>*.freshon.in</code>), or internal servers not reachable from outside</td></tr>
+</table>
+<pre data-lang="shell"><code class="language-bash">sudo certbot --nginx -d api.freshon.in           # obtain a certificate and configure nginx; renewal is installed as a systemd timer
+sudo certbot renew --dry-run                      # prove that renewal works
+# Caddy, Traefik, Netlify and Kubernetes cert-manager do all of this automatically</code></pre>
+<ul>
+<li><b>Monitor expiry</b> anyway: alert 14 days before. Automated renewals fail silently (a firewall change, a DNS API key rotated).</li>
+<li>Serve the <b>full chain</b>. Redirect HTTP to HTTPS and add HSTS. Test at ssllabs.com.</li>
+<li>Internal services: <code>mkcert</code> for development; a private certificate authority (step-ca, Vault PKI) for mTLS between services.</li>
+</ul>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>151.1 <span class="levels">basic</span> Set up a local HTTPS dev certificate with mkcert and serve a site on https://localhost.</summary><div><p><code>mkcert -install &amp;&amp; mkcert localhost</code>, then configure the dev server with the key and cert (Vite: the <code>server.https</code> option). The browser trusts it because mkcert added a local CA.</p></div></details>
+</div>

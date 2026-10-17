@@ -1,0 +1,70 @@
+const t=`<p class="goal">Seven sorting algorithms, each traced on the same small input, so you can see why some are slow and some are fast.</p>
+<p>Input for every trace: <code>[5, 2, 8, 1, 9, 3]</code></p>
+<h3>1. Bubble sort: swap neighbours that are out of order</h3>
+<div class="diagram">pass 1: [2,5,1,8,3,9]   the biggest (9) "bubbles" to the end
+pass 2: [2,1,5,3,8,9]
+pass 3: [1,2,3,5,8,9]   … repeat until a pass makes no swaps.      O(n²). Only for learning.</div>
+<h3>2. Selection sort: find the minimum, put it next</h3>
+<div class="diagram">[1 | 2,8,5,9,3]  →  [1,2 | 8,5,9,3]  →  [1,2,3 | 5,9,8]  → …     always O(n²), but minimal swaps</div>
+<h3>3. Insertion sort: insert each item into the sorted left part</h3>
+<pre data-lang="python"><code class="language-python">def insertion_sort(a):
+    for i in range(1, len(a)):
+        x, j = a[i], i - 1
+        while j &gt;= 0 and a[j] &gt; x:      # shift bigger items right
+            a[j + 1] = a[j]; j -= 1
+        a[j + 1] = x
+    return a</code></pre>
+<div class="diagram">[5 | 2,8,1,9,3] → [2,5 | 8,1,9,3] → [2,5,8 | 1,9,3] → [1,2,5,8 | 9,3] → [1,2,5,8,9 | 3] → [1,2,3,5,8,9]
+O(n²) worst case, but O(n) on nearly sorted data: the fastest choice for small arrays (&lt;~20), which is why real sorts use it inside</div>
+<h3>4. Merge sort: split in half, sort each half, merge</h3>
+<pre data-lang="python"><code class="language-python">def merge_sort(a):
+    if len(a) &lt;= 1: return a
+    mid = len(a) // 2
+    left, right = merge_sort(a[:mid]), merge_sort(a[mid:])
+    out, i, j = [], 0, 0
+    while i &lt; len(left) and j &lt; len(right):          # merge: repeatedly take the smaller front item
+        if left[i] &lt;= right[j]: out.append(left[i]); i += 1
+        else: out.append(right[j]); j += 1
+    return out + left[i:] + right[j:]</code></pre>
+<div class="diagram">            [5,2,8,1,9,3]
+        [5,2,8]         [1,9,3]           split: log n levels
+      [5] [2,8]       [1] [9,3]
+          [2] [8]         [9] [3]
+      [5] [2,8]       [1] [3,9]           merge back up: O(n) work per level
+        [2,5,8]         [1,3,9]
+            [1,2,3,5,8,9]                 total O(n log n) always; stable; needs O(n) extra memory</div>
+<h3>5. Quicksort: partition around a pivot</h3>
+<pre data-lang="python"><code class="language-python">def quicksort(a, lo=0, hi=None):
+    if hi is None: hi = len(a) - 1
+    if lo &gt;= hi: return a
+    pivot, i = a[hi], lo                     # Lomuto partition: everything &lt; pivot goes to the left
+    for j in range(lo, hi):
+        if a[j] &lt; pivot: a[i], a[j] = a[j], a[i]; i += 1
+    a[i], a[hi] = a[hi], a[i]                # the pivot is now in its final place
+    quicksort(a, lo, i - 1); quicksort(a, i + 1, hi)
+    return a</code></pre>
+<div class="diagram">pivot 3:  [2,1 | 3 | 8,9,5]   then sort each side.   Average O(n log n), in place, very cache-friendly.
+Worst case O(n²) (already-sorted input with a bad pivot): use a random or median-of-three pivot.</div>
+<h3>6. Heap sort</h3>
+<p>Heapify the array (O(n)), then repeatedly pop the max to the end. O(n log n) always, in place, but not stable and less cache-friendly (<a class="xref" data-old="x-dsa-heap">Heaps</a>).</p>
+<h3>7. Counting / radix sort: no comparisons at all</h3>
+<pre data-lang="python"><code class="language-python">def counting_sort(a, max_value):                 # for small integer ranges (ages, ratings 1–5, pin codes)
+    counts = [0] * (max_value + 1)
+    for x in a: counts[x] += 1
+    return [v for v, c in enumerate(counts) for _ in range(c)]   # O(n + k)</code></pre>
+<p>Comparison sorts can't beat O(n log n) (<a class="xref" data-old="n20">Big-O</a>). Counting and radix sort avoid comparing, so they can, but only for integers or other bounded keys.</p>
+<h3>Summary</h3>
+<table>
+<tr><th>Algorithm</th><th>Best</th><th>Average</th><th>Worst</th><th>Extra memory</th><th>Stable?</th></tr>
+<tr><td>Bubble / selection</td><td>n / n²</td><td>n²</td><td>n²</td><td>1</td><td>yes / no</td></tr>
+<tr><td>Insertion</td><td>n</td><td>n²</td><td>n²</td><td>1</td><td>yes</td></tr>
+<tr><td>Merge</td><td>n log n</td><td>n log n</td><td>n log n</td><td>n</td><td>yes</td></tr>
+<tr><td>Quick</td><td>n log n</td><td>n log n</td><td>n²</td><td>log n</td><td>no</td></tr>
+<tr><td>Heap</td><td>n log n</td><td>n log n</td><td>n log n</td><td>1</td><td>no</td></tr>
+<tr><td>Counting / radix</td><td>n + k</td><td>n + k</td><td>n + k</td><td>n + k</td><td>yes</td></tr>
+</table>
+<p><b>Stable</b> means items with equal keys keep their original order. It matters when you sort by date and then by store. In practice, call the built-in sort: Python and Java use <b>Timsort</b> (merge + insertion, stable); C++, Go and Rust's unstable sorts use <b>pdqsort</b>/introsort (quicksort + heapsort + insertion).</p>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>0.1 <span class="levels">basic</span> Implement insertion, merge and quicksort, and time them on 10,000 random numbers, 10,000 already-sorted numbers, and 10,000 equal numbers.</summary><div><p>On sorted input, insertion sort is fast (O(n)) while naive quicksort (last-element pivot) degrades to O(n²) and may hit the recursion limit. Merge sort is steady on all three. Equal elements hurt Lomuto quicksort too: three-way partitioning fixes it.</p></div></details>
+</div>
+`;export{t as default};

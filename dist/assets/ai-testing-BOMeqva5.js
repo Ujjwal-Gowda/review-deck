@@ -1,0 +1,20 @@
+const e=`<p class="goal">Automated testing, evaluation pipelines, LLM-as-a-judge patterns, and preventing regression during prompt or model upgrades.</p>
+<h3>Automated LLM-as-Judge Evaluation Script</h3>
+<pre data-lang="python"><code class="language-python">def evaluate_answer(question: str, generated_answer: str, ground_truth: str) -> dict:
+    eval_prompt = f"""Compare Generated Answer to Ground Truth:
+Question: {question}
+Ground Truth: {ground_truth}
+Generated Answer: {generated_answer}
+Respond with JSON: {{"score": 1-5, "reason": "str"}}"""
+
+    res = client.chat.completions.create(
+        model="gpt-4o",
+        response_format={"type": "json_object"},
+        messages=[{"role": "user", "content": eval_prompt}]
+    )
+    import json
+    return json.loads(res.choices[0].message.content)</code></pre>
+
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>361.1 <span class="levels">basic</span> Create a test suite with 10 golden input/output pairs and run it as a GitHub Action on PRs.</summary><div><p>Run eval script, compute mean accuracy score, fail CI if score drops below 4.5/5.0.</p></div></details>
+</div>`;export{e as default};

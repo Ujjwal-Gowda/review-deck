@@ -1,0 +1,51 @@
+const t=`<p class="goal">Rust's tools for modelling data precisely: structs with methods, enums that carry data, and pattern matching that checks you handled every case.</p>
+<h3>Structs and impl blocks</h3>
+<pre data-lang="rust"><code class="language-rust">#[derive(Debug, Clone, PartialEq)]
+pub struct Item { pub sku: String, pub qty: u32, pub price_paise: u64 }
+
+impl Item {
+    pub fn new(sku: impl Into&lt;String&gt;, price_paise: u64) -&gt; Self {   // associated function (constructor)
+        Self { sku: sku.into(), qty: 1, price_paise }
+    }
+    pub fn total(&amp;self) -&gt; u64 { self.qty as u64 * self.price_paise }   // &amp;self: read
+    pub fn add(&amp;mut self, n: u32) { self.qty += n; }                   // &amp;mut self: modify
+    pub fn into_sku(self) -&gt; String { self.sku }                      // self: consume
+}
+let mut it = Item::new("milk", 6000);
+it.add(1);
+let updated = Item { qty: 5, ..it.clone() };                          // struct update syntax
+struct Paise(u64);                                                    // tuple struct / "newtype" for type safety</code></pre>
+<h3>Enums with data</h3>
+<pre data-lang="rust"><code class="language-rust">#[derive(Debug)]
+enum OrderStatus {
+    Placed,
+    Paid { txn_id: String, amount: u64 },
+    Shipped { tracking: String },
+    Cancelled(String),                       // tuple-style variant
+}
+impl OrderStatus {
+    fn can_cancel(&amp;self) -&gt; bool { matches!(self, Self::Placed | Self::Paid { .. }) }
+}</code></pre>
+<h3>Pattern matching</h3>
+<pre data-lang="rust"><code class="language-rust">fn describe(s: &amp;OrderStatus) -&gt; String {
+    match s {
+        OrderStatus::Placed =&gt; "waiting for payment".into(),
+        OrderStatus::Paid { amount, .. } if *amount &gt; 1_000_000 =&gt; "paid (large, needs review)".into(),
+        OrderStatus::Paid { txn_id, .. } =&gt; format!("paid via {txn_id}"),
+        OrderStatus::Shipped { tracking } =&gt; format!("shipped: {tracking}"),
+        OrderStatus::Cancelled(reason) =&gt; format!("cancelled: {reason}"),
+    }                              // forget a variant → compile error (exhaustiveness)
+}
+match (qty, express) { (0, _) =&gt; …, (1..=5, true) =&gt; …, (n, false) if n &gt; 20 =&gt; …, _ =&gt; … }
+let Item { sku, qty, .. } = item;                         // destructuring
+if let OrderStatus::Shipped { tracking } = &amp;status { notify(tracking); }
+let Some(user) = find_user(id) else { return Err(NotFound) };   // let-else: early exit</code></pre>
+<h3>Option: no null</h3>
+<pre data-lang="rust"><code class="language-rust">fn find(items: &amp;[Item], sku: &amp;str) -&gt; Option&lt;&amp;Item&gt; { items.iter().find(|i| i.sku == sku) }
+let price = find(&amp;cart, "milk").map(|i| i.price_paise).unwrap_or(0);
+if let Some(it) = find(&amp;cart, "curd") { println!("{}", it.qty); }
+let qty = find(&amp;cart, "ghee").ok_or("ghee not in cart")?.qty;   // convert to Result and propagate</code></pre>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>0.1 <span class="levels">basic</span> Model the Payment enum (Upi{vpa}, Card{last4, network}, Cash) with a <code>fee_paise(&amp;self, amount) -&gt; u64</code> method (card 2%, others 0) and a <code>Display</code> impl. Add a variant and watch every match fail to compile.</summary><div><p>Use <code>match self { Payment::Card { .. } =&gt; amount * 2 / 100, _ =&gt; 0 }</code>. Beware: the <code>_</code> arm means adding a variant WON&#39;T fail there. List the variants explicitly where you want the compiler&#39;s help.</p></div></details>
+</div>
+`;export{t as default};

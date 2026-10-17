@@ -1,0 +1,14 @@
+const e=`<p class="goal">Tools turn text generation into real actions, so give them the same safety engineering as any privileged API.</p>
+<ul>
+<li><b>Least privilege:</b> the agent's credentials allow only what its tools need: a read-only database role for lookups, scoped API keys, no shell unless it's essential.</li>
+<li><b>Classify tools by risk:</b> read-only (free to run) → reversible writes (log them) → irreversible or external actions (payments, sending messages, deleting data) → <b>require human confirmation</b>, showing exactly what will happen.</li>
+<li><b>Server-side authorisation:</b> the tool checks that the <i>end user</i> may do this (store, role), whatever the model asked for (<a class="xref" data-old="n85">chapter 85</a>).</li>
+<li><b>Sandboxing:</b> code execution happens in isolated containers or VMs (gVisor, Firecracker, E2B) with no network or secrets, plus CPU, memory and time limits.</li>
+<li><b>Tool injection:</b> tool <i>results</i> (web pages, emails, files) can contain instructions. Never let content from one tool silently trigger a high-risk tool; data read from outside must not become commands.</li>
+<li><b>Limits:</b> maximum steps, a token or money budget, rate limits per tool, and idempotency keys on writes.</li>
+<li><b>Audit:</b> an immutable log of every action, with the user, the conversation and the arguments.</li>
+</ul>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>220.1 <span class="levels">think</span> Your agent can read emails and send messages. Design the controls so a malicious email can't make it message all customers.</summary><div><p>Treat email content as untrusted data; sending needs human approval showing the recipients and text; rate-limit sends; allow-list recipients; no bulk-send tool at all.</p></div></details>
+</div>
+`;export{e as default};

@@ -1,0 +1,13 @@
+const e=`<p class="goal">The outputs of a build, and treating them as immutable, traceable things.</p>
+<p>An <b>artifact</b> is anything a pipeline produces for later use: container images, compiled binaries, <code>dist/</code> bundles, test reports, coverage, SBOMs.</p>
+<ul>
+<li><b>Build once, promote many:</b> the <i>same</i> artifact (identified by its digest) goes to staging, then production. Rebuilding for production risks shipping something different from what you tested.</li>
+<li><b>Traceability:</b> embed the commit SHA and version (<code>-ldflags "-X main.version=$SHA"</code>, image labels) and expose it at <code>/version</code>, so you always know what's running.</li>
+<li><b>Storage:</b> images in registries; binaries in GitHub Releases or S3; CI artifacts (<code>actions/upload-artifact</code>) are short-lived by default.</li>
+<li><b>Retention:</b> keep releases; expire per-commit builds after N days.</li>
+<li><b>Provenance:</b> SBOMs (<code>syft</code>), signatures (<code>cosign</code>) and SLSA attestations prove what went into an artifact and who built it.</li>
+</ul>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>122.1 <span class="levels">basic</span> Embed the git SHA into a built binary or bundle, expose it at <code>/version</code>, and verify it after deploying.</summary><div><p>Go: <code>-ldflags "-X main.version=$(git rev-parse HEAD)"</code>. Vite: <code>define: {__SHA__: JSON.stringify(sha)}</code>. Then <code>curl /version</code> should match the deployed commit.</p></div></details>
+</div>
+`;export{e as default};

@@ -1,0 +1,23 @@
+const e=`<p class="goal">The toolkit for answering "why can't A talk to B?"</p>
+<pre data-lang="shell"><code class="language-bash">ip -brief addr              # my IP addresses per interface
+ip route                    # default gateway (where packets for "everywhere else" go)
+ping -c 3 1.1.1.1           # is the internet reachable at all? (ICMP; may be blocked)
+dig +short freshon.in       # DNS: name → IP   (dig freshon.in MX, TXT, @8.8.8.8 to pick a resolver)
+tracepath freshon.in        # the hops along the route, and where it stops
+ss -ltnp                    # which ports are LISTENING here, and which process owns each
+nc -vz api.freshon.in 443   # can I open a TCP connection to this port?
+curl -v https://api.freshon.in/health        # full HTTP + TLS conversation
+curl -sS -o /dev/null -w '%{http_code} dns=%{time_namelookup} tls=%{time_appconnect} total=%{time_total}\\n' URL
+sudo tcpdump -i any -n port 631              # see the actual packets (e.g. IPP to a printer)</code></pre>
+<h3>Debug layer by layer, bottom up</h3>
+<ol>
+<li><b>Link / IP:</b> do I have an address? (<code>ip addr</code>) Can I ping the gateway?</li>
+<li><b>Routing:</b> can I ping a public IP? If not, it's the gateway, Wi-Fi or ISP.</li>
+<li><b>DNS:</b> does <code>dig</code> return an IP? If an IP works but the name doesn't, it's DNS.</li>
+<li><b>Port:</b> <code>nc -vz host port</code>. "Refused" means nothing is listening there; a "timeout" means a firewall is dropping the packets.</li>
+<li><b>TLS:</b> <code>curl -v</code> shows certificate errors (expired, wrong name).</li>
+<li><b>Application:</b> the HTTP status and response body.</li>
+</ol>
+<p>"Works on localhost but not from my phone" almost always means the server is bound to <code>127.0.0.1</code> instead of <code>0.0.0.0</code> (check the Local Address column in <code>ss -ltn</code>), or a firewall is in the way.</p>
+<details class="ex"><summary>58.1 <span class="levels">basic</span> Measure where the time goes when loading https://freshon-demos.netlify.app (DNS, TLS, first byte).</summary><div><p>Use the <code>curl -w</code> line above, adding <code>ttfb=%{time_starttransfer}</code>. Run it twice: the second run is faster because DNS gets cached.</p></div></details>
+`;export{e as default};

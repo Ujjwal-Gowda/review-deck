@@ -1,0 +1,14 @@
+const e=`<p class="goal">A plan for becoming a regular open-source contributor. The mechanics are in <a class="xref" data-old="n50">chapter 50</a>.</p>
+<ol>
+<li><b>Month 1: user to reporter.</b> File high-quality bug reports (minimal reproduction, versions, expected vs actual) for tools you use. Answer a few questions in issues or discussions.</li>
+<li><b>Month 2: docs and tests.</b> Fix confusing docs you tripped over; add missing tests; improve error messages.</li>
+<li><b>Month 3: small fixes.</b> Take <code>good first issue</code> bugs; comment first; keep the PR small; respond to review quickly.</li>
+<li><b>Ongoing: depth over breadth.</b> Pick 1–2 projects and learn their architecture. Regular contributors get trusted with bigger work (and reviewer or maintainer rights).</li>
+</ol>
+<h3>Being a maintainer (even of your own small project)</h3>
+<ul>
+<li>A README with a clear purpose, a LICENSE, CONTRIBUTING, issue and PR templates, CI, and semver releases with a changelog.</li>
+<li>Label issues, respond kindly, say no to scope creep, and automate the repetitive parts (Dependabot, release workflows).</li>
+<li>Your own tools (the printer doctor, the MCP server from Project 10) are good candidates to open-source.</li>
+</ul>
+`;export{e as default};

@@ -1,0 +1,27 @@
+<p class="goal">Turning requirements and estimates into a component diagram with a clear data flow.</p>
+<div class="diagram">clients (consumer app, POS, rider app, FOS)
+   │ HTTPS / WS
+   ▼
+CDN (static, images) ── Load balancer / reverse proxy (TLS, rate limit)
+                              │
+            ┌─────────────────┼──────────────────┐
+            ▼                 ▼                  ▼
+       API (stateless ×N)  Realtime gateway (WS)  Admin/FOS API
+            │   │                 ▲
+            │   └──► Redis (cache, sessions, pub/sub) ─┘
+            ▼
+       Postgres (primary + replica)      Object storage (invoices, images)
+            │ outbox
+            ▼
+       Queue / stream ──► workers (stock sync, SMS, invoices, rider assignment) ──► external APIs (payments, SMS, maps)</div>
+<h3>Walk the flows</h3>
+<ul>
+<li>Trace each core use case through the diagram: "customer places order" goes client → LB → API → Postgres (transaction + outbox) → queue → assignment worker → realtime gateway → rider app.</li>
+<li>Mark the <b>source of truth</b> for each piece of data, and which copies are derived (caches, search indexes, read models).</li>
+<li>Mark sync vs async edges, and what happens when each box fails (<a class="xref" data-old="n184">chapter 184</a>).</li>
+<li>Start with the simplest version that meets the requirements; show how it evolves at 10× and 100×.</li>
+</ul>
+<p>Tools: excalidraw, draw.io, Mermaid, or the C4 model (context → containers → components) for layered detail.</p>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>181.1 <span class="levels">basic</span> Draw FreshOn's architecture diagram from memory, then walk the "customer cancels an order after the rider has picked it up" flow through it.</summary><div><p>The flow touches the orders service state machine (is cancel allowed after pickup?), payments (refund), rider notification via WebSocket, stock (return to inventory?), and an audit log. It exposes the edge cases the design has to handle.</p></div></details>
+</div>

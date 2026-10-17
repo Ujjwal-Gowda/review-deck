@@ -1,0 +1,274 @@
+<p class="goal">Project 8: Resilient Distributed Systems. Construct an event-driven architecture solving the Dual-Write Problem with the Transactional Outbox Pattern, idempotent Go consumers, and Dead-Letter Queues.</p>
+
+<h3>The Fundamental Law of Distributed Systems</h3>
+<p>The moment your backend needs to update a database AND publish a message to a broker (RabbitMQ, Redis Streams, Kafka, NATS), you encounter the <b>Dual-Write Problem</b>:</p>
+
+<pre data-lang="typescript"><code class="language-typescript">// ❌ CATASTROPHIC DISTRIBUTED FAILURE: The Dual-Write Bug
+async function handleOrder(order) {
+  await db.query("INSERT INTO orders (...) VALUES (...)");
+  // 🔥 What if the server crashes, out-of-memory fires, or network drops HERE?
+  // The database committed the order, but the event is NEVER published!
+  // The customer is charged, but the warehouse never packs the box!
+  await messageQueue.publish("order.created", order);
+}</code></pre>
+
+<p>You cannot solve this with two separate network calls. The only mathematical solution is the <b>Transactional Outbox Pattern</b>: saving the business mutation AND the outgoing event into the <i>same ACID database transaction</i>.</p>
+
+<div class="diagram">
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                                 Transactional Outbox Pipeline                          │
+│                                                                                        │
+│   ┌──────────────────────────────────────────────────────────────────────────────┐     │
+│   │                        Single PostgreSQL ACID Transaction                    │     │
+│   │   1. INSERT INTO orders (id, total, status) VALUES (...)                     │     │
+│   │   2. INSERT INTO outbox_events (id, topic, payload) VALUES (...)             │     │
+│   └──────────────────────────────────────┬───────────────────────────────────────┘     │
+│                                          │ Committed Atomically                        │
+│                                          ▼                                             │
+│   ┌──────────────────────────────────────────────────────────────────────────────┐     │
+│   │                 Outbox Relay Engine (Go Polling / CDC Debezium)              │     │
+│   │   • SELECT ... FOR UPDATE SKIP LOCKED                                        │     │
+│   │   • Dispatches events with OpenTelemetry Trace Context                       │     │
+│   └──────────────────────────────────────┬───────────────────────────────────────┘     │
+│                                          │ Guaranteed At-Least-Once Delivery           │
+│                                          ▼                                             │
+│   ┌──────────────────────────────────────────────────────────────────────────────┐     │
+│   │                 Distributed Message Stream (NATS JetStream / Redis)          │     │
+│   └──────────────┬───────────────────────┬───────────────────────┬───────────────┘     │
+│                  │                       │                       │                     │
+│                  ▼                       ▼                       ▼                     │
+│   ┌────────────────────────┐┌────────────────────────┐┌────────────────────────┐       │
+│   │   Stock Worker (Go)    ││  Invoice Worker (Go)   ││  Notification Worker   │       │
+│   │ • Deduplication Lock   ││ • PDF Rendering        ││ • 3 Retries w/ Jitter  │       │
+│   │ • Idempotent Execution ││ • S3 Object Storage    ││ • Route to DLQ on fail │       │
+│   └────────────────────────┘└────────────────────────┘└──────────┬─────────────┘       │
+│                                                                  │ Poison Pill         │
+│                                                                  ▼                     │
+│                                                       ┌────────────────────────┐       │
+│                                                       │ Dead Letter Queue(DLQ) │       │
+│                                                       │ • Ops Alert &amp; Replay   │       │
+│                                                       └────────────────────────┘       │
+└────────────────────────────────────────────────────────────────────────────────────────┘
+</div>
+
+<h3>Part 1: The Outbox Database Schema</h3>
+<pre data-lang="sql"><code class="language-sql">CREATE TABLE outbox_events (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    aggregate_type VARCHAR(64) NOT NULL,
+    aggregate_id VARCHAR(64) NOT NULL,
+    topic VARCHAR(128) NOT NULL,
+    payload JSONB NOT NULL,
+    headers JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    published_at TIMESTAMPTZ
+);
+
+-- Index for high-speed batch polling
+CREATE INDEX idx_outbox_unpublished ON outbox_events (created_at) 
+WHERE published_at IS NULL;
+
+-- Consumer idempotency tracking table
+CREATE TABLE processed_events (
+    event_id UUID NOT NULL,
+    consumer_name VARCHAR(64) NOT NULL,
+    processed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (event_id, consumer_name)
+);</code></pre>
+
+<h3>Part 2: The High-Throughput Go Outbox Relay</h3>
+<p>The relay extracts unpublished events safely across multiple instances using <code>SKIP LOCKED</code> (preventing worker contention):</p>
+
+<pre data-lang="go"><code class="language-go">package main
+
+import (
+	"context"
+	"database/sql"
+	"encoding/json"
+	"log"
+	"time"
+
+	"github.com/nats-io/nats.go"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
+)
+
+type OutboxEvent struct {
+	ID        string
+	Topic     string
+	Payload   []byte
+	Headers   map[string]string
+}
+
+func StartOutboxRelay(ctx context.Context, db *sql.DB, js nats.JetStreamContext) {
+	ticker := time.NewTicker(200 * time.Millisecond)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			log.Println("Outbox relay shutting down gracefully...")
+			return
+		case <-ticker.C:
+			if err := processBatch(ctx, db, js); err != nil {
+				log.Printf("Error processing outbox batch: %v", err)
+			}
+		}
+	}
+}
+
+func processBatch(ctx context.Context, db *sql.DB, js nats.JetStreamContext) error {
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// SKIP LOCKED allows concurrent relay processes without blocking or deadlocking
+	rows, err := tx.QueryContext(ctx, `
+		SELECT id, topic, payload, headers 
+		FROM outbox_events 
+		WHERE published_at IS NULL 
+		ORDER BY created_at ASC 
+		LIMIT 50 
+		FOR UPDATE SKIP LOCKED
+	`)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	var events []OutboxEvent
+	for rows.Next() {
+		var e OutboxEvent
+		var rawPayload []byte
+		var rawHeaders []byte
+		if err := rows.Scan(&e.ID, &e.Topic, &rawPayload, &rawHeaders); err != nil {
+			return err
+		}
+		e.Payload = rawPayload
+		json.Unmarshal(rawHeaders, &e.Headers)
+		events = append(events, e)
+	}
+
+	if len(events) == 0 {
+		return nil
+	}
+
+	for _, e := range events {
+		// Inject OpenTelemetry tracing headers
+		msg := nats.NewMsg(e.Topic)
+		msg.Data = e.Payload
+		msg.Header.Set("Nats-Msg-Id", e.ID) // Native JetStream deduplication ID
+
+		propagator := otel.GetTextMapPropagator()
+		propagator.Inject(ctx, propagation.HeaderCarrier(msg.Header))
+
+		if _, err := js.PublishMsg(msg); err != nil {
+			return err // Fail transaction on broker disconnect
+		}
+
+		// Mark as published in same transaction
+		if _, err := tx.ExecContext(ctx, "UPDATE outbox_events SET published_at = NOW() WHERE id = $1", e.ID); err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
+}</code></pre>
+
+<h3>Part 3: The Idempotent Consumer &amp; Dead-Letter Queue</h3>
+<p>Because distributed networks deliver messages <b>at least once</b>, network retries will deliver duplicate events. Consumers must be strictly idempotent:</p>
+
+<pre data-lang="go"><code class="language-go">package main
+
+import (
+	"context"
+	"database/sql"
+	"log"
+	"math"
+	"math/rand"
+	"time"
+
+	"github.com/nats-io/nats.go"
+)
+
+type Consumer struct {
+	db   *sql.DB
+	js   nats.JetStreamContext
+	name string
+}
+
+func (c *Consumer) HandleOrderEvent(msg *nats.Msg) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	eventID := msg.Header.Get("Nats-Msg-Id")
+	if eventID == "" {
+		eventID = msg.Subject // fallback
+	}
+
+	// 1. Transactional Deduplication Check
+	tx, err := c.db.BeginTx(ctx, nil)
+	if err != nil {
+		msg.Nak()
+		return
+	}
+	defer tx.Rollback()
+
+	// Try inserting into processed_events table
+	_, err = tx.ExecContext(ctx, `
+		INSERT INTO processed_events (event_id, consumer_name) 
+		VALUES ($1, $2)
+	`, eventID, c.name)
+
+	if err != nil {
+		// Unique constraint violation = duplicate message already handled!
+		log.Printf("Duplicate event %s detected. Acknowledging safely without re-execution.", eventID)
+		msg.Ack()
+		return
+	}
+
+	// 2. Execute Business Logic with Retry + Backoff
+	success := false
+	maxRetries := 3
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		if err := c.processBusinessLogic(msg.Data); err == nil {
+			success = true
+			break
+		}
+		// Full Jitter Backoff
+		sleepDuration := time.Duration(math.Pow(2, float64(attempt))) * 100 * time.Millisecond
+		jitter := time.Duration(rand.Int63n(int64(sleepDuration)))
+		time.Sleep(jitter)
+	}
+
+	if !success {
+		log.Printf("Permanent failure for event %s. Forwarding to Dead-Letter Queue (DLQ)...", eventID)
+		c.js.Publish("orders.DLQ", msg.Data)
+		msg.Ack() // Acknowledge from primary queue to prevent head-of-line blocking
+		return
+	}
+
+	if err := tx.Commit(); err != nil {
+		msg.Nak()
+		return
+	}
+
+	msg.Ack()
+}
+
+func (c *Consumer) processBusinessLogic(payload []byte) error {
+	// Execute PDF rendering, email dispatch, or stock allocation
+	return nil
+}</code></pre>
+
+<details class="ex">
+  <summary><b>Drill: What is "Head-of-Line Blocking" and how does a DLQ prevent it?</b> (Click to expand)</summary>
+  <p><b>Scenario:</b> A malformed JSON payload ("poison pill") is pushed to the queue. When the worker tries to parse it, it throws a fatal syntax error.</p>
+  <p><b>Question:</b> If you continuously NACK (Negative Acknowledge) the poison pill, what happens to the remaining 50,000 valid orders waiting in the queue?</p>
+  <div class="callout warn">
+    <p><b>Answer: The entire processing pipeline freezes (Head-of-Line Blocking)!</b></p>
+    <p>The worker rejects the message, the broker re-delivers it immediately, the worker fails again, and repeats infinitely in a tight CPU loop. Zero subsequent messages are ever processed.</p>
+    <p><b>The DLQ Solution:</b> After a fixed number of retries (e.g. 3 attempts), route the poison pill message to a dedicated <code>DLQ</code> stream, trigger an alert for on-call engineers, and acknowledge the message so the queue continues processing healthy traffic.</p>
+  </div>
+</details>

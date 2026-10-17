@@ -1,0 +1,53 @@
+<p class="goal">"Fearless concurrency": threads, message passing and shared state, where the compiler prevents data races, plus async with tokio for I/O.</p>
+<h3>Threads</h3>
+<pre data-lang="rust"><code class="language-rust">use std::thread;
+let orders = vec![1, 2, 3];
+let handle = thread::spawn(move || {          // move: the thread takes ownership of what it uses
+    orders.iter().sum::&lt;i32&gt;()
+});
+let total = handle.join().unwrap();           // join returns the thread's result
+
+thread::scope(|s| {                           // scoped threads may BORROW local data
+    for chunk in data.chunks(1000) { s.spawn(move || process(chunk)); }
+});                                           // all joined automatically here</code></pre>
+<h3>Message passing</h3>
+<pre data-lang="rust"><code class="language-rust">use std::sync::mpsc;
+let (tx, rx) = mpsc::channel();
+for id in 0..4 {
+    let tx = tx.clone();
+    thread::spawn(move || { tx.send((id, work(id))).unwrap(); });
+}
+drop(tx);                                      // close our copy so the loop below can end
+for (id, result) in rx { println!("{id}: {result}"); }</code></pre>
+<h3>Shared state: Arc + Mutex</h3>
+<pre data-lang="rust"><code class="language-rust">use std::sync::{Arc, Mutex};
+let stock = Arc::new(Mutex::new(HashMap::from([("milk".to_string(), 10u32)])));
+let handles: Vec&lt;_&gt; = (0..5).map(|_| {
+    let stock = Arc::clone(&amp;stock);            // Arc: shared ownership across threads (atomic refcount)
+    thread::spawn(move || {
+        let mut s = stock.lock().unwrap();     // the guard unlocks when dropped
+        if let Some(q) = s.get_mut("milk") { if *q &gt; 0 { *q -= 1; } }
+    })
+}).collect();
+for h in handles { h.join().unwrap(); }</code></pre>
+<p><b>Send</b> (safe to move to another thread) and <b>Sync</b> (safe to share references across threads) are traits the compiler checks automatically. <code>Rc</code> isn't Send, so using it across threads is a compile error: data races are caught before running.</p>
+<h3>Data parallelism with rayon</h3>
+<pre data-lang="rust"><code class="language-rust">use rayon::prelude::*;
+let total: u64 = lines.par_iter().map(|l| parse_amount(l)).sum();   // iter → par_iter: all cores</code></pre>
+<h3>Async with tokio (I/O-heavy work)</h3>
+<pre data-lang="rust"><code class="language-rust">#[tokio::main]
+async fn main() -&gt; anyhow::Result&lt;()&gt; {
+    let client = reqwest::Client::new();
+    let urls = vec!["https://example.com/a", "https://example.com/b"];
+    let tasks: Vec&lt;_&gt; = urls.into_iter().map(|u| {
+        let c = client.clone();
+        tokio::spawn(async move { c.get(u).send().await.map(|r| r.status()) })
+    }).collect();
+    for t in tasks { println!("{:?}", t.await?); }
+    tokio::time::timeout(Duration::from_secs(5), slow_call()).await??;   // timeouts
+    Ok(())
+}</code></pre>
+<p>Choose threads or rayon for CPU work, and tokio async for many concurrent network operations. Don't block inside async code (use <code>tokio::task::spawn_blocking</code>).</p>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>0.1 <span class="levels">basic</span> Count words across 20 text files in parallel: first with threads + mpsc (one thread per file), then with rayon <code>par_iter</code>. Merge the HashMaps at the end and compare the code size.</summary><div><p>With rayon: <code>files.par_iter().map(|f| count(f)).reduce(HashMap::new, merge)</code>, a few lines, and the compiler guarantees there are no races. The threads version needs a clone of tx per thread, <code>drop(tx)</code>, and a merge loop.</p></div></details>
+</div>

@@ -1,0 +1,36 @@
+<p class="goal">Advanced TypeScript for real codebases. The basics are in <a class="xref" data-old="c35">chapter 29</a>.</p>
+<h3>Narrowing and type guards</h3>
+<pre data-lang="typescript"><code class="language-typescript">function fmt(x: string | number | Date) {
+  if (typeof x === "string") return x;            // typeof guard
+  if (x instanceof Date) return x.toISOString();  // instanceof guard
+  return x.toFixed(2);                            // TS knows only number is left
+}
+function isOrder(v: unknown): v is Order {         // custom type predicate
+  return typeof v === "object" &amp;&amp; v !== null &amp;&amp; "id" in v &amp;&amp; "items" in v;
+}
+function assertNever(x: never): never { throw new Error(`unhandled: ${JSON.stringify(x)}`); }
+// in a switch's default: assertNever(s) → compile error if you forgot a union member</code></pre>
+<h3>Type-level programming</h3>
+<pre data-lang="typescript"><code class="language-typescript">type Keys = keyof Order;                                  // "id" | "items" | "status"
+type Status = Order["status"];                            // indexed access
+const ROLES = ["owner", "manager", "cashier"] as const;
+type Role = (typeof ROLES)[number];                       // "owner" | "manager" | "cashier"
+type Optional&lt;T, K extends keyof T&gt; = Omit&lt;T, K&gt; &amp; Partial&lt;Pick&lt;T, K&gt;&gt;;   // make some keys optional
+type Readonlyish&lt;T&gt; = { readonly [K in keyof T]: T[K] };  // mapped type
+type Unwrap&lt;T&gt; = T extends Promise&lt;infer U&gt; ? U : T;       // conditional type + infer
+type Route = `/api/${"orders" | "stock"}/${number}`;       // template literal type
+type Handlers = { [K in Status as `on${Capitalize&lt;K&gt;}`]: () =&gt; void };   // key remapping
+function config&lt;const T extends Record&lt;string, unknown&gt;&gt;(c: T) { return c; }
+const cfg = { port: 8080 } satisfies Record&lt;string, number&gt;;   // checks the type without widening it</code></pre>
+<h3>Runtime validation: types disappear at runtime</h3>
+<pre data-lang="typescript"><code class="language-typescript">import { z } from "zod";
+const OrderSchema = z.object({ id: z.number().int(), items: z.array(z.object({ sku: z.string(), qty: z.number().positive() })) });
+type Order = z.infer&lt;typeof OrderSchema&gt;;                  // ONE source of truth for type AND validator
+const order = OrderSchema.parse(await res.json());         // throws on bad data at the boundary</code></pre>
+<h3>tsconfig essentials</h3>
+<pre data-lang="json"><code class="language-json">{ "compilerOptions": {
+    "strict": true, "noUncheckedIndexedAccess": true,  // arr[i] is T | undefined: catches real bugs
+    "target": "ES2022", "module": "ESNext", "moduleResolution": "bundler",
+    "verbatimModuleSyntax": true, "skipLibCheck": true, "noEmit": true } }</code></pre>
+<p><b>Declaration files</b> (<code>.d.ts</code>) describe the types of JS libraries; <code>@types/x</code> packages supply them. Use <code>declare module "x"</code> to patch a missing one.</p>
+<details class="ex"><summary>69.1 <span class="levels">think</span> Write <code>DeepPartial&lt;T&gt;</code>, which makes every nested property optional.</summary><div><pre data-lang="typescript"><code class="language-typescript">type DeepPartial&lt;T&gt; = T extends object ? { [K in keyof T]?: DeepPartial&lt;T[K]&gt; } : T;</code></pre></div></details>

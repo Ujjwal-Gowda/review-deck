@@ -1,0 +1,32 @@
+<p class="goal">Contributing to projects you don't own: the workflow, the etiquette, and how to pick a first issue.</p>
+<h3>The fork workflow</h3>
+<pre data-lang="shell"><code class="language-bash">gh repo fork owner/project --clone        # your copy on GitHub + a local clone; 'upstream' remote set
+cd project &amp;&amp; git switch -c fix/typo-in-readme
+# …change, test…
+git commit -m "docs: fix install command in README"
+git push -u origin fix/typo-in-readme
+gh pr create --repo owner/project --fill
+git fetch upstream &amp;&amp; git rebase upstream/main   # keep your branch current while the PR is open</code></pre>
+<h3>Before you write code</h3>
+<ol>
+<li>Read <code>CONTRIBUTING.md</code>, the code of conduct, and a few recently merged PRs. They show the style reviewers expect.</li>
+<li>For anything beyond a typo, <b>comment on the issue first</b> ("I'd like to take this; my plan is X"). Maintainers may already have a direction.</li>
+<li>Make the test suite run locally <i>before</i> changing anything, so you know failures are yours.</li>
+</ol>
+<h3>Picking a first contribution</h3>
+<ul>
+<li>Labels: <code>good first issue</code>, <code>help wanted</code>, <code>documentation</code>.</li>
+<li>Tools you already use are best: you understand the bug. Reproduce it, write a failing test, then fix it.</li>
+<li>Docs, error messages, tests and small bug fixes are real contributions and get merged fastest.</li>
+</ul>
+<h3>Licences in one table</h3>
+<table>
+<tr><th>Licence</th><th>You may</th><th>You must</th></tr>
+<tr><td>MIT / BSD / Apache-2.0</td><td>use it anywhere, including closed-source commercial products</td><td>keep the copyright notice (Apache also has a patent grant and NOTICE file)</td></tr>
+<tr><td>GPL-3.0</td><td>use and modify it</td><td>release your source under the GPL if you <i>distribute</i> the combined work</td></tr>
+<tr><td>AGPL-3.0</td><td>same as GPL</td><td>also release source if users interact with it <i>over a network</i> (SaaS)</td></tr>
+<tr><td>No licence</td><td>nothing: all rights reserved by default</td><td>ask the author</td></tr>
+</table>
+<h3>Etiquette</h3>
+<p>Maintainers are usually volunteers. Be patient (a week without a reply is normal), keep PRs small, don't argue style, and never ping repeatedly. If a PR is declined, ask what would make it acceptable, or maintain it in your fork.</p>
+<details class="ex"><summary>50.1 <span class="levels">basic</span> Find one <code>good first issue</code> in a tool you use (Remotion, Vite, a VS Code extension). Reproduce it locally, and don't fix it yet.</summary><div><p>Search with <code>gh search issues --label "good first issue" --state open --repo remotion-dev/remotion</code>. Reproducing it is already half the contribution. Post what you found on the issue.</p></div></details>

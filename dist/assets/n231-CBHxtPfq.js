@@ -1,0 +1,18 @@
+const t=`<p class="goal">Serving your own models in production.</p>
+<table>
+<tr><th>Option</th><th>Use</th></tr>
+<tr><td>Provider APIs</td><td>the default: no GPUs to run (<a class="xref" data-old="c30">chapter 216</a>)</td></tr>
+<tr><td>Managed endpoints (Bedrock, Vertex AI, Azure, Together, Fireworks, Replicate, HF Inference Endpoints)</td><td>open or fine-tuned models without operating GPUs yourself</td></tr>
+<tr><td>Self-hosted: vLLM / SGLang / TGI / TensorRT-LLM on GPU VMs or Kubernetes</td><td>data control, custom models, high steady volume</td></tr>
+<tr><td>Serverless GPUs (Modal, RunPod serverless)</td><td>bursty workloads, scale to zero (cold starts load GBs of weights)</td></tr>
+<tr><td>Classical models: ONNX Runtime, a FastAPI wrapper, BentoML, Triton</td><td>scikit-learn and PyTorch models, CPU inference</td></tr>
+</table>
+<ul>
+<li><b>Autoscaling GPUs</b> is slow: nodes take minutes to start and models to load. Keep a warm minimum, scale on queue depth or GPU utilisation, and batch requests.</li>
+<li><b>Cost maths:</b> an H100 costs a few dollars per hour. Divide by real tokens per second at your batch size, and compare with API prices at your actual volume and utilisation. Self-hosting only wins when utilisation is high.</li>
+<li>Keep an OpenAI-compatible API in front, so you can switch backends without changing app code.</li>
+</ul>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>231.1 <span class="levels">think</span> At what volume does self-hosting an 8B model on a rented GPU beat an API priced at $0.20 per million tokens? Make your assumptions explicit.</summary><div><p>With the GPU at $X/hour and T tokens/sec at your batch size: self-hosted cost per million tokens = X / (T × 3600) × 1e6. Break-even needs high, steady utilisation. Idle GPUs cost as much as busy ones.</p></div></details>
+</div>
+`;export{t as default};

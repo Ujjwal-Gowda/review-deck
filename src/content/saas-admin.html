@@ -1,0 +1,11 @@
+<p class="goal">Building secure internal admin tools: user impersonation for support, audit logging, manual subscription overrides, and data deletion.</p>
+<pre data-lang="typescript"><code class="language-typescript">export async function impersonateUser(adminUserId: string, targetUserId: string) {
+  await db.auditLogs.create({
+    data: { adminId: adminUserId, action: "impersonate_user", targetId: targetUserId }
+  });
+  // Issue temporary session token with impersonation claim
+  return createSessionToken({ userId: targetUserId, isImpersonated: true, originalAdminId: adminUserId });
+}</code></pre>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>385.1 <span class="levels">basic</span> Render an unmistakable yellow sticky banner in the app whenever an admin is in impersonation mode.</summary><div><p>Check <code>isImpersonated</code> claim in session context, provide an 'Exit Impersonation' button.</p></div></details>
+</div>

@@ -1,0 +1,12 @@
+<p class="goal">Designing user interfaces around non-deterministic AI: smart autocompletes, progressive enhancement, error states, and confidence indicators.</p>
+<h3>UI Rules for AI Products</h3>
+<ul>
+  <li><b>Always permit user editing:</b> Treat AI outputs as drafts or suggestions, never unalterable final states.</li>
+  <li><b>Indicate provenance:</b> Highlight AI-generated fields with a subtle visual cue so the user knows to verify.</li>
+  <li><b>Provide single-click undo / reset:</b> If an AI autocomplete overwrites form inputs, make reverting instantaneous.</li>
+  <li><b>Graceful degradation:</b> When the AI service times out or errors, fall back to standard manual inputs without breaking form submission.</li>
+</ul>
+
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>356.1 <span class="levels">basic</span> Create a 'Smart Fill' button on a form that populates fields from an unstructured pasted invoice.</summary><div><p>Send text to structured output API (JSON schema), map returned keys to form input state.</p></div></details>
+</div>

@@ -1,0 +1,31 @@
+const e=`<p class="goal">Running and operating PostgreSQL, the default choice for relational data.</p>
+<pre data-lang="shell"><code class="language-bash">docker run -d --name pg -e POSTGRES_PASSWORD=dev -p 5432:5432 -v pgdata:/var/lib/postgresql/data postgres:17
+psql postgres://postgres:dev@localhost:5432/postgres</code></pre>
+<table>
+<tr><th>psql command</th><th>Does</th></tr>
+<tr><td><code>\\l</code>, <code>\\c shop</code></td><td>list databases / connect to one</td></tr>
+<tr><td><code>\\dt</code>, <code>\\d orders</code></td><td>list tables / describe a table (columns, indexes, constraints)</td></tr>
+<tr><td><code>\\x auto</code>, <code>\\timing on</code></td><td>readable wide rows / show query time</td></tr>
+<tr><td><code>\\e</code>, <code>\\i file.sql</code></td><td>edit the query in your editor / run a file</td></tr>
+</table>
+<h3>Postgres features worth knowing</h3>
+<ul>
+<li><b>Types:</b> <code>bigint</code> identity keys (<code>id bigint GENERATED ALWAYS AS IDENTITY</code>), <code>numeric</code> for money, <code>timestamptz</code> (always, not <code>timestamp</code>), <code>jsonb</code> (indexable JSON), <code>uuid</code>, arrays, enums, ranges.</li>
+<li><b>Constraints</b> are your last line of defence: <code>NOT NULL</code>, <code>CHECK (qty &gt;= 0)</code>, <code>UNIQUE</code>, foreign keys, exclusion constraints.</li>
+<li><b>Extensions:</b> <code>pgvector</code> (embeddings), <code>pg_trgm</code> (fuzzy search), <code>postgis</code> (maps), <code>pg_stat_statements</code> (the slowest queries).</li>
+<li><b>Roles:</b> the app connects as a limited role, not the superuser. <code>GRANT SELECT, INSERT, UPDATE ON orders TO app;</code></li>
+<li><b>LISTEN/NOTIFY</b> for simple pub/sub; <code>SKIP LOCKED</code> for job queues.</li>
+</ul>
+<h3>Operations</h3>
+<ul>
+<li><b>Connection pooling:</b> each connection is a process (~10 MB). Use a pool in the app, plus PgBouncer when there are many app instances.</li>
+<li><b>VACUUM/autovacuum</b> cleans up dead row versions left by MVCC (<a class="xref" data-old="n98">chapter 98</a>). Leave autovacuum on, and watch for table bloat.</li>
+<li><b>Backups:</b> <code>pg_dump</code> for logical dumps; base backups plus WAL archiving (pgBackRest, or a managed service) for point-in-time recovery. <b>Test your restores.</b></li>
+<li><b>Replication:</b> streaming replicas for reads and failover.</li>
+<li>Managed options: Supabase, Neon, RDS, Cloud SQL, Crunchy Bridge.</li>
+</ul>
+<div class="callout seclens"><b class="t">Security lens · PostgreSQL</b><p>Use separate roles for migrations (DDL) and the app (DML only); consider Row-Level Security for multi-tenant isolation; set <code>statement_timeout</code> to limit the damage from runaway queries.</p></div>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>94.1 <span class="levels">basic</span> Start Postgres in Docker, create an app role with only SELECT and INSERT on one table, and prove that it can't DELETE.</summary><div><p><code>CREATE ROLE app LOGIN PASSWORD '…'; GRANT SELECT, INSERT ON orders TO app;</code> Connected as app, <code>DELETE FROM orders</code> fails with "permission denied".</p></div></details>
+</div>
+`;export{e as default};

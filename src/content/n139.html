@@ -1,0 +1,18 @@
+<p class="goal">HTTP routing from the internet to the right Service, with TLS.</p>
+<pre data-lang="yaml"><code class="language-yaml">apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: shop
+  annotations: { cert-manager.io/cluster-issuer: letsencrypt }   # automatic TLS certificates
+spec:
+  ingressClassName: nginx
+  tls: [{ hosts: [api.freshon.in, app.freshon.in], secretName: shop-tls }]
+  rules:
+    - host: api.freshon.in
+      http: { paths: [{ path: /, pathType: Prefix, backend: { service: { name: api, port: { number: 80 } } } }] }
+    - host: app.freshon.in
+      http: { paths: [{ path: /, pathType: Prefix, backend: { service: { name: web, port: { number: 80 } } } }] }</code></pre>
+<p>An Ingress resource is only a set of rules. An <b>ingress controller</b> (ingress-nginx, Traefik, a cloud load balancer controller) actually implements them, behind one LoadBalancer Service. <b>cert-manager</b> obtains and renews Let's Encrypt certificates. The newer <b>Gateway API</b> (Gateway + HTTPRoute) is the more expressive successor: header matching, traffic splitting for canaries, and cross-namespace routes.</p>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>139.1 <span class="levels">basic</span> Install ingress-nginx in k3d and route two hostnames to two services.</summary><div><p>Two <code>rules</code> entries with different <code>host</code> values. Test with <code>curl -H "Host: a.local" localhost</code>, or entries in <code>/etc/hosts</code>.</p></div></details>
+</div>

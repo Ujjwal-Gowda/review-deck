@@ -1,0 +1,25 @@
+const t=`<p class="goal">Defining "reliable enough" in numbers, and using the gap to decide when to ship versus when to stabilise.</p>
+<table>
+<tr><th>Term</th><th>Meaning</th><th>Example</th></tr>
+<tr><td><b>SLI</b> (indicator)</td><td>a measurement of good events ÷ all events</td><td>share of checkout requests that succeed in under 500 ms</td></tr>
+<tr><td><b>SLO</b> (objective)</td><td>the internal target for an SLI over a time window</td><td>99.5% over 30 days</td></tr>
+<tr><td><b>SLA</b> (agreement)</td><td>a contract with customers, with penalties</td><td>99% or service credits (always set it looser than the SLO)</td></tr>
+<tr><td><b>Error budget</b></td><td>1 − SLO</td><td>0.5% of requests may fail this month</td></tr>
+</table>
+<table>
+<tr><th>Availability</th><th>Downtime per month</th><th>Per year</th></tr>
+<tr><td>99%</td><td>7.3 hours</td><td>3.65 days</td></tr>
+<tr><td>99.9%</td><td>43.8 minutes</td><td>8.8 hours</td></tr>
+<tr><td>99.95%</td><td>21.9 minutes</td><td>4.4 hours</td></tr>
+<tr><td>99.99%</td><td>4.4 minutes</td><td>52.6 minutes</td></tr>
+</table>
+<ul>
+<li><b>Availability multiplies:</b> a request that needs 3 services each at 99.9% succeeds only 99.7% of the time.</li>
+<li><b>Budget policy:</b> budget remaining means ship features; budget exhausted means freeze risky launches and spend time on reliability. This turns "move fast" vs "be stable" into data instead of an argument.</li>
+<li>Don't aim for 100%: users can't tell 99.99% from 100% (their own Wi-Fi is worse), and every extra nine costs roughly 10× more.</li>
+<li><b>Burn rate:</b> how fast the budget is being spent. At 14× burn, a 30-day budget is gone in about 2 days, so that should page someone.</li>
+</ul>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>161.1 <span class="levels">basic</span> Your SLO is 99.9% of successful checkouts over 30 days, and you handle 3M checkouts a month. How many failures can you afford, and what burn rate should page?</summary><div><p>Budget = 3,000 failures. At a 14.4× burn rate, the budget is gone in about 2 days, so page at that rate over the last hour; file a ticket at around 3× over 6 hours.</p></div></details>
+</div>
+`;export{t as default};

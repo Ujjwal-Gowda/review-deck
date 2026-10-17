@@ -1,0 +1,28 @@
+<p class="goal">Deciding where each piece of state lives. Most frontend complexity comes from putting state in the wrong place.</p>
+<table>
+<tr><th>Kind of state</th><th>Example</th><th>Where it belongs</th></tr>
+<tr><td>UI / local</td><td>is the dropdown open, input text</td><td><code>useState</code> in the component</td></tr>
+<tr><td>Shared UI</td><td>theme, current user, sidebar collapsed</td><td>lift it to the nearest common parent, or Context</td></tr>
+<tr><td><b>Server state</b></td><td>orders, products (a cached copy of backend data)</td><td>a data-fetching cache (TanStack Query, SWR), <b>not</b> a global store</td></tr>
+<tr><td>URL state</td><td>filters, page, selected tab</td><td>the URL (shareable, survives refresh, back button works)</td></tr>
+<tr><td>Form state</td><td>field values, errors</td><td>the form library or local state</td></tr>
+<tr><td>Complex client state</td><td>an editor, a POS cart with offline sync</td><td><code>useReducer</code>, or Zustand / Redux Toolkit</td></tr>
+</table>
+<h3>Lifting state and prop drilling</h3>
+<p>When two siblings need the same state, move it up to their parent and pass it down. If you're passing it through five layers that don't use it, reach for Context (or composition: pass components as <code>children</code>).</p>
+<h3>Reducers for state with rules</h3>
+<pre data-lang="typescript"><code class="language-typescript">type Action = { type: "add"; item: Item } | { type: "remove"; sku: string } | { type: "clear" };
+function cart(state: Item[], a: Action): Item[] {
+  switch (a.type) {
+    case "add":    return [...state, a.item];
+    case "remove": return state.filter(i =&gt; i.sku !== a.sku);
+    case "clear":  return [];
+  }
+}
+const [items, dispatch] = useReducer(cart, []);
+dispatch({ type: "add", item });    // every change is a named, testable event</code></pre>
+<p>A reducer is a pure function, so it's trivially unit-testable, and it's the same idea as the state machines in <a class="xref" data-old="n36">chapter 36</a>.</p>
+<div class="callout key"><b class="t">Rules of thumb</b><p>Keep state as local as possible. Store the minimum and derive the rest. One source of truth per fact. Server data is a cache, so treat it as one.</p></div>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>72.1 <span class="levels">think</span> The FreshOn POS cart needs to survive a page refresh and sync to the server. Decide where each piece of its state lives.</summary><div><p>Cart items: a reducer, persisted to IndexedDB for offline use. Product catalogue: server state, cached via TanStack Query. The selected customer: local state. Filters: URL. Sync status: derived from a pending-changes queue.</p></div></details>
+</div>

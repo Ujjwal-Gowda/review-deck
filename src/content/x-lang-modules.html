@@ -1,0 +1,56 @@
+<p class="goal">How code is split into files and packages, and how a real project is laid out, in each language. Concepts: <a class="xref" data-old="n38">Modules</a>.</p>
+<table>
+<tr><th></th><th>Unit of code</th><th>Public vs private</th><th>Manifest + lockfile</th></tr>
+<tr><td>Python</td><td>module (file), package (folder)</td><td><code>_private</code> convention; <code>__all__</code></td><td><code>pyproject.toml</code> + <code>uv.lock</code></td></tr>
+<tr><td>TS</td><td>ES module (file)</td><td><code>export</code></td><td><code>package.json</code> + <code>package-lock.json</code></td></tr>
+<tr><td>Go</td><td>package (folder), module (repo)</td><td>Capitalised = exported; <code>internal/</code></td><td><code>go.mod</code> + <code>go.sum</code></td></tr>
+<tr><td>Rust</td><td>crate, <code>mod</code> tree</td><td><code>pub</code>, <code>pub(crate)</code></td><td><code>Cargo.toml</code> + <code>Cargo.lock</code></td></tr>
+<tr><td>C</td><td>translation unit (<code>.c</code>) + header (<code>.h</code>)</td><td><code>static</code> = file-private</td><td>Makefile / CMake (no standard package manager)</td></tr>
+</table>
+<h3>Typical project layouts</h3>
+<div class="cheat">
+<div><h4>Python</h4><pre data-lang="plaintext"><code class="language-plaintext">shop/
+  pyproject.toml  uv.lock
+  src/shop/__init__.py
+  src/shop/orders.py
+  src/shop/cli.py
+  tests/test_orders.py</code></pre></div>
+<div><h4>TypeScript</h4><pre data-lang="plaintext"><code class="language-plaintext">shop/
+  package.json  tsconfig.json
+  src/index.ts
+  src/orders/orders.ts
+  src/orders/orders.test.ts
+  dist/   (build output, gitignored)</code></pre></div>
+<div><h4>Go</h4><pre data-lang="plaintext"><code class="language-plaintext">shop/
+  go.mod  go.sum
+  cmd/shop/main.go        (package main)
+  internal/orders/orders.go
+  internal/orders/orders_test.go</code></pre></div>
+<div><h4>Rust</h4><pre data-lang="plaintext"><code class="language-plaintext">shop/
+  Cargo.toml  Cargo.lock
+  src/main.rs   (binary)
+  src/lib.rs    (library root: mod orders;)
+  src/orders.rs
+  tests/integration.rs</code></pre></div>
+<div><h4>C</h4><pre data-lang="plaintext"><code class="language-plaintext">shop/
+  Makefile
+  include/orders.h
+  src/orders.c  src/main.c
+  tests/test_orders.c
+  build/  (objects, gitignored)</code></pre></div>
+</div>
+<h3>Importing</h3>
+<pre data-lang="plaintext"><code class="language-plaintext">Py  from shop.orders import place_order          TS  import { placeOrder } from "./orders/orders.js";
+Go  import "example.com/shop/internal/orders"      →  orders.PlaceOrder(...)
+Rs  use crate::orders::place_order;               C   #include "orders.h"  (+ link orders.o)</code></pre>
+<h3>Traps</h3>
+<ul>
+<li><b>Python</b> imports depend on how you run the program. Use <code>python -m shop.cli</code> or an installed entry point, not <code>python src/shop/cli.py</code>.</li>
+<li><b>TS/ESM</b> imports often need the <code>.js</code> extension even in <code>.ts</code> files (NodeNext resolution).</li>
+<li><b>Go</b> forbids import cycles and unused imports: both are compile errors.</li>
+<li><b>Rust</b> modules must be declared (<code>mod orders;</code>) in the parent before they exist.</li>
+<li><b>C</b> headers need include guards (<code>#ifndef ORDERS_H</code>), and "undefined reference" errors come from the <i>linker</i>, not the compiler (<a class="xref" data-old="x-linking">Linking</a>).</li>
+</ul>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>0.1 <span class="levels">basic</span> Split your word-frequency program (from the Collections chapter) into a library module and a CLI entry point in Go and Rust, with a test for the library.</summary><div><p>Go: <code>internal/wordfreq/wordfreq.go</code> with <code>func Top(r io.Reader, n int) []Count</code>, plus <code>cmd/wf/main.go</code>. Rust: <code>src/lib.rs</code> with <code>pub fn top(text: &amp;str, n: usize) -&gt; Vec&lt;(String, usize)&gt;</code>, with <code>main.rs</code> calling <code>wf::top</code>. Tests live next to the library.</p></div></details>
+</div>

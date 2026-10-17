@@ -1,0 +1,222 @@
+const e=`<p class="goal">Project 10: Building Production MCP Servers. Master Anthropic's Model Context Protocol (MCP) by constructing a secure, dual-transport (stdio &amp; SSE) operational server for AI developer tools.</p>
+
+<h3>The Architecture of the Model Context Protocol</h3>
+<p>Before MCP, every AI agent framework (LangChain, LlamaIndex, custom scripts) invented its own proprietary tool-calling schema. If you built a tool for PostgreSQL, you had to rewrite it for Claude, rewrite it again for VS Code, and rewrite it again for custom Python agents. <b>Model Context Protocol (MCP)</b> is the "USB-C for AI": an open JSON-RPC 2.0 standard allowing any AI client (Antigravity, Claude Code, Cursor, Zed) to securely discover and invoke tools, read resources, and execute prompt templates.</p>
+
+<div class="diagram">
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                                   MCP Host / Client                                    │
+│                     (Antigravity CLI / Claude Desktop / IDE)                           │
+└──────────────────────────────────────────┬─────────────────────────────────────────────┘
+                                           │ JSON-RPC 2.0 Messages
+                                           ▼
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                        Transport Layer (stdio OR Server-Sent Events)                   │
+│  • Local stdio: Subprocess stdin/stdout streams (Zero network exposure)               │
+│  • Remote SSE: HTTP stream with Bearer Token authorization                             │
+└──────────────────────────────────────────┬─────────────────────────────────────────────┘
+                                           │
+                                           ▼
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                                Custom MCP Server Core                                  │
+│                                                                                        │
+│   ┌──────────────────────────┐┌──────────────────────────┐┌──────────────────────────┐ │
+│   │     Tools (Execute)      ││     Resources (Read)     ││    Prompts (Templates)   │ │
+│   │ • \`query_readonly_sql\`   ││ • \`db://schema/orders\`   ││ • \`diagnose_slow_query\`  │ │
+│   │ • \`fetch_system_metrics\` ││ • \`logs://tail/app.log\`  ││ • \`triage_incident\`      │ │
+│   │ • \`restart_worker\`       ││ • \`config://env/staging\` ││                          │ │
+│   └──────────────────────────┘└──────────────────────────┘└──────────────────────────┘ │
+│                                            │                                           │
+│                                            ▼                                           │
+│   ┌──────────────────────────────────────────────────────────────────────────────┐     │
+│   │                      Security Guardrails &amp; Input Validation                  │     │
+│   │   • AST validation (Blocks DROP, DELETE, UPDATE on read-only tools)          │     │
+│   │   • Zod Schema parameter enforcement &amp; Timeout Budgets (5s)                  │     │
+│   │   • Least-Privilege Postgres User (\`GRANT SELECT ONLY\`)                      │     │
+│   └──────────────────────────────────────────────────────────────────────────────┘     │
+└────────────────────────────────────────────────────────────────────────────────────────┘
+</div>
+
+<h3>Part 1: The 3 Primitives of MCP</h3>
+<table>
+  <tr><th>Primitive</th><th>Direction</th><th>Purpose</th><th>Analogy</th></tr>
+  <tr><td><b>Tools</b></td><td>Model-Controlled</td><td>Functions the LLM can decide to execute to perform computations or side effects.</td><td>POST API endpoints</td></tr>
+  <tr><td><b>Resources</b></td><td>Client/App-Controlled</td><td>Read-only contextual data (files, schemas, logs) the AI can inspect.</td><td>GET file URLs</td></tr>
+  <tr><td><b>Prompts</b></td><td>User-Controlled</td><td>Pre-engineered workflow templates that users can trigger with arguments.</td><td>Slash commands</td></tr>
+</table>
+
+<h3>Part 2: Building the Production TypeScript MCP Server</h3>
+<p>Create a robust DevOps &amp; Database inspection server using the official <code>@modelcontextprotocol/sdk</code>:</p>
+
+<pre data-lang="typescript"><code class="language-typescript">import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import {
+  CallToolRequestSchema,
+  ListToolsRequestSchema,
+  ListResourcesRequestSchema,
+  ReadResourceRequestSchema,
+  ListPromptsRequestSchema,
+  GetPromptRequestSchema,
+} from "@modelcontextprotocol/sdk/types.js";
+import { z } from "zod";
+import { Pool } from "pg";
+import os from "os";
+
+const db = new Pool({
+  connectionString: process.env.READONLY_DATABASE_URL,
+  max: 3,
+  statement_timeout: 4000, // 4-second hard timeout to prevent runaway queries
+});
+
+const server = new Server(
+  { name: "ops-nexus", version: "1.0.0" },
+  { capabilities: { tools: {}, resources: {}, prompts: {} } }
+);
+
+// -------------------------------------------------------------------
+// 1. List Available Tools
+// -------------------------------------------------------------------
+server.setRequestHandler(ListToolsRequestSchema, async () => ({
+  tools: [
+    {
+      name: "query_readonly_sql",
+      description: "Execute a read-only SELECT SQL query against the production replica. Mutating commands (INSERT, UPDATE, DELETE, DROP) are strictly blocked.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          sql: { type: "string", description: "The SELECT query to execute" },
+        },
+        required: ["sql"],
+      },
+    },
+    {
+      name: "get_host_metrics",
+      description: "Retrieve real-time host CPU load, memory utilization, and uptime.",
+      inputSchema: { type: "object", properties: {} },
+    },
+  ],
+}));
+
+// -------------------------------------------------------------------
+// 2. Execute Tools with Strict Safety Guardrails
+// -------------------------------------------------------------------
+server.setRequestHandler(CallToolRequestSchema, async (request) => {
+  const { name, arguments: args } = request.params;
+
+  if (name === "get_host_metrics") {
+    const freeMemMb = Math.round(os.freemem() / 1024 / 1024);
+    const totalMemMb = Math.round(os.totalmem() / 1024 / 1024);
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify({
+            hostname: os.hostname(),
+            uptimeSeconds: os.uptime(),
+            cpuCount: os.cpus().length,
+            loadAvg1m: os.loadavg()[0],
+            memoryUsedPercentage: (((totalMemMb - freeMemMb) / totalMemMb) * 100).toFixed(1) + "%",
+            memoryFreeMb: freeMemMb,
+          }, null, 2),
+        },
+      ],
+    };
+  }
+
+  if (name === "query_readonly_sql") {
+    const rawSql = String(args?.sql || "").trim();
+
+    // Defense-in-depth AST & regex safety check
+    const forbiddenKeywords = /\\b(DROP|DELETE|UPDATE|INSERT|ALTER|TRUNCATE|GRANT|REVOKE)\\b/i;
+    if (forbiddenKeywords.test(rawSql) || !rawSql.toUpperCase().startsWith("SELECT")) {
+      return {
+        isError: true,
+        content: [{ type: "text", text: "SECURITY_VIOLATION: Only SELECT statements are permitted." }],
+      };
+    }
+
+    try {
+      const result = await db.query(rawSql);
+      return {
+        content: [{ type: "text", text: JSON.stringify(result.rows, null, 2) }],
+      };
+    } catch (err: any) {
+      return {
+        isError: true,
+        content: [{ type: "text", text: \`Database error: \${err.message}\` }],
+      };
+    }
+  }
+
+  throw new Error(\`Unknown tool: \${name}\`);
+});
+
+// -------------------------------------------------------------------
+// 3. Expose Live Resources
+// -------------------------------------------------------------------
+server.setRequestHandler(ListResourcesRequestSchema, async () => ({
+  resources: [
+    {
+      uri: "db://schema/public",
+      name: "PostgreSQL Database Schema",
+      mimeType: "application/json",
+      description: "List of all public tables, columns, and foreign keys.",
+    },
+  ],
+}));
+
+server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+  if (request.params.uri === "db://schema/public") {
+    const res = await db.query(\`
+      SELECT table_name, column_name, data_type 
+      FROM information_schema.columns 
+      WHERE table_schema = 'public' 
+      ORDER BY table_name, ordinal_position;
+    \`);
+    return {
+      contents: [
+        {
+          uri: request.params.uri,
+          mimeType: "application/json",
+          text: JSON.stringify(res.rows, null, 2),
+        },
+      ],
+    };
+  }
+  throw new Error("Resource not found");
+});
+
+// -------------------------------------------------------------------
+// Start Transport (stdio)
+// -------------------------------------------------------------------
+const transport = new StdioServerTransport();
+await server.connect(transport);</code></pre>
+
+<h3>Part 3: Testing with the MCP Inspector</h3>
+<p>Anthropic provides an interactive visual debugger to test tools, inputs, and schemas before connecting to production AI clients:</p>
+
+<pre data-lang="shell"><code class="language-bash"># Launch visual GUI inspector over your compiled TypeScript server
+npx @modelcontextprotocol/inspector node dist/server.js</code></pre>
+
+<div class="callout warn"><b class="t">The Stdio stdout Corruption Bug</b>
+<p>When running an MCP server over <code>stdio</code>, <b>never use <code>console.log()</code> for debug statements!</b></p>
+<p>The MCP protocol uses <code>process.stdout</code> exclusively for framing JSON-RPC packets. If your server outputs <code>console.log("Connected to DB")</code>, the client parser fails with <code>SyntaxError: Unexpected token 'C'</code> and immediately terminates the process.</p>
+<p>Always direct debug logs to standard error: <code>console.error("[DEBUG] Connected to DB")</code>.</p>
+</div>
+
+<details class="ex">
+  <summary><b>Drill: How to register this server in Claude Code / Antigravity CLI?</b> (Click to expand)</summary>
+  <p>Add the server configuration to your project's <code>.mcp.json</code> or global <code>claude.json</code>:</p>
+  <pre data-lang="json"><code class="language-json">{
+  "mcpServers": {
+    "ops-nexus": {
+      "command": "node",
+      "args": ["/absolute/path/to/ops-server/dist/server.js"],
+      "env": {
+        "READONLY_DATABASE_URL": "postgres://readonly_user:secret@db.internal:5432/production"
+      }
+    }
+  }
+}</code></pre>
+</details>
+`;export{e as default};

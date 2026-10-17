@@ -1,0 +1,44 @@
+const e=`<p class="goal">Try a choice, explore from it, undo it, and try the next. The systematic way to search all combinations, with pruning so it stays fast.</p>
+<h3>The template</h3>
+<pre data-lang="python"><code class="language-python">def backtrack(path, choices):
+    if is_complete(path):
+        record(path); return
+    for c in choices:
+        if not valid(path, c): continue   # PRUNE: skip branches that can't work
+        path.append(c)                    # 1. choose
+        backtrack(path, next_choices)     # 2. explore
+        path.pop()                        # 3. un-choose (restore state for the next option)</code></pre>
+<h3>Subsets, drawn as a decision tree</h3>
+<div class="diagram">items [a, b, c]: at each level decide "take it or skip it"
+                        []
+              take a /      \\ skip a
+                [a]            []
+             /     \\         /    \\
+          [a,b]    [a]     [b]     []
+          /  \\     / \\     / \\    /  \\
+     [a,b,c][a,b][a,c][a] [b,c][b] [c] []     → 2³ = 8 subsets</div>
+<pre data-lang="python"><code class="language-python">def subsets(items):
+    out = []
+    def go(i, path):
+        if i == len(items): out.append(path[:]); return
+        path.append(items[i]); go(i + 1, path); path.pop()     # take
+        go(i + 1, path)                                        # skip
+    go(0, []); return out
+
+def permutations(items):
+    out, used = [], [False] * len(items)
+    def go(path):
+        if len(path) == len(items): out.append(path[:]); return
+        for i, x in enumerate(items):
+            if used[i]: continue
+            used[i] = True; path.append(x)
+            go(path)
+            path.pop(); used[i] = False
+    go([]); return out</code></pre>
+<h3>Pruning makes it practical</h3>
+<p>Example: choose products whose prices add up to exactly ₹500. Sort the prices first; once the running total exceeds 500, stop exploring that branch entirely, along with every more expensive option after it. Good pruning turns "impossible" into "instant". Classic problems that use it: N-queens, sudoku, word search in a grid, and combination sums.</p>
+<p><b>Costs</b> are exponential by nature: subsets are O(2ⁿ), permutations O(n!). Backtracking is right for small n (under about 20–25) or with heavy pruning. For "count the ways" or "best total" with overlapping subproblems, switch to <a class="xref" data-old="x-dsa-dp">dynamic programming</a>.</p>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>0.1 <span class="levels">basic</span> Find all combinations of product prices (each used at most once) that sum exactly to a budget. Sort first and prune when the sum exceeds the budget.</summary><div><p>Recurse on (start index, remaining budget). Loop i from start; if price[i] &gt; remaining, <code>break</code> (the list is sorted, so everything after is bigger too). Skip equal neighbours (<code>i &gt; start and p[i] == p[i-1]</code>) to avoid duplicate combinations.</p></div></details>
+</div>
+`;export{e as default};

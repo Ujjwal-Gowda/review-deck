@@ -1,0 +1,58 @@
+const e=`<p class="goal">The graph algorithms that come up again and again in real systems: shortest paths, dependency ordering, and cheapest connections.</p>
+<h3>Dijkstra: shortest paths with non-negative weights</h3>
+<p>Idea: always settle the closest vertex not yet settled. A min-heap gives you "the closest" cheaply.</p>
+<pre data-lang="python"><code class="language-python">import heapq
+def dijkstra(graph, src):
+    dist = {src: 0}
+    prev = {}
+    heap = [(0, src)]
+    while heap:
+        d, v = heapq.heappop(heap)
+        if d &gt; dist.get(v, float("inf")): continue          # a stale entry: already found a shorter way
+        for nxt, w in graph[v]:
+            nd = d + w
+            if nd &lt; dist.get(nxt, float("inf")):
+                dist[nxt] = nd; prev[nxt] = v
+                heapq.heappush(heap, (nd, nxt))
+    return dist, prev
+
+def path_to(prev, target):                                  # rebuild the route by walking prev backwards
+    out = [target]
+    while out[-1] in prev: out.append(prev[out[-1]])
+    return out[::-1]</code></pre>
+<div class="diagram">from store (the graph from the previous chapter):
+settle store 0 → push hub 5, zone1 2
+settle zone1 2 → zone2 via zone1 = 8
+settle hub 5   → zone2 via hub = 8 (not better), zone3 = 9
+settle zone2 8, zone3 9       result: store→hub→zone3 = 9 km</div>
+<p>Complexity: O((V + E) log V). It breaks with negative edge weights: use Bellman-Ford there. <b>A*</b> adds a heuristic (such as straight-line distance) to steer toward the goal, which is how maps and games route.</p>
+<h3>Topological sort: an order that respects dependencies</h3>
+<p>"pick before pack before deliver", or build steps, course prerequisites, package installs. It only works on a <b>directed acyclic graph</b> (DAG).</p>
+<pre data-lang="python"><code class="language-python">from collections import deque
+def topo_sort(tasks, deps):                       # deps: (before, after)
+    indeg = {t: 0 for t in tasks}; out = {t: [] for t in tasks}
+    for a, b in deps: out[a].append(b); indeg[b] += 1
+    q = deque(t for t in tasks if indeg[t] == 0)   # start with tasks that depend on nothing
+    order = []
+    while q:
+        t = q.popleft(); order.append(t)
+        for n in out[t]:
+            indeg[n] -= 1
+            if indeg[n] == 0: q.append(n)
+    if len(order) != len(tasks): raise ValueError("cycle: no valid order")
+    return order</code></pre>
+<h3>Minimum spanning tree: connect everything as cheaply as possible</h3>
+<p>Example: laying cable between all stores for the lowest total length. <b>Kruskal's algorithm</b>: sort the edges by weight, and add each one unless it would form a cycle. Checking for cycles uses <a class="xref" data-old="x-dsa-unionfind">Union-Find</a>.</p>
+<table>
+<tr><th>Problem</th><th>Algorithm</th><th>Cost</th></tr>
+<tr><td>fewest hops</td><td>BFS</td><td>O(V+E)</td></tr>
+<tr><td>shortest weighted path (weights ≥ 0)</td><td>Dijkstra</td><td>O((V+E) log V)</td></tr>
+<tr><td>negative weights</td><td>Bellman-Ford</td><td>O(V·E)</td></tr>
+<tr><td>all pairs of shortest paths (small graphs)</td><td>Floyd-Warshall</td><td>O(V³)</td></tr>
+<tr><td>dependency order</td><td>topological sort (Kahn's algorithm or DFS)</td><td>O(V+E)</td></tr>
+<tr><td>cheapest connection of everything</td><td>Kruskal / Prim</td><td>O(E log E)</td></tr>
+</table>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>0.1 <span class="levels">basic</span> Run your Dijkstra on the store/hub/zones graph. Then add a direct edge store–zone3 of 8 km. Which route wins now, and what does <code>path_to</code> return?</summary><div><p>The direct 8 km edge beats store→hub→zone3 (9 km), so <code>path_to(prev, "zone3")</code> returns ["store", "zone3"]. Dijkstra updates dist and prev whenever it finds a shorter route.</p></div></details>
+</div>
+`;export{e as default};

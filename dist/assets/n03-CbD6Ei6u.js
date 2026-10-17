@@ -1,0 +1,44 @@
+const e=`<p class="goal">What your structs, arrays and strings physically look like in RAM, and why the layout affects speed and correctness.</p>
+<h3>Addresses and word size</h3>
+<p>Memory is one enormous byte array; an <b>address</b> is an index into it. On a 64-bit machine, pointers are 8 bytes, so the address space is 2⁶⁴ (in practice 48 bits are used). A <b>word</b> is the CPU's natural unit: 8 bytes, the size of a register.</p>
+<h3>Alignment and padding</h3>
+<p>CPUs read memory fastest (and on some architectures, only correctly) when a value's address is a multiple of its size: a 4-byte int at an address divisible by 4, an 8-byte double at one divisible by 8. So compilers insert invisible <b>padding</b> into structs:</p>
+<pre data-lang="c"><code class="language-c">struct Bad  { char a; double b; char c; };   // 1 + 7 pad + 8 + 1 + 7 pad = 24 bytes
+struct Good { double b; char a; char c; };   // 8 + 1 + 1 + 6 pad          = 16 bytes
+printf("%zu %zu\\n", sizeof(struct Bad), sizeof(struct Good));   // 24 16</code></pre>
+<div class="diagram">Bad:  [a][· · · · · · ·][b b b b b b b b][c][· · · · · · ·]   24 B
+Good: [b b b b b b b b][a][c][· · · · · ·]                     16 B
+Rule: order fields from largest to smallest.</div>
+<p>Rust reorders struct fields automatically for you (unless you write <code>#[repr(C)]</code>, which you need when sharing structs with C). C and Go keep your order, so you choose. With a million structs in an array, 24 vs 16 bytes is 8 MB of wasted RAM and cache.</p>
+<h3>Arrays: contiguous, fixed-stride</h3>
+<p><code>int a[5]</code> is 5 × 4 = 20 bytes back to back. Element <code>i</code> is at <code>base + i × sizeof(int)</code>, which is why indexing is O(1) and why a bad index silently reads a neighbour in C. A 2-D array <code>int g[3][4]</code> is stored <b>row-major</b> (row 0, then row 1…), so looping row by row walks memory in order (fast), while looping column-first jumps around (cache misses; <a class="xref" data-old="c22">chapter 5</a> explains the cost).</p>
+<pre data-lang="c"><code class="language-c">for (int r = 0; r &lt; ROWS; r++)        // fast: sequential
+    for (int c = 0; c &lt; COLS; c++) sum += g[r][c];
+for (int c = 0; c &lt; COLS; c++)        // slow on big arrays: strided
+    for (int r = 0; r &lt; ROWS; r++) sum += g[r][c];</code></pre>
+<h3>How each language lays out its common types</h3>
+<table>
+<tr><th>Value</th><th>Layout</th></tr>
+<tr><td>C string <code>"hi"</code></td><td>3 bytes: <code>h i \\0</code>. The length is found by scanning for the zero byte.</td></tr>
+<tr><td>Rust <code>String</code> / Go <code>string</code></td><td>header {pointer, length (+ capacity for Rust)} on the stack; UTF-8 bytes on the heap</td></tr>
+<tr><td>Go slice <code>[]int</code></td><td>header {pointer, len, cap} (24 bytes) + a backing array</td></tr>
+<tr><td>Rust <code>&amp;[T]</code> / <code>&amp;str</code></td><td>"fat pointer": {pointer, length} (16 bytes)</td></tr>
+<tr><td>Python <code>int</code></td><td>a full heap object: refcount + type pointer + digits, 28+ bytes for a small number. A list of ints is an array of <i>pointers</i> to these objects.</td></tr>
+<tr><td>Python <code>list</code> of 1M floats</td><td>~8 MB of pointers + ~24 MB of float objects. A NumPy array is 8 MB of raw doubles, which is why it's about 50× faster</td></tr>
+<tr><td>JS array of numbers</td><td>V8 stores packed doubles or small ints (SMIs) contiguously while the array stays homogeneous; mixing types degrades it into boxed values</td></tr>
+</table>
+<pre data-lang="python"><code class="language-python">import sys
+sys.getsizeof(1), sys.getsizeof(2**100), sys.getsizeof([]), sys.getsizeof("a")
+# 28, 40, 56, 50  (bytes, CPython 3.13): objects are heavy</code></pre>
+<pre data-lang="rust"><code class="language-rust">use std::mem::size_of;
+println!("{} {} {}", size_of::&lt;String&gt;(), size_of::&lt;&amp;str&gt;(), size_of::&lt;Option&lt;Box&lt;u8&gt;&gt;&gt;());
+// 24 16 8: Option&lt;Box&gt; costs nothing extra because None uses the null pointer ("niche optimisation")</code></pre>
+<h3>Structure of Arrays vs Array of Structures</h3>
+<pre data-lang="c"><code class="language-c">struct P { float x, y, z, mass; } ps[N];        // AoS: natural, but summing mass loads x,y,z too
+struct Ps { float x[N], y[N], z[N], mass[N]; };  // SoA: summing mass streams one tight array (SIMD-friendly)</code></pre>
+<p>Games, databases (column stores like ClickHouse) and ML frameworks use SoA layouts for exactly this reason.</p>
+<div class="exercises"><h3>Exercises</h3>
+<details class="ex"><summary>3.1 <span class="levels">basic</span> Predict <code>sizeof</code> for <code>struct { char a; int b; char c; short d; }</code>, then reorder the fields to minimise it.</summary><div><p>1 + 3 pad + 4 + 1 + 1 pad + 2 = 12. Reordered as int, short, char, char: 4 + 2 + 1 + 1 = <b>8</b>.</p></div></details>
+<details class="ex"><summary>3.2 <span class="levels">think</span> Time summing a 4000×4000 C array row-first vs column-first (<code>gcc -O2</code>, <code>time</code>). Explain the gap.</summary><div><p>Column-first is typically 3–10× slower. Each access lands on a different cache line 16 KB away, so every read misses the cache; the row-first loop uses all 16 ints in each 64-byte line it loads.</p></div></details>
+</div>
+`;export{e as default};

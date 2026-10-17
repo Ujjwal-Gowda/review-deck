@@ -1,0 +1,52 @@
+const e=`<p class="goal">Text in five languages: what a "string" really is in each, and how to do the common operations safely. Background: <a class="xref" data-old="c07">Strings &amp; Encoding</a>.</p>
+<table>
+<tr><th></th><th>Type</th><th>Stored as</th><th><code>len</code> counts</th><th>Mutable?</th></tr>
+<tr><td>Python</td><td><code>str</code> / <code>bytes</code></td><td>Unicode code points</td><td>code points</td><td>no</td></tr>
+<tr><td>TS</td><td><code>string</code></td><td>UTF-16</td><td>UTF-16 units (an emoji counts as 2)</td><td>no</td></tr>
+<tr><td>Go</td><td><code>string</code> / <code>[]byte</code> / <code>rune</code></td><td>UTF-8 bytes</td><td><b>bytes</b></td><td>no (<code>[]byte</code> is)</td></tr>
+<tr><td>Rust</td><td><code>String</code> (owned) / <code>&amp;str</code> (borrowed)</td><td>UTF-8, guaranteed valid</td><td>bytes</td><td><code>String</code> yes</td></tr>
+<tr><td>C</td><td><code>char *</code></td><td>bytes ending in <code>'\\0'</code></td><td>bytes until the NUL (<code>strlen</code>)</td><td>if it's not a literal</td></tr>
+</table>
+<div class="cheat">
+<div><h4>Formatting</h4><pre data-lang="plaintext"><code class="language-plaintext">Py  f"{name} owes ₹{amt:,.2f}"
+TS  \`\${name} owes ₹\${amt.toFixed(2)}\`
+Go  fmt.Sprintf("%s owes ₹%.2f", name, amt)
+Rs  format!("{name} owes ₹{amt:.2}")
+C   snprintf(buf, sizeof buf, "%s owes %.2f", name, amt)</code></pre></div>
+<div><h4>Split / join / trim</h4><pre data-lang="plaintext"><code class="language-plaintext">Py  s.split(","); ",".join(xs); s.strip()
+TS  s.split(","); xs.join(","); s.trim()
+Go  strings.Split(s, ","); strings.Join(xs, ","); strings.TrimSpace(s)
+Rs  s.split(',').collect::&lt;Vec&lt;_&gt;&gt;(); xs.join(","); s.trim()
+C   strtok (destructive!) / strsep; manual joins</code></pre></div>
+<div><h4>Contains / find / replace</h4><pre data-lang="plaintext"><code class="language-plaintext">Py  "sh" in s; s.find("x"); s.replace("a","b")
+TS  s.includes("sh"); s.indexOf("x"); s.replaceAll("a","b")
+Go  strings.Contains(s,"sh"); strings.Index(s,"x"); strings.ReplaceAll(s,"a","b")
+Rs  s.contains("sh"); s.find('x'); s.replace("a","b")
+C   strstr(s, "sh")  /* returns a pointer or NULL */</code></pre></div>
+<div><h4>Build strings in a loop</h4><pre data-lang="plaintext"><code class="language-plaintext">Py  parts.append(x) … "".join(parts)
+TS  parts.push(x) … parts.join("")
+Go  var b strings.Builder; b.WriteString(x); b.String()
+Rs  let mut s = String::new(); s.push_str(x);
+C   size-tracked buffer + snprintf / memcpy</code></pre></div>
+<div><h4>Parse numbers</h4><pre data-lang="plaintext"><code class="language-plaintext">Py  int(s)          # ValueError on bad input
+TS  Number(s)       // NaN on bad input (check it!)
+Go  strconv.Atoi(s) // (n, err)
+Rs  s.parse::&lt;i64&gt;() // Result
+C   strtol(s, &amp;end, 10) // check end and errno</code></pre></div>
+<div><h4>Iterate characters</h4><pre data-lang="plaintext"><code class="language-plaintext">Py  for ch in s:          # code points
+TS  for (const ch of s)   // code points (s[i] = UTF-16 unit)
+Go  for i, r := range s   // runes; s[i] = a byte
+Rs  for ch in s.chars()   // chars; s.bytes() for bytes
+C   for (char *p = s; *p; p++)  /* bytes */</code></pre></div>
+</div>
+<h3>Traps when switching</h3>
+<ul>
+<li><b>Indexing:</b> <code>s[0]</code> is a code point in Python, a UTF-16 unit in JS, a <i>byte</i> in Go, not allowed in Rust (use <code>.chars().nth(0)</code> or byte slicing on a char boundary), and a byte in C.</li>
+<li><b>Concatenating in a loop</b> is O(n²) in every language: use the builder.</li>
+<li><b>C strings:</b> every copy must fit its destination plus the NUL. Use <code>snprintf</code>, never <code>strcpy</code>/<code>strcat</code>/<code>gets</code>.</li>
+<li><b>Rust <code>String</code> vs <code>&amp;str</code>:</b> take <code>&amp;str</code> as a parameter (it accepts both); return <code>String</code> when you create new text.</li>
+</ul>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>0.1 <span class="levels">basic</span> Reverse the string "héllo 😀" correctly in all five languages. Where does the naive approach break?</summary><div><p>Python: <code>s[::-1]</code> works for these characters (combining marks would still break). JS: <code>[...s].reverse().join("")</code>, because <code>split("")</code> breaks the emoji&#39;s surrogate pair. Go: convert to <code>[]rune</code> and reverse. Rust: <code>s.chars().rev().collect::&lt;String&gt;()</code>. C: byte reversal corrupts multi-byte UTF-8, so you&#39;d need to decode first. Full grapheme correctness needs a library in every language.</p></div></details>
+</div>
+`;export{e as default};

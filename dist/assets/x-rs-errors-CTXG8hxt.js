@@ -1,0 +1,53 @@
+const e=`<p class="goal">Rust's error handling: <code>Result</code>, the <code>?</code> operator, custom error types, and when panicking is right.</p>
+<h3>Result and ?</h3>
+<pre data-lang="rust"><code class="language-rust">use std::fs;
+fn read_qty(path: &amp;str) -&gt; Result&lt;u32, Box&lt;dyn std::error::Error&gt;&gt; {
+    let text = fs::read_to_string(path)?;           // on Err: return it immediately (converted via From)
+    let qty: u32 = text.trim().parse()?;
+    Ok(qty)
+}
+match read_qty("qty.txt") {
+    Ok(q) =&gt; println!("{q}"),
+    Err(e) =&gt; eprintln!("failed: {e}"),
+}</code></pre>
+<h3>Libraries: precise error types with thiserror</h3>
+<pre data-lang="rust"><code class="language-rust">#[derive(Debug, thiserror::Error)]
+pub enum StockError {
+    #[error("unknown sku {0}")]
+    UnknownSku(String),
+    #[error("{sku}: wanted {wanted}, have {have}")]
+    Insufficient { sku: String, wanted: u32, have: u32 },
+    #[error("reading stock file")]
+    Io(#[from] std::io::Error),                     // enables ? on io errors inside this library
+}
+pub fn reserve(stock: &amp;mut HashMap&lt;String, u32&gt;, sku: &amp;str, n: u32) -&gt; Result&lt;(), StockError&gt; {
+    let have = stock.get_mut(sku).ok_or_else(|| StockError::UnknownSku(sku.into()))?;
+    if *have &lt; n { return Err(StockError::Insufficient { sku: sku.into(), wanted: n, have: *have }); }
+    *have -= n; Ok(())
+}
+// callers can match on the variant:  Err(StockError::Insufficient { have, .. }) =&gt; suggest(have)</code></pre>
+<h3>Applications: convenient errors with anyhow</h3>
+<pre data-lang="rust"><code class="language-rust">use anyhow::{Context, Result, bail};
+fn main() -&gt; Result&lt;()&gt; {
+    let cfg = fs::read_to_string("config.toml").context("reading config.toml")?;   // adds a context line
+    let port: u16 = cfg.parse().with_context(|| format!("bad port {cfg:?}"))?;
+    if port &lt; 1024 { bail!("port {port} needs root"); }
+    Ok(())
+}
+// on failure it prints the chain: "Error: bad port "x"\\n\\nCaused by: invalid digit found in string"</code></pre>
+<h3>Option ↔ Result, and handy combinators</h3>
+<pre data-lang="rust"><code class="language-rust">opt.ok_or(MyErr::Missing)?            // Option → Result
+res.ok()                               // Result → Option (drops the error)
+res.map_err(|e| MyErr::Parse(e.to_string()))?
+res.unwrap_or_default(); res.unwrap_or_else(|_| fallback())
+let v: Result&lt;Vec&lt;_&gt;, _&gt; = iter.map(parse).collect();   // all-or-nothing</code></pre>
+<h3>When to panic</h3>
+<ul>
+<li><code>panic!</code>, <code>unwrap()</code>, <code>expect()</code> are for <b>bugs</b> and impossible states, and fine in tests and quick prototypes.</li>
+<li>In library code, return <code>Result</code>. Prefer <code>expect("reason this can't fail")</code> over a bare <code>unwrap()</code> when you're sure.</li>
+<li>Indexing (<code>v[i]</code>), integer overflow (debug builds) and division by zero panic; use <code>.get(i)</code> and <code>checked_*</code> when inputs are external.</li>
+</ul>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>0.1 <span class="levels">basic</span> Write a stock library with a thiserror enum (UnknownSku, Insufficient, Io), and a small binary using anyhow that loads stock from a file, reserves from command-line arguments, and prints helpful error chains.</summary><div><p>Library: <code>pub fn load(path) -&gt; Result&lt;Stock, StockError&gt;</code> using <code>?</code> on io errors (via <code>#[from]</code>). Binary: <code>fn main() -&gt; anyhow::Result&lt;()&gt;</code>, with <code>.context("loading stock")?</code> on every call. Try a missing file and an unknown SKU to see the chains.</p></div></details>
+</div>
+`;export{e as default};

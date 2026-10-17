@@ -1,0 +1,43 @@
+const t=`<p class="goal">Defining and calling functions, passing arguments, returning several values, and capturing state, in every language. The theory is in <a class="xref" data-old="c05">Functions</a> and <a class="xref" data-old="n11">Scope &amp; Closures</a>.</p>
+<h3>The same function five times</h3>
+<pre data-lang="python"><code class="language-python">def split_price(paise: int, parts: int = 2) -&gt; tuple[int, int]:
+    return divmod(paise, parts)            # (each, remainder)
+each, rem = split_price(1001, 3)</code></pre>
+<pre data-lang="typescript"><code class="language-typescript">function splitPrice(paise: number, parts = 2): [number, number] {
+  return [Math.floor(paise / parts), paise % parts];
+}
+const [each, rem] = splitPrice(1001, 3);</code></pre>
+<pre data-lang="go"><code class="language-go">func splitPrice(paise, parts int) (each, rem int) {   // named results
+    return paise / parts, paise % parts
+}
+each, rem := splitPrice(1001, 3)                      // no default parameters in Go</code></pre>
+<pre data-lang="rust"><code class="language-rust">fn split_price(paise: u64, parts: u64) -&gt; (u64, u64) {
+    (paise / parts, paise % parts)                    // last expression = return value (no semicolon)
+}
+let (each, rem) = split_price(1001, 3);</code></pre>
+<pre data-lang="c"><code class="language-c">void split_price(long paise, long parts, long *each, long *rem) {   // "multiple returns" via out-pointers
+    *each = paise / parts; *rem = paise % parts;
+}
+long each, rem; split_price(1001, 3, &amp;each, &amp;rem);</code></pre>
+<h3>Features compared</h3>
+<table>
+<tr><th>Feature</th><th>Python</th><th>TS</th><th>Go</th><th>Rust</th><th>C</th></tr>
+<tr><td>Default arguments</td><td>✓</td><td>✓</td><td>✗ (use options structs)</td><td>✗ (use builders / <code>Option</code>)</td><td>✗</td></tr>
+<tr><td>Named / keyword arguments</td><td>✓</td><td>via an object parameter</td><td>✗</td><td>✗</td><td>✗</td></tr>
+<tr><td>Variadic</td><td><code>*args, **kw</code></td><td><code>...rest</code></td><td><code>xs ...int</code></td><td>macros only (<code>println!</code>)</td><td><code>...</code> (<code>stdarg.h</code>, unsafe)</td></tr>
+<tr><td>Multiple returns</td><td>tuples</td><td>arrays / objects</td><td>✓ native</td><td>tuples</td><td>out-pointers / structs</td></tr>
+<tr><td>Overloading</td><td>✗</td><td>signatures only</td><td>✗</td><td>✗ (use traits)</td><td>✗ (<code>_Generic</code>)</td></tr>
+<tr><td>Closures</td><td>✓ <code>lambda</code> / nested <code>def</code></td><td>✓ arrow functions</td><td>✓ func literals</td><td>✓ <code>|x| …</code> (Fn/FnMut/FnOnce)</td><td>✗ (function pointer + context pointer)</td></tr>
+</table>
+<h3>Functions as values: "sort orders by total, descending"</h3>
+<pre data-lang="plaintext"><code class="language-plaintext">Python  orders.sort(key=lambda o: o.total, reverse=True)
+TS      orders.sort((a, b) =&gt; b.total - a.total)
+Go      slices.SortFunc(orders, func(a, b Order) int { return cmp.Compare(b.Total, a.Total) })
+Rust    orders.sort_by(|a, b| b.total.cmp(&amp;a.total));   // or sort_by_key(|o| Reverse(o.total))
+C       qsort(orders, n, sizeof *orders, cmp_total_desc); // cmp is a separate function taking const void*</code></pre>
+<h3>How arguments are passed</h3>
+<p>Python and JS pass object references (mutating an argument is visible to the caller; rebinding it isn't). Go and C pass <b>copies</b>, so pass a pointer to let the callee modify. Rust <b>moves</b> ownership unless you pass a reference (<code>&amp;T</code>, <code>&amp;mut T</code>). Details in <a class="xref" data-old="x-lang-memory">Memory &amp; Value Semantics Across Languages</a>.</p>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>0.1 <span class="levels">basic</span> Write <code>make_counter()</code>, which returns a function that increments and returns a private count, in Python, TS, Go and Rust. Why is it hard in C?</summary><div><p>Python: <code>nonlocal</code>. TS: an arrow function capturing <code>let n</code>. Go: a func literal capturing <code>n</code>. Rust: <code>let mut n = 0; move || { n += 1; n }</code>, whose type is <code>impl FnMut() -&gt; i32</code>. C has no closures: you&#39;d pass a struct holding the state along with a function pointer.</p></div></details>
+</div>
+`;export{t as default};

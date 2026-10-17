@@ -1,0 +1,28 @@
+<p class="goal">Who may read, write and run what, and why "just chmod 777" is always wrong.</p>
+<pre data-lang="plaintext"><code class="language-plaintext">-rwxr-x---  1 ujjwal devs  4096 Sep 27 deploy.sh
+│└┬┘└┬┘└┬┘      │      │
+│ │  │  │       owner  group
+│ │  │  └── others: ---  (nothing)
+│ │  └───── group:  r-x  (read + execute)
+│ └──────── owner:  rwx  (read + write + execute)
+└────────── type: - file, d directory, l symlink</code></pre>
+<table>
+<tr><th></th><th>On a file</th><th>On a directory</th></tr>
+<tr><td>r (4)</td><td>read contents</td><td>list names</td></tr>
+<tr><td>w (2)</td><td>modify</td><td>create, delete and rename entries inside</td></tr>
+<tr><td>x (1)</td><td>run as a program</td><td><b>enter</b> it / access the files inside</td></tr>
+</table>
+<pre data-lang="shell"><code class="language-bash">chmod 755 script.sh       # rwxr-xr-x (7 = 4+2+1)
+chmod 600 ~/.ssh/id_ed25519   # private keys: owner-only, or ssh refuses to use them
+chmod u+x,go-w file       # symbolic form
+chown ujjwal:devs file    # change owner and group (needs sudo)
+id; groups                # who am I, and which groups am I in?
+sudo usermod -aG docker ujjwal   # join a group (log out and back in for it to apply)
+umask                     # default permission mask for new files (022 → files 644, dirs 755)</code></pre>
+<h3>root, sudo and least privilege</h3>
+<p><b>root</b> (UID 0) bypasses all permission checks. <code>sudo</code> runs one command as root and logs it. Run services as dedicated unprivileged users. A web server that's hacked while running as root is a hacked machine.</p>
+<h3>Special bits</h3>
+<p><b>setuid</b> (<code>s</code> in the owner's x slot): the program runs as its file's owner. <code>passwd</code> uses this to edit <code>/etc/shadow</code>. <b>sticky bit</b> on <code>/tmp</code> (<code>t</code>): everyone can write there, but you can only delete your own files. <b>ACLs</b> (<code>setfacl</code>/<code>getfacl</code>) grant per-user permissions beyond owner/group/other.</p>
+<div class="callout warn"><b class="t">chmod 777</b><p>It means any user or process on the machine can overwrite the file. A "permission denied" error means find <i>who</i> needs access and grant exactly that: the right owner, the right group, or a narrower mode.</p></div>
+<details class="ex"><summary>55.1 <span class="levels">basic</span> SSH says "UNPROTECTED PRIVATE KEY FILE". Fix it with one command, and explain why ssh cares.</summary><div><p><code>chmod 600 ~/.ssh/id_ed25519</code>. If other users can read your private key, it's no longer private, so ssh refuses to use it.</p></div></details>
+<div class="callout seclens"><b class="t">Security lens · Permissions</b><p>Most Linux privilege escalations exploit over-broad permissions: world-writable scripts run by root, secrets readable by all users, and unnecessary setuid binaries. Audit with <code>find / -perm -4000</code> and <code>find /etc -perm -o+w</code>.</p></div>

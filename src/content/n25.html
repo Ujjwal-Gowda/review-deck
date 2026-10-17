@@ -1,0 +1,63 @@
+<p class="goal">Writing code once for many types in each of your languages, and knowing what it costs.</p>
+<p><a class="xref" data-old="c18">Chapter 24</a> introduced generics as part of type systems. Here's how to use them well in practice.</p>
+<h3>The same generic function, four times</h3>
+<pre data-lang="typescript"><code class="language-typescript">function groupBy&lt;T, K extends PropertyKey&gt;(xs: T[], key: (x: T) =&gt; K): Record&lt;K, T[]&gt; {
+  const out = {} as Record&lt;K, T[]&gt;;
+  for (const x of xs) (out[key(x)] ??= []).push(x);
+  return out;
+}</code></pre>
+<pre data-lang="go"><code class="language-go">func GroupBy[T any, K comparable](xs []T, key func(T) K) map[K][]T {
+    out := make(map[K][]T)
+    for _, x := range xs { out[key(x)] = append(out[key(x)], x) }
+    return out
+}</code></pre>
+<pre data-lang="rust"><code class="language-rust">use std::{collections::HashMap, hash::Hash};
+fn group_by&lt;T, K: Eq + Hash&gt;(xs: Vec&lt;T&gt;, key: impl Fn(&amp;T) -&gt; K) -&gt; HashMap&lt;K, Vec&lt;T&gt;&gt; {
+    let mut out: HashMap&lt;K, Vec&lt;T&gt;&gt; = HashMap::new();
+    for x in xs { out.entry(key(&amp;x)).or_default().push(x); }
+    out
+}</code></pre>
+<pre data-lang="python"><code class="language-python">from collections import defaultdict
+from typing import Callable, Hashable
+def group_by[T, K: Hashable](xs: list[T], key: Callable[[T], K]) -&gt; dict[K, list[T]]:
+    out: dict[K, list[T]] = defaultdict(list)
+    for x in xs: out[key(x)].append(x)
+    return dict(out)</code></pre>
+<h3>Constraints (bounds)</h3>
+<p>An unconstrained <code>T</code> lets you do almost nothing with it. Constraints say which operations are allowed:</p>
+<table>
+<tr><th>Need</th><th>TS</th><th>Go</th><th>Rust</th><th>Python</th></tr>
+<tr><td>equality / map key</td><td><code>K extends PropertyKey</code></td><td><code>comparable</code></td><td><code>Eq + Hash</code></td><td><code>Hashable</code></td></tr>
+<tr><td>ordering</td><td>pass a comparator</td><td><code>cmp.Ordered</code></td><td><code>Ord</code> / <code>PartialOrd</code></td><td>a <code>Protocol</code> with <code>__lt__</code></td></tr>
+<tr><td>has a field or method</td><td><code>T extends {id: number}</code></td><td>an interface constraint</td><td>a trait bound</td><td><code>Protocol</code></td></tr>
+<tr><td>numeric</td><td><code>number | bigint</code></td><td>a union constraint <code>~int | ~float64</code></td><td><code>num</code> traits / <code>Add&lt;Output=T&gt;</code></td><td>no real equivalent</td></tr>
+</table>
+<h3>Generic types</h3>
+<pre data-lang="go"><code class="language-go">type Stack[T any] struct{ items []T }
+func (s *Stack[T]) Push(v T) { s.items = append(s.items, v) }
+func (s *Stack[T]) Pop() (T, bool) {
+    var zero T
+    if len(s.items) == 0 { return zero, false }
+    v := s.items[len(s.items)-1]
+    s.items = s.items[:len(s.items)-1]
+    return v, true
+}</code></pre>
+<pre data-lang="rust"><code class="language-rust">struct Page&lt;T&gt; { items: Vec&lt;T&gt;, next_cursor: Option&lt;String&gt; }   // generic API response
+impl&lt;T: serde::Serialize&gt; Page&lt;T&gt; { /* to_json … */ }</code></pre>
+<h3>Static vs dynamic dispatch</h3>
+<pre data-lang="rust"><code class="language-rust">fn total_static(xs: &amp;[impl Shape]) -&gt; f64 { xs.iter().map(|s| s.area()).sum() }   // monomorphised: one copy per type, inlinable
+fn total_dyn(xs: &amp;[Box&lt;dyn Shape&gt;]) -&gt; f64 { xs.iter().map(|s| s.area()).sum() }  // vtable: mixed types, one copy, indirect call</code></pre>
+<div class="callout key"><b class="t">Trade-offs</b><p><b>Generics / static dispatch:</b> type-safe, fastest, but bigger binaries and slower compiles (Rust/C++), and all elements must share one type. <b>Interfaces / dynamic dispatch:</b> mixed types in one collection, smaller code, a tiny cost per call. <b>Over-generic code</b> is a smell: write the concrete version first, and generalise when a second real use appears.</p></div>
+<div class="exercises"><h3>Exercises</h3>
+<details class="ex"><summary>25.1 <span class="levels">basic</span> Write <code>Map[T, U any](xs []T, f func(T) U) []U</code> and <code>Filter</code> in Go, with tests.</summary><div><pre data-lang="go"><code class="language-go">func Map[T, U any](xs []T, f func(T) U) []U {
+    out := make([]U, 0, len(xs))
+    for _, x := range xs { out = append(out, f(x)) }
+    return out
+}</code></pre></div></details>
+<details class="ex"><summary>25.2 <span class="levels">think</span> Write a Rust <code>fn largest&lt;T: PartialOrd&gt;(xs: &amp;[T]) -&gt; Option&lt;&amp;T&gt;</code> that works on an empty slice and doesn't require <code>Copy</code>.</summary><div><pre data-lang="rust"><code class="language-rust">fn largest&lt;T: PartialOrd&gt;(xs: &amp;[T]) -&gt; Option&lt;&amp;T&gt; {
+    let mut it = xs.iter();
+    let mut best = it.next()?;
+    for x in it { if x &gt; best { best = x; } }
+    Some(best)
+}</code></pre></div></details>
+</div>

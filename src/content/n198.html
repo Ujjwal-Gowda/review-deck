@@ -1,0 +1,23 @@
+<p class="goal">Building and training a neural network yourself: first NumPy by hand, then PyTorch.</p>
+<pre data-lang="python"><code class="language-python">import torch, torch.nn as nn
+from torch.utils.data import DataLoader, TensorDataset
+
+model = nn.Sequential(nn.Linear(784, 128), nn.ReLU(), nn.Dropout(0.1), nn.Linear(128, 10))  # an MLP for MNIST digits
+opt = torch.optim.AdamW(model.parameters(), lr=1e-3)
+loss_fn = nn.CrossEntropyLoss()
+loader = DataLoader(TensorDataset(X_train, y_train), batch_size=64, shuffle=True)
+
+for epoch in range(5):
+    model.train()
+    for xb, yb in loader:
+        logits = model(xb)                 # forward pass
+        loss = loss_fn(logits, yb)
+        opt.zero_grad()
+        loss.backward()                    # backprop: autograd computes every gradient
+        opt.step()                         # update the weights
+    model.eval()
+    with torch.no_grad():
+        acc = (model(X_val).argmax(1) == y_val).float().mean()
+    print(epoch, loss.item(), acc.item())</code></pre>
+<p>This loop (forward, loss, backward, step) is the same for a 100K-parameter MLP and a 100B-parameter LLM. Everything else is scale and engineering. Runs fine on your CPU (MNIST is small); use <code>model.to("cuda")</code> on a GPU.</p>
+<details class="ex"><summary>198.1 <span class="levels">think</span> Before using PyTorch: implement a 2-layer network with NumPy (forward pass, softmax cross-entropy, backprop by hand) and train it on MNIST to at least 95% accuracy.</summary><div><p>Andrej Karpathy's "micrograd" and "Neural Networks: Zero to Hero" walk through exactly this. Doing backprop by hand once removes all the mystery.</p></div></details>

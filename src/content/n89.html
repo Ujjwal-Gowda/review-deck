@@ -1,0 +1,28 @@
+<p class="goal">Receiving events from other services (payments, shipping, GitHub) reliably and securely.</p>
+<p>A webhook is the provider calling <i>your</i> URL when something happens: "payment captured", "delivery completed". It's the reverse of polling.</p>
+<pre data-lang="typescript"><code class="language-typescript">app.post("/webhooks/razorpay", express.raw({ type: "application/json" }), async (req, res) =&gt; {
+  // 1. VERIFY the signature over the RAW body (a parsed-then-reserialised body won't match)
+  const expected = crypto.createHmac("sha256", process.env.RZP_WEBHOOK_SECRET!).update(req.body).digest("hex");
+  const got = req.header("X-Razorpay-Signature") ?? "";
+  if (got.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(got), Buffer.from(expected)))
+    return res.sendStatus(401);
+  const event = JSON.parse(req.body.toString());
+  // 2. DEDUPLICATE: providers retry, so the same event can arrive twice
+  if (await db.webhookEvents.exists(event.id)) return res.sendStatus(200);
+  // 3. STORE + ENQUEUE, then answer fast (providers time out after a few seconds)
+  await db.webhookEvents.insert({ id: event.id, type: event.event, payload: event });
+  await queue.add("process-payment-event", { id: event.id });
+  res.sendStatus(200);
+});</code></pre>
+<h3>Rules</h3>
+<ul>
+<li><b>Verify signatures</b> (HMAC with a shared secret), and check the timestamp to reject replays.</li>
+<li><b>Idempotent processing:</b> delivery is at-least-once, and events can arrive out of order. Re-fetch the current state from the provider's API when order matters.</li>
+<li><b>Respond 2xx quickly</b> and do the work in a background job (<a class="xref" data-old="n91">chapter 91</a>).</li>
+<li>Develop locally with a tunnel: <code>ngrok http 8080</code>, <code>cloudflared</code>, or the provider's CLI forwarder.</li>
+<li>If <i>you</i> send webhooks: sign them, retry with backoff, give each event an ID, and let customers see delivery logs.</li>
+</ul>
+<div class="callout seclens"><b class="t">Security lens · Webhooks</b><p>Verify signatures over the raw body, check timestamps against replay, and never let a webhook URL you configure point at internal addresses (SSRF).</p></div>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>89.1 <span class="levels">think</span> A webhook for the same payment arrives twice, and the "captured" event arrives before "authorized". How should your handler cope?</summary><div><p>Deduplicate by event ID; make processing idempotent; don't rely on the arrival order. Fetch the payment's current state from the provider's API, or apply state transitions only when they move forward.</p></div></details>
+</div>

@@ -1,0 +1,21 @@
+<p class="goal">How software gets onto a Debian system, and how to keep that tidy.</p>
+<pre data-lang="shell"><code class="language-bash">sudo apt update                 # refresh package lists from the repositories
+apt search ripgrep; apt show ripgrep
+sudo apt install ripgrep        # resolves and installs dependencies
+sudo apt upgrade                # upgrade everything installed
+sudo apt remove --purge pkg &amp;&amp; sudo apt autoremove   # remove it, its config, and orphaned dependencies
+dpkg -L ripgrep                 # which files did this package install?
+dpkg -S /usr/bin/rg             # which package owns this file?
+apt policy firefox              # installed vs candidate version, and which repo it comes from</code></pre>
+<table>
+<tr><th>Source</th><th>Trade-off</th></tr>
+<tr><td>apt (Debian repos)</td><td>stable, tested, auto-updated; often older versions</td></tr>
+<tr><td>Extra apt repos (<code>/etc/apt/sources.list.d</code>)</td><td>newer vendor builds (Docker, Node); you trust that vendor's signing key</td></tr>
+<tr><td>Flatpak / Snap</td><td>sandboxed and self-contained, up to date; bigger, duplicate libraries</td></tr>
+<tr><td>Language managers (pip/uv, npm, cargo, go install)</td><td>install into your user folder, no root needed (e.g. <code>npm i -g --prefix ~/.local</code>)</td></tr>
+<tr><td>AppImage / tarball in <code>/opt</code></td><td>one file, no install; no automatic updates</td></tr>
+</table>
+<p>Never <code>sudo pip install</code> or <code>sudo npm i -g</code> into system directories: it fights with apt-managed files. Use user installs or per-project environments.</p>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>59.1 <span class="levels">basic</span> Find which package installed <code>/usr/bin/curl</code>, list its dependencies, and check whether a newer version is available.</summary><div><p><code>dpkg -S /usr/bin/curl</code>, then <code>apt-cache depends curl</code> and <code>apt policy curl</code> (installed vs candidate version).</p></div></details>
+</div>

@@ -1,0 +1,20 @@
+const e=`<p class="goal">Stable networking in front of ever-changing pods.</p>
+<pre data-lang="yaml"><code class="language-yaml">apiVersion: v1
+kind: Service
+metadata: { name: api }
+spec:
+  selector: { app: api }          # all ready pods with this label become endpoints
+  ports: [{ port: 80, targetPort: 8080 }]
+  type: ClusterIP                  # default: internal only</code></pre>
+<table>
+<tr><th>Type</th><th>Reachable from</th></tr>
+<tr><td><b>ClusterIP</b></td><td>inside the cluster, at <code>api.default.svc.cluster.local</code> (or just <code>api</code> within the namespace)</td></tr>
+<tr><td>NodePort</td><td>every node's IP on a high port (30000–32767): mostly for dev</td></tr>
+<tr><td><b>LoadBalancer</b></td><td>the cloud provisions an external load balancer</td></tr>
+<tr><td>Headless (<code>clusterIP: None</code>)</td><td>DNS returns the individual pod IPs (StatefulSets)</td></tr>
+</table>
+<p>A Service gives a stable virtual IP and DNS name, and load-balances across the <b>ready</b> pods matching its selector. When pods are replaced, the endpoints update automatically. Debug with <code>kubectl get endpoints api</code>: an empty list means the selector doesn't match your pod labels, or no pod is ready. For quick local access: <code>kubectl port-forward svc/api 8080:80</code>.</p>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>138.1 <span class="levels">basic</span> Expose a deployment with a ClusterIP Service, then break the selector and inspect the endpoints.</summary><div><p><code>kubectl get endpoints svc</code> empties when the selector doesn't match the pod labels. That's the first thing to check when "the service returns nothing".</p></div></details>
+</div>
+`;export{e as default};

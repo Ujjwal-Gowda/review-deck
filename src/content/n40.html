@@ -1,0 +1,44 @@
+<p class="goal">Everything that changes between environments (dev, staging, production) lives outside the code.</p>
+<h3>What counts as configuration</h3>
+<p>Database URLs, API keys, ports, feature flags, log levels, third-party endpoints, timeouts. The test: <b>could you open-source the code right now without leaking anything?</b> If not, config (or secrets) are mixed into the code.</p>
+<h3>12-factor config: environment variables</h3>
+<pre data-lang="shell"><code class="language-bash"># .env: local development only; it's in .gitignore. Commit a .env.example with dummy values instead.
+DATABASE_URL=postgres://dev:dev@localhost:5432/shop
+PORT=8080
+LOG_LEVEL=debug
+FEATURE_NEW_CHECKOUT=true</code></pre>
+<h3>Load once, validate at startup, fail fast</h3>
+<pre data-lang="typescript"><code class="language-typescript">import { z } from "zod";
+const Env = z.object({
+  DATABASE_URL: z.string().url(),
+  PORT: z.coerce.number().int().default(8080),
+  LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
+});
+export const config = Env.parse(process.env);   // crashes at boot with a clear message, not at 3 a.m. on first use</code></pre>
+<pre data-lang="python"><code class="language-python">from pydantic_settings import BaseSettings
+class Settings(BaseSettings):
+    database_url: str
+    port: int = 8080
+    log_level: str = "info"
+settings = Settings()        # reads the env (and .env); raises if database_url is missing</code></pre>
+<pre data-lang="go"><code class="language-go">type Config struct { DatabaseURL string; Port int }
+func Load() (Config, error) {
+    c := Config{DatabaseURL: os.Getenv("DATABASE_URL"), Port: 8080}
+    if c.DatabaseURL == "" { return c, errors.New("DATABASE_URL is required") }
+    if p := os.Getenv("PORT"); p != "" {
+        n, err := strconv.Atoi(p); if err != nil { return c, fmt.Errorf("PORT: %w", err) }
+        c.Port = n
+    }
+    return c, nil
+}</code></pre>
+<h3>Precedence (lowest to highest)</h3>
+<p>Built-in defaults, then a config file, then environment variables, then command-line flags. Every serious tool follows this order (git, docker, kubectl) so an operator can override anything without editing files.</p>
+<h3>Secrets are special configuration</h3>
+<ul>
+<li>Never commit them; add a secret scanner (gitleaks, GitHub push protection).</li>
+<li>In production, inject them from a secret manager (AWS Secrets Manager, Vault, Doppler, Kubernetes Secrets, GitHub Actions secrets).</li>
+<li>Never log them or send them in error messages; rotate them if they're ever exposed.</li>
+</ul>
+<h3>Feature flags</h3>
+<p>These are runtime switches (<code>if flags.new_checkout:</code>) that let you deploy code "dark" and turn it on for 5% of users, or instantly off if it breaks. They separate <b>deploy</b> from <b>release</b>. The cost: stale flags become technical debt, so delete them once a feature is fully rolled out.</p>
+<details class="ex"><summary>40.1 <span class="levels">basic</span> Take one of your existing projects, find every hard-coded URL, key or port, and move them to validated env config with a <code>.env.example</code>.</summary><div><p>Search with <code>rg -n "http(s)?://|api[_-]?key|localhost:|password" --glob '!node_modules'</code>, then centralise everything in one config module that's loaded at startup.</p></div></details>

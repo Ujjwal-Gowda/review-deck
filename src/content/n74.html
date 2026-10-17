@@ -1,0 +1,27 @@
+<p class="goal">Forms that are pleasant to fill in, accessible, and validated correctly on both ends.</p>
+<pre data-lang="typescript"><code class="language-typescript">import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+const Schema = z.object({ phone: z.string().regex(/^[6-9]\d{9}$/, "10-digit mobile"), qty: z.coerce.number().int().min(1).max(20) });
+type Values = z.infer&lt;typeof Schema&gt;;
+
+function OrderForm() {
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm&lt;Values&gt;({ resolver: zodResolver(Schema) });
+  return (
+    &lt;form onSubmit={handleSubmit(async v =&gt; { await placeOrder(v); })} noValidate&gt;
+      &lt;label htmlFor="phone"&gt;Mobile&lt;/label&gt;
+      &lt;input id="phone" inputMode="numeric" autoComplete="tel" aria-invalid={!!errors.phone}
+             aria-describedby="phone-err" {...register("phone")} /&gt;
+      {errors.phone &amp;&amp; &lt;p id="phone-err" role="alert"&gt;{errors.phone.message}&lt;/p&gt;}
+      &lt;button disabled={isSubmitting}&gt;{isSubmitting ? "Placing…" : "Place order"}&lt;/button&gt;
+    &lt;/form&gt;
+  );
+}</code></pre>
+<ul>
+<li><b>Controlled</b> inputs (React state holds the value; re-render on every keystroke) vs <b>uncontrolled</b> (the DOM holds the value; read it on submit). Form libraries use uncontrolled inputs for speed.</li>
+<li><b>Share the schema</b> between client and server (zod works in both), but the server <b>must</b> validate regardless.</li>
+<li>UX: validate on blur, then live once a field has been touched; keep the user's input on error; disable the submit button while pending to prevent double orders (and make the server idempotent anyway).</li>
+<li>Accessibility: a real <code>&lt;label&gt;</code> on every input, errors linked with <code>aria-describedby</code>, focus moved to the first error on submit.</li>
+</ul>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>74.1 <span class="levels">basic</span> Build a phone + OTP form with inline validation, accessible error messages, and a disabled submit button while pending.</summary><div><p>Link the label and input with <code>id</code>/<code>for</code>; add <code>aria-invalid</code> and <code>aria-describedby</code> pointing at an error element with <code>role="alert"</code>; set <code>inputmode="numeric"</code> and <code>autocomplete="one-time-code"</code>; keep an <code>isSubmitting</code> flag.</p></div></details>
+</div>

@@ -1,0 +1,115 @@
+<p class="goal">Engineering Practice: High-Performance System Design. Master the 45-minute architectural interview framework, mental math estimations, latency cheat sheets, and deep-dive failure analysis.</p>
+
+<h3>The 45-Minute System Design Framework</h3>
+<p>System design is not about memorizing buzzwords ("use Kafka and microservices"). It is a structured exercise in clarifying ambiguous requirements, sizing hardware with rapid mental math, defending trade-offs under the CAP theorem, and deep-diving into the single hardest algorithmic bottleneck.</p>
+
+<div class="diagram">
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                               The 45-Minute Design Blueprint                           │
+│                                                                                        │
+│   [0–5m]   Scope &amp; Clarification   ──► Functional requirements, SLA (99.99%), CAP bias │
+│   [5–10m]  Back-of-Envelope Math   ──► Peak QPS, Read/Write ratio, Storage/yr, Network │
+│   [10–15m] API &amp; Data Model        ──► REST/gRPC endpoints, relational vs NoSQL schema│
+│   [15–30m] High-Level Topology     ──► Client → CDN → LB → Gateway → Services → DB/Cache│
+│   [30–40m] Deep Dive Hot Path      ──► Distributed locking, race conditions, sharding  │
+│   [40–45m] Bottlenecks &amp; Scaling   ──► SPOFs, single-node limits, replication lag      │
+└────────────────────────────────────────────────────────────────────────────────────────┘
+</div>
+
+<h3>Part 1: The Numbers Every Engineer Must Memorize</h3>
+
+<div class="cheat">
+  <div class="card">
+    <h4>Latency Hierarchy</h4>
+    <ul>
+      <li><b>L1 cache reference:</b> 0.5 – 1 ns</li>
+      <li><b>RAM access:</b> 100 ns</li>
+      <li><b>NVMe SSD random read:</b> 100 µs (0.1 ms)</li>
+      <li><b>Same-datacenter network round-trip:</b> 0.5 ms</li>
+      <li><b>Cross-region network round-trip (US to EU):</b> 80 – 150 ms</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h4>Mental Math Shorthands</h4>
+    <ul>
+      <li>$1\text{ day} = 86,400\text{ seconds} \approx 10^5\text{ seconds}$</li>
+      <li>$1\text{ Million requests / day} \approx \mathbf{12\text{ RPS}}$</li>
+      <li>$100\text{ Million requests / day} \approx \mathbf{1,200\text{ RPS}}$</li>
+      <li><b>Peak Traffic Rule of Thumb:</b> Multiply average RPS by $3\times$ to $5\times$.</li>
+      <li>$1\text{ KB} \times 1\text{M writes / day} \approx \mathbf{1\text{ GB / day}} \approx \mathbf{365\text{ GB / yr}}$.</li>
+    </ul>
+  </div>
+</div>
+
+<h3>Part 2: Full Walkthrough: Stadium Ticket Reservation Engine</h3>
+<p>Let's design a high-throughput ticketing platform (e.g. reserving 50,000 stadium seats in 60 seconds with 500,000 concurrent users without overselling).</p>
+
+<h4>1. Requirements &amp; Scope</h4>
+<ul>
+  <li><b>Functional:</b> Browse events, view interactive seat layout, hold a seat for 10 minutes during checkout, complete purchase, release seat if timer expires.</li>
+  <li><b>Non-Functional:</b> <b>Zero Double-Booking</b> (Strict Consistency over Seat State), High Availability on seat browsing, P99 latency &lt; 200ms.</li>
+</ul>
+
+<h4>2. Back-of-Envelope Sizing</h4>
+<ul>
+  <li><b>Peak Traffic:</b> 500,000 active users searching seats = 25,000 Read RPS.</li>
+  <li><b>Write Traffic:</b> 50,000 reservation attempts in first 10 seconds = 5,000 Write RPS.</li>
+</ul>
+
+<h4>3. The Architecture Topology</h4>
+<div class="diagram">
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                              Ticket Reservation Architecture                           │
+│                                                                                        │
+│   [500k Fans] ──► [Cloudflare CDN (Cached Seat Map SVG)]                               │
+│                         │                                                              │
+│                         ▼ Cache Miss (Dynamic Hold Requests)                           │
+│   ┌──────────────────────────────────────────────────────────────────────────────┐     │
+│   │                        API Gateway / Load Balancer                           │     │
+│   └──────────────────────────────────────┬───────────────────────────────────────┘     │
+│                                          │                                             │
+│                                          ▼                                             │
+│   ┌──────────────────────────────────────────────────────────────────────────────┐     │
+│   │               Reservation Service (Stateless Node.js / Go)                   │     │
+│   └───────────────────┬──────────────────────────────────────┬───────────────────┘     │
+│                       │                                      │                         │
+│         Fast Lock Hold│ (TTL = 10m)                          │ Confirm Purchase        │
+│                       ▼                                      ▼                         │
+│   ┌──────────────────────────────────────┐┌──────────────────────────────────────┐     │
+│   │       Redis Distributed Cache        ││         PostgreSQL Database          │     │
+│   │ • Atomic Lua Script (SETNX seat_id)  ││ • Permanent ledger: `orders`,        │     │
+│   │ • Redis Key Expiry (Releases seat)   ││   `tickets`, `payments`              │     │
+│   └──────────────────────────────────────┘└──────────────────────────────────────┘     │
+└────────────────────────────────────────────────────────────────────────────────────────┘
+</div>
+
+<h4>4. The Deep Dive: The 10-Minute Seat Reservation Problem</h4>
+<p>Holding database row locks (<code>SELECT FOR UPDATE</code>) across a 10-minute human credit card checkout will exhaust all database connections and crash the database. Instead, use an <b>Atomic Redis Lua Script</b> with an automatic Time-To-Live (TTL):</p>
+
+<pre data-lang="lua"><code class="language-lua">-- atomic_seat_hold.lua
+-- KEYS[1]: seat key (e.g. "event:42:seat:B12")
+-- ARGV[1]: user_id
+-- ARGV[2]: hold_duration_seconds (e.g. 600)
+
+if redis.call("EXISTS", KEYS[1]) == 1 then
+    return 0 -- Seat already held or sold!
+else
+    -- Atomically claim seat with 10-minute expiry
+    redis.call("SET", KEYS[1], ARGV[1], "EX", ARGV[2])
+    return 1 -- Hold acquired successfully!
+end</code></pre>
+
+<p>If the user completes payment within 10 minutes, the backend records the confirmed sale in PostgreSQL. If the user closes their browser, Redis automatically expires the key after 600 seconds, releasing the seat instantly back to other fans without running background cleanup cron jobs.</p>
+
+<details class="ex">
+  <summary><b>Drill: How to handle Live Delivery Driver Geolocation tracking at 1M RPS?</b> (Click to expand)</summary>
+  <p><b>Question:</b> 1,000,000 delivery drivers send GPS coordinates $(lat, lng)$ every 3 seconds. How do you store and query "find the 5 nearest drivers within 2km"?</p>
+  <div class="callout key">
+    <p><b>Answer: Redis Geospatial Indices (Geohash / Sorted Sets)!</b></p>
+    <ul>
+      <li>Never write 300,000 GPS updates per second to relational disk (PostGIS)! The write IOPS will destroy the database.</li>
+      <li>Store driver coordinates in Redis in-memory using <code>GEOADD drivers:active &lt;lng&gt; &lt;lat&gt; &lt;driver_id&gt;</code>.</li>
+      <li>Query nearby drivers using <code>GEOSEARCH drivers:active FROMLONLAT &lt;lng&gt; &lt;lat&gt; BYRADIUS 2 km COUNT 5 ASC</code>. Redis executes this spatial B-tree search in sub-millisecond memory!</li>
+    </ul>
+  </div>
+</details>

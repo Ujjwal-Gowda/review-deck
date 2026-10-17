@@ -1,0 +1,37 @@
+const e=`<p class="goal">Scaling GitHub Actions beyond one workflow file: reuse, speed and cloud access without stored keys.</p>
+<pre data-lang="yaml"><code class="language-yaml"># .github/workflows/build.yml: a REUSABLE workflow
+on:
+  workflow_call:
+    inputs: { service: { type: string, required: true } }
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    permissions: { contents: read, packages: write, id-token: write }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with: { registry: ghcr.io, username: "\${{ github.actor }}", password: "\${{ secrets.GITHUB_TOKEN }}" }
+      - uses: docker/build-push-action@v6
+        with:
+          context: \${{ inputs.service }}
+          push: true
+          tags: ghcr.io/\${{ github.repository }}/\${{ inputs.service }}:\${{ github.sha }}
+          cache-from: type=gha                      # Docker layer cache stored in GitHub's cache
+          cache-to: type=gha,mode=max
+# caller:   jobs: { api: { uses: ./.github/workflows/build.yml, with: { service: api } } }</code></pre>
+<pre data-lang="yaml"><code class="language-yaml"># OIDC: log into AWS with no stored access keys
+permissions: { id-token: write, contents: read }
+steps:
+  - uses: aws-actions/configure-aws-credentials@v4
+    with: { role-to-assume: "arn:aws:iam::123456789012:role/gh-deploy", aws-region: ap-south-1 }</code></pre>
+<ul>
+<li><b>Path filters</b> (<code>on: push: paths: ["api/**"]</code>) run only the affected pipelines in a monorepo.</li>
+<li><b>Composite actions</b> bundle repeated steps; <b>reusable workflows</b> share whole jobs across repos.</li>
+<li><b>Environments</b> hold per-environment secrets, required reviewers and wait timers.</li>
+<li>Debug with <code>gh run view --log-failed</code>, and by re-running with debug logging (<code>ACTIONS_STEP_DEBUG</code>).</li>
+</ul>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>121.1 <span class="levels">basic</span> Convert duplicated steps across two workflows into a reusable workflow with inputs.</summary><div><p>Put <code>on: workflow_call</code> with inputs in one file; callers use <code>uses: ./.github/workflows/x.yml</code> and <code>with:</code>. Secrets need <code>secrets: inherit</code> or explicit mapping.</p></div></details>
+</div>
+`;export{e as default};

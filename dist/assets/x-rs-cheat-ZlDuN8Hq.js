@@ -1,0 +1,67 @@
+const e=`<p class="goal">Rust on one screen.</p>
+<div class="cheat">
+<div><h4>Variables &amp; types</h4><pre data-lang="rust"><code class="language-rust">let x = 5;  let mut y = 5;  const MAX: u32 = 50;
+let x = x + 1;          // shadowing
+i8..i128 u8..u128 isize usize f32 f64 bool char
+let t: (i32, &amp;str) = (1, "a"); t.0
+let a: [i32; 3] = [1, 2, 3];
+n as f64; u8::try_from(300)   // Err
+"42".parse::&lt;i32&gt;()           // Result</code></pre></div>
+<div><h4>Ownership</h4><pre data-lang="rust"><code class="language-rust">let s2 = s1;          // MOVE: s1 unusable
+let s3 = s2.clone();  // deep copy
+fn look(s: &amp;String)   // borrow (read)
+fn edit(s: &amp;mut String) // exclusive borrow (write)
+fn take(s: String)    // takes ownership
+&amp;s[0..3]              // slice (borrow of part)
+// many &amp;T  OR  one &amp;mut T, never both</code></pre></div>
+<div><h4>Control flow</h4><pre data-lang="rust"><code class="language-rust">let v = if c { 1 } else { 2 };
+match n { 0 =&gt; "zero", 1..=9 =&gt; "small", _ =&gt; "big" }
+if let Some(x) = opt { … }
+let Some(x) = opt else { return; };
+for i in 0..n {}  for x in &amp;v {}  for (i, x) in v.iter().enumerate() {}
+while c {}  let r = loop { break 42; };</code></pre></div>
+<div><h4>Structs &amp; enums</h4><pre data-lang="rust"><code class="language-rust">#[derive(Debug, Clone, PartialEq)]
+struct Item { sku: String, qty: u32 }
+impl Item {
+    fn new(sku: &amp;str) -&gt; Self { Self { sku: sku.into(), qty: 0 } }
+    fn add(&amp;mut self, n: u32) { self.qty += n; }
+}
+enum Pay { Upi(String), Card { last4: String }, Cash }
+println!("{item:?} {item:#?}");</code></pre></div>
+<div><h4>Option &amp; Result</h4><pre data-lang="rust"><code class="language-rust">opt.unwrap_or(0) opt.map(|x| x*2) opt.ok_or("missing")?
+opt.is_some() opt.as_ref() opt.and_then(f)
+res? res.map_err(|e| …) res.unwrap_or_default()
+res.expect("why this can't fail")
+fn main() -&gt; Result&lt;(), Box&lt;dyn Error&gt;&gt; { …; Ok(()) }</code></pre></div>
+<div><h4>Collections</h4><pre data-lang="rust"><code class="language-rust">let mut v = vec![3, 1, 2]; v.push(4); v.pop(); v.len(); v.sort();
+v.iter().sum::&lt;i32&gt;(); v.contains(&amp;3); v.retain(|&amp;x| x &gt; 1);
+let mut m = HashMap::new(); m.insert("k", 1); m.get("k");
+*m.entry("k").or_insert(0) += 1;
+let s = HashSet::from([1, 2]); BTreeMap / VecDeque / BinaryHeap</code></pre></div>
+<div><h4>Strings</h4><pre data-lang="rust"><code class="language-rust">let s: String = "hi".to_string(); let r: &amp;str = &amp;s;
+s.push_str("!"); format!("{s} {n:05} {f:.2}")
+s.split(',') s.trim() s.contains("x") s.replace("a","b")
+s.chars().rev().collect::&lt;String&gt;()
+s.len()  // bytes;  s.chars().count()  // chars</code></pre></div>
+<div><h4>Iterators</h4><pre data-lang="rust"><code class="language-rust">v.iter().filter(|x| **x &gt; 0).map(|x| x * 2).collect::&lt;Vec&lt;_&gt;&gt;()
+.enumerate() .zip(other) .take(3) .skip(1) .rev() .chain()
+.fold(0, |a, x| a + x) .any(|x| …) .all(…) .find(…) .position(…)
+.max_by_key(|o| o.total) .sum() .count() .flat_map(…)
+into_iter() (owned)  iter() (&amp;T)  iter_mut() (&amp;mut T)</code></pre></div>
+<div><h4>Traits &amp; generics</h4><pre data-lang="rust"><code class="language-rust">trait Area { fn area(&amp;self) -&gt; f64; }
+impl Area for Circle { fn area(&amp;self) -&gt; f64 { 3.14 * self.r * self.r } }
+fn total&lt;T: Area&gt;(xs: &amp;[T]) -&gt; f64 { xs.iter().map(|x| x.area()).sum() }
+fn show(x: &amp;impl Display) {}   fn boxed(v: Vec&lt;Box&lt;dyn Area&gt;&gt;) {}
+impl fmt::Display for Item { fn fmt(&amp;self, f: &amp;mut fmt::Formatter) -&gt; fmt::Result { write!(f, "{}", self.sku) } }</code></pre></div>
+<div><h4>Smart pointers &amp; concurrency</h4><pre data-lang="rust"><code class="language-rust">Box&lt;T&gt; (heap)  Rc&lt;T&gt; (shared, 1 thread)  Arc&lt;T&gt; (shared, threads)
+RefCell&lt;T&gt; / Mutex&lt;T&gt; (interior mutability)
+let c = Arc::new(Mutex::new(0));
+thread::spawn(move || { *c.lock().unwrap() += 1; }).join().unwrap();
+let (tx, rx) = mpsc::channel();</code></pre></div>
+<div><h4>Cargo</h4><pre data-lang="shell"><code class="language-bash">cargo new app; cargo add serde --features derive; cargo add anyhow clap
+cargo run -- args; cargo build --release; cargo check
+cargo test; cargo test name -- --nocapture
+cargo clippy -- -D warnings; cargo fmt; cargo doc --open
+cargo tree; cargo update; rustup update</code></pre></div>
+</div>
+`;export{e as default};

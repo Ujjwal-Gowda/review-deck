@@ -1,0 +1,44 @@
+<p class="goal">Writing that saves future-you and teammates hours: which document answers which question.</p>
+<table>
+<tr><th>Document</th><th>Answers</th><th>Reader</th></tr>
+<tr><td><b>README</b></td><td>What is this? How do I run it, test it, deploy it?</td><td>a newcomer's first 10 minutes</td></tr>
+<tr><td><b>Docstrings / doc comments</b></td><td>What does this function promise? (inputs, outputs, errors, side effects)</td><td>a caller</td></tr>
+<tr><td><b>Code comments</b></td><td><i>Why</i> is this code like this? (a non-obvious constraint, a workaround, a link to a bug report)</td><td>a maintainer</td></tr>
+<tr><td><b>API docs</b> (OpenAPI)</td><td>Endpoints, schemas, errors, auth</td><td>integrators</td></tr>
+<tr><td><b>Architecture doc</b></td><td>The big picture: components, data flow, boundaries</td><td>new team members</td></tr>
+<tr><td><b>ADR</b> (<a class="xref" data-old="n42">chapter 42</a>)</td><td>Why did we choose X over Y?</td><td>future deciders</td></tr>
+<tr><td><b>Runbook</b></td><td>It's broken at 3 a.m.: step by step, what do I do?</td><td>on-call</td></tr>
+<tr><td><b>CHANGELOG</b></td><td>What changed in each version? Breaking changes?</td><td>users upgrading</td></tr>
+<tr><td><b>CONTRIBUTING</b></td><td>How to set up, the code style, how to open a PR</td><td>contributors</td></tr>
+</table>
+<h3>A README template that works</h3>
+<pre data-lang="plaintext"><code class="language-plaintext"># Project name: one sentence on what it does and for whom
+## Quick start       (copy-pasteable commands: clone → install → run, in under 5 minutes)
+## Configuration     (env vars table: name, purpose, default, required?)
+## Development       (tests, lint, project layout in 5 lines)
+## Deployment        (or a link to it)
+## Architecture      (a 1-paragraph overview + a diagram, or a link)</code></pre>
+<h3>Doc comments in your languages</h3>
+<pre data-lang="go"><code class="language-go">// Reserve holds qty units of sku for an order. It returns ErrInsufficientStock
+// if fewer than qty units are available. Safe for concurrent use.
+func (s *Store) Reserve(ctx context.Context, sku string, qty int) error</code></pre>
+<pre data-lang="rust"><code class="language-rust">/// Parses `"sku,qty"` lines.
+///
+/// # Errors
+/// Returns `Err` with the 1-based line number on malformed input.
+///
+/// # Examples
+/// ```
+/// assert_eq!(drills::parse_stock("milk,2").unwrap()[0].1, 2);
+/// ```
+pub fn parse_stock(text: &amp;str) -&gt; Result&lt;Vec&lt;(String, u32)&gt;, String&gt;   // `cargo test` RUNS doc examples</code></pre>
+<p>Go (<code>go doc</code>, pkg.go.dev), Rust (<code>cargo doc --open</code>), Python (docstrings, <code>help()</code>) and TS (TSDoc in the IDE) all generate browsable docs from these comments.</p>
+<h3>Comments: the rules</h3>
+<ul>
+<li>Explain <b>why</b>, not what. <code>i += 1  # increment i</code> is noise. <code># Razorpay rounds down to whole paise; match it or reconciliation fails</code> is gold.</li>
+<li>If you need a comment to explain <i>what</i> the code does, first try a better name or extracting a function.</li>
+<li>Outdated docs are worse than none. Keep docs next to the code and update them in the same PR.</li>
+</ul>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>41.1 <span class="levels">basic</span> Write a README for your printer-doctor app using the template. Then follow it on a fresh clone and fix every step that fails.</summary><div><p>The steps that fail on a fresh clone (a missing dependency, an undocumented env var, a wrong path) are documentation bugs. Commit the fixes in the same PR as the code they describe.</p></div></details>
+</div>

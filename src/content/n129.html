@@ -1,0 +1,25 @@
+<p class="goal">Picking the right kind of storage: object, block or file.</p>
+<table>
+<tr><th>Type</th><th>Access</th><th>Examples</th><th>Use for</th></tr>
+<tr><td><b>Object</b></td><td>HTTP API: PUT/GET whole objects by key</td><td>S3, GCS, R2, Backblaze B2, MinIO</td><td>uploads, images, videos, backups, static sites, data lakes. Effectively unlimited and very durable.</td></tr>
+<tr><td><b>Block</b></td><td>a raw disk attached to one VM</td><td>EBS, Persistent Disk</td><td>databases, a VM's boot disk. Low latency.</td></tr>
+<tr><td><b>File</b></td><td>a shared POSIX filesystem (NFS) mounted by many machines</td><td>EFS, Filestore</td><td>legacy apps that need a shared folder</td></tr>
+</table>
+<pre data-lang="python"><code class="language-python">import boto3
+s3 = boto3.client("s3")
+s3.upload_file("invoice-42.pdf", "freshon-invoices", "2026/09/invoice-42.pdf")
+url = s3.generate_presigned_url("get_object", Params={"Bucket": "freshon-invoices", "Key": "2026/09/invoice-42.pdf"},
+                                ExpiresIn=3600)      # a time-limited link: the bucket stays private
+# presigned PUT URLs let browsers upload directly to S3, so big files never pass through your server</code></pre>
+<h3>Object storage essentials</h3>
+<ul>
+<li><b>Keep buckets private</b> (public-bucket leaks are a classic breach); serve files via presigned URLs or a CDN with origin access control.</li>
+<li><b>Storage classes and lifecycle rules:</b> move old objects to cheaper tiers, and expire temporary files automatically.</li>
+<li>Versioning protects against accidental deletes and ransomware.</li>
+<li><b>Egress costs:</b> serving lots of video from S3 directly is expensive. Use a CDN, or providers with free egress (Cloudflare R2).</li>
+<li>Objects are immutable: "editing" one means writing a new object.</li>
+</ul>
+<div class="callout seclens"><b class="t">Security lens · Object storage</b><p>Public buckets are among the most common data breaches. Block public access account-wide, and serve private files through short-lived presigned URLs.</p></div>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>129.1 <span class="levels">basic</span> Upload a file to S3 (or R2) with the CLI, generate a presigned URL valid for 10 minutes, and confirm it expires.</summary><div><p><code>aws s3 cp f s3://b/f</code>, then <code>aws s3 presign s3://b/f --expires-in 600</code>. After 10 minutes the URL returns 403 AccessDenied (Request has expired).</p></div></details>
+</div>

@@ -1,0 +1,80 @@
+<p class="goal">Python on one screen. Keep this open while you code.</p>
+<div class="cheat">
+<div><h4>Basics</h4><pre data-lang="python"><code class="language-python">x = 42; name = "Asha"; ok = True; nothing = None
+x += 1; x //= 2; x ** 2; 7 % 3; abs(-3); round(2.567, 2)
+int("42"); float("3.5"); str(42); bool(0)   # False
+type(x); isinstance(x, int)
+a, b = b, a                  # swap
+print(f"{name=} {x:05d} {3.14159:.2f} {1234567:,}")</code></pre></div>
+<div><h4>Strings</h4><pre data-lang="python"><code class="language-python">s.lower() s.upper() s.strip() s.title()
+s.split(",") ",".join(xs) s.replace("a","b")
+s.startswith("Fr") "sh" in s s.find("x")   # -1 if missing
+s[0] s[-1] s[1:4] s[::-1]
+s.isdigit() s.isalpha() len(s)
+"""multi
+line"""  r"raw\n"  b"bytes"  s.encode(); b.decode()</code></pre></div>
+<div><h4>Lists</h4><pre data-lang="python"><code class="language-python">xs = [3, 1, 2]
+xs.append(4); xs.extend([5, 6]); xs.insert(0, 9)
+xs.pop(); xs.pop(0); xs.remove(9); del xs[0]
+xs.sort(); sorted(xs, key=len, reverse=True)
+xs.index(2); xs.count(2); 2 in xs
+xs[1:3]; xs[::2]; xs.copy(); xs.reverse()
+sum(xs) min(xs) max(xs) len(xs)</code></pre></div>
+<div><h4>Dicts &amp; sets</h4><pre data-lang="python"><code class="language-python">d = {"milk": 12}
+d["curd"] = 5; d.get("x", 0); d.pop("milk")
+d.setdefault("k", []).append(1)
+for k, v in d.items(): ...
+d | {"new": 1}            # merge (3.9+)
+s = {1, 2}; s.add(3); s &amp; t; s | t; s - t
+from collections import Counter, defaultdict, deque</code></pre></div>
+<div><h4>Control flow</h4><pre data-lang="python"><code class="language-python">if x &gt; 0: ... elif x == 0: ... else: ...
+y = "pos" if x &gt; 0 else "non-pos"
+for i in range(10): ...          # 0..9
+for i, x in enumerate(xs): ...
+for a, b in zip(xs, ys): ...
+while cond: ...  break  continue
+for x in xs: ... else: ...       # else: no break happened
+match cmd:
+    case ["go", d]: ...
+    case _: ...</code></pre></div>
+<div><h4>Comprehensions</h4><pre data-lang="python"><code class="language-python">[x * 2 for x in xs if x &gt; 0]
+{k: v for k, v in pairs}
+{x % 3 for x in xs}
+sum(x * x for x in xs)           # generator: no list built
+any(x &lt; 0 for x in xs); all(...)</code></pre></div>
+<div><h4>Functions</h4><pre data-lang="python"><code class="language-python">def f(a, b=2, *args, key=None, **kw) -&gt; int: ...
+f(1, key="x")
+lambda x: x * 2
+def outer():
+    n = 0
+    def inner():
+        nonlocal n; n += 1; return n
+    return inner</code></pre></div>
+<div><h4>Classes</h4><pre data-lang="python"><code class="language-python">from dataclasses import dataclass, field
+@dataclass
+class Item:
+    sku: str
+    qty: int = 0
+    tags: list[str] = field(default_factory=list)
+    def total(self, price: int) -&gt; int: return self.qty * price
+class Paneer(Item): ...               # inheritance
+@property  __repr__  __eq__  __lt__  __len__</code></pre></div>
+<div><h4>Errors &amp; files</h4><pre data-lang="python"><code class="language-python">try: ...
+except (ValueError, KeyError) as e: ...
+else: ...     # no exception happened
+finally: ...
+raise ValueError("bad qty") from e
+with open(p, encoding="utf-8") as f: text = f.read()
+from pathlib import Path; Path("a/b.txt").read_text()
+import json; json.loads(s); json.dumps(o, indent=2)</code></pre></div>
+<div><h4>Handy stdlib</h4><pre data-lang="python"><code class="language-python">import os, sys, re, math, random, time, datetime, itertools, functools, heapq, bisect, subprocess, logging
+sys.argv; os.environ.get("X"); sys.exit(1)
+re.findall(r"\d+", s); re.sub(r"\s+", " ", s)
+datetime.datetime.now(datetime.UTC).isoformat()
+functools.cache; itertools.groupby; heapq.nlargest(3, xs)</code></pre></div>
+<div><h4>Tooling (uv)</h4><pre data-lang="shell"><code class="language-bash">uv init app; uv add httpx; uv add --dev pytest
+uv run python main.py; uv run pytest -q
+uvx ruff check .; uvx ruff format .; uvx pyright
+python -m pdb app.py      # or breakpoint() in code
+python -X importtime …; python -m cProfile -s cumtime app.py</code></pre></div>
+</div>

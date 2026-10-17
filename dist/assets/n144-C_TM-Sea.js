@@ -1,0 +1,17 @@
+const e=`<p class="goal">Packaging and templating Kubernetes manifests for many environments.</p>
+<pre data-lang="shell"><code class="language-bash">helm repo add bitnami https://charts.bitnami.com/bitnami
+helm install cache bitnami/redis --set auth.enabled=true -n shop --create-namespace   # install third-party software
+helm upgrade --install api ./charts/api -f values-prod.yaml    # your own chart, with per-environment values
+helm list -A; helm rollback api 3; helm template ./charts/api  # render to plain YAML to inspect it</code></pre>
+<p>A <b>chart</b> is templated YAML (<code>templates/deployment.yaml</code> using <code>{{ .Values.image.tag }}</code>) plus default <code>values.yaml</code>. Helm tracks <b>releases</b>, so upgrades and rollbacks are one command. It's great for installing off-the-shelf software (ingress-nginx, cert-manager, Prometheus).</p>
+<pre data-lang="plaintext"><code class="language-plaintext">k8s/
+  base/            deployment.yaml service.yaml kustomization.yaml
+  overlays/
+    staging/       kustomization.yaml  (patch: replicas 1, image tag, ConfigMap)
+    prod/          kustomization.yaml  (patch: replicas 3, resources, HPA)
+kubectl apply -k k8s/overlays/prod     # Kustomize: patches over plain YAML, no templating language</code></pre>
+<p><b>Helm vs Kustomize:</b> Helm has templating plus release management, and is best for distributing software. Kustomize is plain YAML with patches, simpler for your own apps. Many teams use both, with Argo CD applying them from git.</p>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>144.1 <span class="levels">basic</span> Install Redis with Helm, change one value with <code>--set</code> in an upgrade, then roll back.</summary><div><p><code>helm install</code>, <code>helm upgrade --set …</code>, <code>helm history</code>, <code>helm rollback r 1</code>. <code>helm template</code> shows the rendered YAML before you apply it.</p></div></details>
+</div>
+`;export{e as default};

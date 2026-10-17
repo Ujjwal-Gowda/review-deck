@@ -1,0 +1,32 @@
+const e=`<p class="goal">Classical ML with scikit-learn: often the right tool for tabular business data.</p>
+<pre data-lang="python"><code class="language-python">import pandas as pd
+from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.ensemble import HistGradientBoostingRegressor
+from sklearn.metrics import mean_absolute_error
+
+df = pd.read_csv("daily_sales.csv")                   # predict tomorrow's units per product per store
+X = df[["store_id", "product_id", "dow", "is_festival", "units_lag_7", "units_lag_1", "price"]]
+y = df["units"]
+X_tr, X_te, y_tr, y_te = train_test_split(X, y, test_size=0.2, shuffle=False)   # time series: DON'T shuffle
+model = HistGradientBoostingRegressor(max_iter=300).fit(X_tr, y_tr)
+print("MAE:", mean_absolute_error(y_te, model.predict(X_te)))
+print("baseline (last week's value):", mean_absolute_error(y_te, X_te["units_lag_7"]))   # always compare to a naive baseline</code></pre>
+<table>
+<tr><th>Model</th><th>Use</th></tr>
+<tr><td>Linear / logistic regression</td><td>interpretable baselines; probabilities</td></tr>
+<tr><td>Decision tree / random forest</td><td>non-linear, easy to explain</td></tr>
+<tr><td><b>Gradient boosting</b> (XGBoost, LightGBM, HistGB)</td><td>the usual winner on tabular data</td></tr>
+<tr><td>k-means / DBSCAN</td><td>clustering (customer segments)</td></tr>
+<tr><td>PCA</td><td>dimensionality reduction, visualisation</td></tr>
+<tr><td>Isolation forest</td><td>anomaly detection (strange transactions)</td></tr>
+</table>
+<ul>
+<li><b>Feature engineering</b> (lags, day of week, holidays) usually matters more than the choice of model.</li>
+<li><b>Metrics:</b> MAE/RMSE for regression; precision, recall, F1 and ROC-AUC for classification (accuracy misleads on imbalanced data); a confusion matrix.</li>
+<li><b>Leakage:</b> features that wouldn't be known at prediction time (e.g. using tomorrow's data) produce fake great scores.</li>
+<li>Cross-validation (time-series splits for temporal data) for honest estimates.</li>
+</ul>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>196.1 <span class="levels">basic</span> Predict next-day sales for one product with a naive baseline (same as last week) and gradient boosting. Did the model beat the baseline?</summary><div><p>Compare MAE on a time-ordered test split. If the model doesn't clearly beat the baseline, the features matter more than the algorithm: add day-of-week, festival and price features.</p></div></details>
+</div>
+`;export{e as default};

@@ -1,0 +1,43 @@
+<p class="goal">Doing several things at once in each language: the primitives, the idioms, and what each is best at. Theory: <a class="xref" data-old="c20">Concurrency</a> and <a class="xref" data-old="x-io">I/O Models</a>.</p>
+<h3>Fetch 20 URLs, at most 5 at a time</h3>
+<pre data-lang="python"><code class="language-python">async def fetch_all(urls):
+    sem = asyncio.Semaphore(5)
+    async with httpx.AsyncClient(timeout=10) as client:
+        async def one(u):
+            async with sem: return (await client.get(u)).status_code
+        return await asyncio.gather(*(one(u) for u in urls))</code></pre>
+<pre data-lang="typescript"><code class="language-typescript">async function fetchAll(urls: string[], limit = 5) {
+  const results: number[] = []; let i = 0;
+  const worker = async () =&gt; { while (i &lt; urls.length) { const k = i++; results[k] = (await fetch(urls[k])).status; } };
+  await Promise.all(Array.from({ length: limit }, worker));
+  return results;
+}</code></pre>
+<pre data-lang="go"><code class="language-go">func fetchAll(ctx context.Context, urls []string) []int {
+    out := make([]int, len(urls))
+    g, ctx := errgroup.WithContext(ctx); g.SetLimit(5)
+    for i, u := range urls {
+        g.Go(func() error { req, _ := http.NewRequestWithContext(ctx, "GET", u, nil)
+            r, err := http.DefaultClient.Do(req); if err != nil { return err }
+            r.Body.Close(); out[i] = r.StatusCode; return nil })
+    }
+    g.Wait(); return out
+}</code></pre>
+<pre data-lang="rust"><code class="language-rust">async fn fetch_all(urls: Vec&lt;String&gt;) -&gt; Vec&lt;u16&gt; {   // tokio + reqwest + futures
+    let client = reqwest::Client::new();
+    futures::stream::iter(urls).map(|u| { let c = client.clone(); async move {
+        c.get(&amp;u).send().await.map(|r| r.status().as_u16()).unwrap_or(0) } })
+      .buffered(5).collect().await                    // at most 5 in flight, results in order
+}</code></pre>
+<pre data-lang="c"><code class="language-c">/* C: pthreads + a mutex-protected next-index counter, 5 threads each looping:
+   lock → take next index → unlock → fetch with libcurl → store result.  Or libcurl's multi interface (event-driven). */</code></pre>
+<table>
+<tr><th></th><th>Best for I/O</th><th>Best for CPU</th><th>Share data safely with</th><th>Data-race protection</th></tr>
+<tr><td>Python</td><td>asyncio / threads</td><td>processes (GIL)</td><td>queues, locks</td><td>runtime only</td></tr>
+<tr><td>TS/Node</td><td>async/await (one thread)</td><td>worker_threads</td><td>message passing</td><td>no shared memory by default</td></tr>
+<tr><td>Go</td><td>goroutines</td><td>goroutines (all cores)</td><td>channels, Mutex</td><td><code>go test -race</code> detects races</td></tr>
+<tr><td>Rust</td><td>async (tokio)</td><td>threads, rayon</td><td>Arc&lt;Mutex&gt;, channels</td><td><b>compile-time</b> (Send/Sync)</td></tr>
+<tr><td>C</td><td>epoll / threads</td><td>pthreads</td><td>mutexes, atomics</td><td>none (ThreadSanitizer helps)</td></tr>
+</table>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>0.1 <span class="levels">basic</span> Sum the squares of 1..50,000,000 using all CPU cores in Go (goroutines), Rust (rayon <code>par_iter</code>) and Python (<code>ProcessPoolExecutor</code>). Compare wall time with the single-threaded version of each.</summary><div><p>Go and Rust scale close to your 12 cores. Python with processes scales too, but pays for starting processes and shipping data between them (chunk the ranges). Python threads would show no speedup because of the GIL.</p></div></details>
+</div>

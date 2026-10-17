@@ -1,0 +1,62 @@
+<p class="goal">Defining your own types in Python, and hooking into the language through the data model ("dunder" methods).</p>
+<h3>A class from scratch</h3>
+<pre data-lang="python"><code class="language-python">class Cart:
+    tax_rate = 0.05                          # class attribute (shared by all instances)
+
+    def __init__(self, customer: str):
+        self.customer = customer             # instance attributes
+        self._items: dict[str, int] = {}     # _ = internal by convention
+
+    def add(self, sku: str, qty: int = 1) -&gt; None:
+        if qty &lt;= 0: raise ValueError("qty must be positive")
+        self._items[sku] = self._items.get(sku, 0) + qty
+
+    @property
+    def count(self) -&gt; int:                  # accessed like an attribute: cart.count
+        return sum(self._items.values())
+
+    def __len__(self): return len(self._items)          # len(cart)
+    def __contains__(self, sku): return sku in self._items   # "milk" in cart
+    def __iter__(self): return iter(self._items.items())    # for sku, qty in cart
+    def __repr__(self): return f"Cart({self.customer!r}, {self._items})"</code></pre>
+<h3>Dataclasses: less boilerplate</h3>
+<pre data-lang="python"><code class="language-python">from dataclasses import dataclass, field
+@dataclass(frozen=True, slots=True)          # immutable, hashable, memory-efficient
+class Money:
+    paise: int
+    def __add__(self, other: "Money") -&gt; "Money": return Money(self.paise + other.paise)
+    def __str__(self): return f"₹{self.paise / 100:,.2f}"
+
+@dataclass(order=True)                       # generates __init__, __repr__, __eq__, and &lt; &gt; comparisons
+class Delivery:
+    deadline: int
+    order_id: int = field(compare=False)
+    tags: list[str] = field(default_factory=list, compare=False)</code></pre>
+<h3>The data model: what each dunder enables</h3>
+<table>
+<tr><th>Method</th><th>Makes this work</th></tr>
+<tr><td><code>__init__</code>, <code>__repr__</code>, <code>__str__</code></td><td>construction; debug display; <code>print()</code></td></tr>
+<tr><td><code>__eq__</code>, <code>__hash__</code>, <code>__lt__</code></td><td><code>==</code>, dict/set keys, sorting</td></tr>
+<tr><td><code>__len__</code>, <code>__getitem__</code>, <code>__iter__</code>, <code>__contains__</code></td><td><code>len()</code>, indexing, <code>for</code>, <code>in</code></td></tr>
+<tr><td><code>__add__</code>, <code>__mul__</code>…</td><td>operators</td></tr>
+<tr><td><code>__enter__</code>/<code>__exit__</code></td><td><code>with</code> blocks (<a class="xref" data-old="x-py-errors-io">Context Managers</a>)</td></tr>
+<tr><td><code>__call__</code></td><td>calling an instance like a function</td></tr>
+</table>
+<h3>Inheritance and protocols</h3>
+<pre data-lang="python"><code class="language-python">from abc import ABC, abstractmethod
+class Notifier(ABC):
+    @abstractmethod
+    def send(self, to: str, msg: str) -&gt; None: ...
+class Sms(Notifier):
+    def send(self, to, msg): print(f"SMS to {to}: {msg}")
+
+from typing import Protocol                  # structural: no inheritance needed
+class SupportsSend(Protocol):
+    def send(self, to: str, msg: str) -&gt; None: ...
+def notify_all(n: SupportsSend, phones): [n.send(p, "Sale!") for p in phones]</code></pre>
+<p>Use <code>super().__init__(…)</code> to call the parent's constructor, and prefer composition over deep hierarchies (<a class="xref" data-old="c13">OOP</a>).</p>
+<h3>In practice</h3>
+<p>Plain data: <code>@dataclass</code> (frozen when possible). Validation of external data: <b>Pydantic</b> models. Behaviour-only helpers: plain functions, not classes. Interfaces: <code>Protocol</code>.</p>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>0.1 <span class="levels">basic</span> Build <code>Inventory</code> with <code>add</code>, <code>remove</code> (it must never go negative), <code>__len__</code>, <code>__contains__</code>, <code>__iter__</code> (sorted by sku) and <code>__repr__</code>, plus a frozen <code>Money</code> dataclass with <code>+</code>. Write 5 pytest tests.</summary><div><p>Keep a private dict. <code>remove</code> raises a custom <code>InsufficientStock</code>. <code>__iter__</code> returns <code>iter(sorted(self._d.items()))</code>. Test: add/remove, the negative case raises, <code>len</code>, <code>in</code>, and iteration order.</p></div></details>
+</div>

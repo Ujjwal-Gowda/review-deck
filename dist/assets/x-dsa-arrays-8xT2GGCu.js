@@ -1,0 +1,68 @@
+const e=`<p class="goal">The simplest and fastest structure: items side by side in memory. Understand this one deeply, because almost everything else is built on it.</p>
+<h3>How an array lives in memory</h3>
+<div class="diagram">int prices[5] = {40, 60, 120, 260, 480};     each int = 4 bytes, one after another
+
+address:   1000   1004   1008   1012   1016
+         ┌──────┬──────┬──────┬──────┬──────┐
+         │  40  │  60  │ 120  │ 260  │ 480  │
+         └──────┴──────┴──────┴──────┴──────┘
+index:      0      1      2      3      4
+
+address of prices[i] = 1000 + i × 4   ← one multiply and one add, so access is O(1) no matter the size</div>
+<p>Because the items are <b>contiguous</b>, the CPU loads neighbouring items into cache together, which makes scanning an array extremely fast in practice (<a class="xref" data-old="n03">Memory &amp; Data Representation</a>).</p>
+<h3>The cost of inserting in the middle</h3>
+<div class="diagram">insert 99 at index 1:
+before  [40][60][120][260][480][  ]
+         shift ───────────────────►  every item after index 1 moves one slot right (n−1 moves)
+after   [40][99][60][120][260][480]            → O(n)
+Deleting from the front is the same problem in reverse: everything shifts left.</div>
+<h3>Dynamic arrays: arrays that grow</h3>
+<p>A fixed array can't grow. A <b>dynamic array</b> (Python <code>list</code>, JS arrays, Go slices, Rust <code>Vec</code>, C++ <code>vector</code>) keeps a bigger buffer than it needs. It tracks <b>length</b> (used slots) and <b>capacity</b> (allocated slots). When it's full, it allocates a buffer about twice as big and copies everything over.</p>
+<div class="diagram">len=4 cap=4  [a][b][c][d]           append e → full!
+             allocate cap=8, copy 4 items, then append:
+len=5 cap=8  [a][b][c][d][e][ ][ ][ ]   the next 3 appends are free (no copying)</div>
+<p><b>Why append is still O(1) on average:</b> the copies happen at sizes 1, 2, 4, 8, 16…, and they add up to less than 2n in total. Spread over n appends, that's a constant amount of work each. This is <b>amortised O(1)</b>.</p>
+<h3>Build one yourself</h3>
+<pre data-lang="python"><code class="language-python">class DynamicArray:
+    def __init__(self):
+        self._cap, self._len = 1, 0
+        self._data = [None] * self._cap          # pretend this is raw fixed-size memory
+
+    def __len__(self): return self._len
+
+    def __getitem__(self, i):
+        if not 0 &lt;= i &lt; self._len: raise IndexError(i)
+        return self._data[i]
+
+    def append(self, x):
+        if self._len == self._cap:
+            self._grow(self._cap * 2)            # double when full
+        self._data[self._len] = x
+        self._len += 1
+
+    def insert(self, i, x):
+        if self._len == self._cap: self._grow(self._cap * 2)
+        for j in range(self._len, i, -1):        # shift right, starting from the end
+            self._data[j] = self._data[j - 1]
+        self._data[i] = x
+        self._len += 1
+
+    def pop(self):
+        if self._len == 0: raise IndexError("pop from empty")
+        self._len -= 1
+        x = self._data[self._len]; self._data[self._len] = None
+        return x
+
+    def _grow(self, new_cap):
+        new = [None] * new_cap
+        for j in range(self._len): new[j] = self._data[j]   # the O(n) copy
+        self._data, self._cap = new, new_cap</code></pre>
+<p>The same thing in C is in <a class="xref" data-old="c38">C Overview</a> (<code>ItemVec</code>), and it's drill <code>vec_push</code> in your exercises folder.</p>
+<h3>2-D arrays</h3>
+<p>A grid <code>g[rows][cols]</code> is stored row after row (<b>row-major</b>), so <code>g[r][c]</code> sits at <code>base + (r × cols + c) × size</code>. Loop over rows in the outer loop so you walk memory in order.</p>
+<h3>When to use an array</h3>
+<p>Use one by default for lists of things: fast indexing, fast append, the best cache behaviour. Avoid it for frequent inserts and deletes at the front (use a deque) or lookups by key (use a hash map).</p>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>0.1 <span class="levels">basic</span> Add <code>remove(i)</code> and a <code>shrink</code> rule to the DynamicArray (halve the capacity when it drops to a quarter full). Why a quarter, and not a half?</summary><div><p>If you halved at half-full, alternating append and pop right at the boundary would grow and shrink on every call: O(n) each time ("thrashing"). Shrinking at a quarter leaves slack in both directions, so both stay amortised O(1).</p></div></details>
+</div>
+`;export{e as default};

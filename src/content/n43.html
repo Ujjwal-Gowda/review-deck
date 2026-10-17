@@ -1,0 +1,51 @@
+<p class="goal">Git's model: three places your changes live, and the commands that move them between those places.</p>
+<h3>The three areas</h3>
+<div class="diagram">  working tree  ──git add──►  staging area (index)  ──git commit──►  repository (.git)
+  your files        (choose what goes           (permanent snapshots,
+  on disk            in the next snapshot)        each with an ID)
+       ◄──────────── git restore ◄───────────  ◄── git restore --staged ──</div>
+<p>A <b>commit</b> is a snapshot of the <i>whole</i> project (not a diff), plus metadata: author, date, message, and a pointer to its parent commit(s). Its ID is a SHA hash of all of that, so history can't be changed silently. <b>HEAD</b> means "the commit you're on now", usually via a branch name.</p>
+<h3>Setup, once</h3>
+<pre data-lang="shell"><code class="language-bash">git config --global user.name "Ujjwal"
+git config --global user.email "you@example.com"
+git config --global init.defaultBranch main
+git config --global pull.rebase true           # keep history linear when pulling
+git config --global core.editor "code --wait"  # or nano / vim</code></pre>
+<h3>The everyday loop</h3>
+<pre data-lang="shell"><code class="language-bash">git init                         # or: git clone &lt;url&gt;
+git status                       # ALWAYS know where you are
+git diff                         # unstaged changes (working tree vs index)
+git diff --staged                # what will be committed (index vs HEAD)
+git add -p                       # stage hunk by hunk: review your own change as you stage it
+git commit -m "Reserve stock when order is placed"
+git log --oneline --graph --decorate -20
+git show HEAD                    # the last commit's diff
+git mv old.py new.py             # rename (keeps history readable)
+git rm --cached secrets.env      # stop tracking a file but keep it on disk</code></pre>
+<h3>Undoing things, from safest to most destructive</h3>
+<table>
+<tr><th>Situation</th><th>Command</th><th>Destroys work?</th></tr>
+<tr><td>Unstage a file</td><td><code>git restore --staged f</code></td><td>no</td></tr>
+<tr><td>Fix the last commit's message or add a forgotten file</td><td><code>git commit --amend</code></td><td>rewrites the last commit (fine if not yet pushed)</td></tr>
+<tr><td>Undo a pushed commit</td><td><code>git revert &lt;sha&gt;</code></td><td>no: adds a new inverse commit</td></tr>
+<tr><td>Discard edits to a file</td><td><code>git restore f</code></td><td><b>yes</b>: uncommitted edits are gone</td></tr>
+<tr><td>Move the branch back but keep the changes</td><td><code>git reset --soft HEAD~1</code></td><td>no</td></tr>
+<tr><td>Throw away commits AND changes</td><td><code>git reset --hard &lt;sha&gt;</code></td><td><b>yes</b></td></tr>
+<tr><td>"I lost a commit!"</td><td><code>git reflog</code>, then <code>git switch -c rescue &lt;sha&gt;</code></td><td>the safety net: commits stay recoverable for about 90 days</td></tr>
+</table>
+<h3>.gitignore</h3>
+<pre data-lang="plaintext"><code class="language-plaintext">node_modules/
+target/
+.venv/
+__pycache__/
+dist/
+.env
+*.log
+out/            # e.g. your 900 MB film renders don't belong in git</code></pre>
+<h3>Good commits</h3>
+<ul>
+<li><b>One logical change per commit.</b> It should build and pass tests on its own.</li>
+<li><b>Messages:</b> an imperative summary under about 72 characters ("Fix negative stock on refund"), a blank line, then <i>why</i> in the body. Many teams use <b>Conventional Commits</b> (<code>feat:</code>, <code>fix:</code>, <code>docs:</code>, <code>refactor:</code>), which tools use to generate changelogs and version bumps.</li>
+<li><b>Commit often, push when coherent.</b> You can tidy local history before sharing (<a class="xref" data-old="n45">chapter 45</a>).</li>
+</ul>
+<details class="ex"><summary>43.1 <span class="levels">basic</span> Turn <code>~/learn/fundamentals</code> into a git repo with a sensible .gitignore, and make three small, well-described commits using <code>git add -p</code>.</summary><div><p><code>cd ~/learn/fundamentals &amp;&amp; git init &amp;&amp; printf "exercises/rust/target/\n" &gt; .gitignore &amp;&amp; git add .gitignore &amp;&amp; git commit -m "Ignore Rust build output"</code>, then commit the guide and exercises separately.</p></div></details>

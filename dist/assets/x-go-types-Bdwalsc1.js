@@ -1,0 +1,166 @@
+const e=`<p class="goal">Go Types, Structs &amp; Interfaces in Depth: Memory Alignment Padding, iface/eface 16-Byte Headers, The Typed Nil Trap, and Embedding Composition.</p>
+
+<h3>Go's Type Philosophy: Composition Over Inheritance</h3>
+<p>Go has no classes, no inheritance hierarchies, and no <code>implements</code> keyword. Objects are modeled as concrete structs, behavior is attached via methods, and interfaces are satisfied <b>implicitly</b> (duck typing verified at compile time). This keeps dependencies decoupled and testing straightforward.</p>
+
+<div class="diagram">
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                        Memory Alignment &amp; Padding Inside Structs                       │
+│                                                                                        │
+│   CPUs read memory in 8-byte word boundaries. Unaligned struct fields waste RAM!       │
+│                                                                                        │
+│   ❌ Unoptimized Struct (24 bytes):                                                    │
+│   type BadOrder struct {                                                               │
+│       A bool    // 1 byte + 7 bytes PADDING!                                           │
+│       B int64   // 8 bytes                                                             │
+│       C bool    // 1 byte + 7 bytes PADDING!                                           │
+│   }                                                                                    │
+│   [ A (1B) | Pad (7B) ][ B (8B) ][ C (1B) | Pad (7B) ] ──► Total: 24 bytes!            │
+│                                                                                        │
+│   ✅ Optimized Struct (16 bytes - 33% RAM Savings across 10M rows):                   │
+│   type GoodOrder struct {                                                              │
+│       B int64   // 8 bytes                                                             │
+│       A bool    // 1 byte                                                              │
+│       C bool    // 1 byte + 6 bytes PADDING                                            │
+│   }                                                                                    │
+│   [ B (8B) ][ A (1B) | C (1B) | Pad (6B) ] ──► Total: 16 bytes!                        │
+│                                                                                        │
+│   ★ Rule: Order struct fields from largest byte-size to smallest!                      │
+└────────────────────────────────────────────────────────────────────────────────────────┘
+</div>
+
+<h3>Part 1: Structs, Receivers &amp; Constructors</h3>
+<p>Methods are functions with an explicit receiver declared before the function name:</p>
+
+<pre data-lang="go"><code class="language-go">package domain
+
+import "sync"
+
+type Order struct {
+	ID         string \`json:"id"\`
+	TotalCents int64  \`json:"totalCents"\`
+	items      []string // unexported (private to package)
+	mu         sync.Mutex
+}
+
+// Constructor convention: New<TypeName> returns pointer
+func NewOrder(id string) *Order {
+	return &Order{
+		ID:    id,
+		items: make([]string, 0, 8), // Pre-allocate initial slice
+	}
+}
+
+// Pointer Receiver (*Order):
+// MUST use pointer receiver if:
+// 1. Method mutates struct fields
+// 2. Struct contains locks (sync.Mutex CANNOT be copied!)
+// 3. Struct is large (prevents copying bytes on every call)
+func (o *Order) AddItem(sku string, priceCents int64) {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	o.items = append(o.items, sku)
+	o.TotalCents += priceCents
+}
+
+// Value Receiver (Order):
+// Receives an independent stack copy. Mutation is invisible to caller.
+func (o Order) ItemCount() int {
+	return len(o.items)
+}</code></pre>
+
+<h3>Part 2: Interfaces Under the Hood (iface &amp; eface)</h3>
+<p>An interface variable is not a direct pointer. At runtime, an interface is a <b>16-byte dual-pointer header</b>:</p>
+
+<div class="diagram">
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                               The 16-Byte Interface Layout                             │
+│                                                                                        │
+│   type iface struct {                                                                  │
+│       tab  *itab          // 8 bytes: pointer to type metadata &amp; method table          │
+│       data unsafe.Pointer // 8 bytes: pointer to concrete value/struct                 │
+│   }                                                                                    │
+│                                                                                        │
+│   var w io.Writer = os.Stdout                                                          │
+│   ┌────────────────────────┬────────────────────────┐                                  │
+│   │ tab: *itab (*os.File)  │ data: 0x7fff_addr      │                                  │
+│   └────────────────────────┴────────────────────────┘                                  │
+└────────────────────────────────────────────────────────────────────────────────────────┘
+</div>
+
+<div class="callout warn"><b class="t">The Infamous "Typed Nil" Disaster in Go</b>
+<p>An interface in Go is only equal to <code>nil</code> if <b>BOTH</b> <code>tab == nil</code> AND <code>data == nil</code>.</p>
+<p>If you assign a concrete <code>nil</code> pointer to an interface, the interface's <code>tab</code> pointer is NOT nil! This causes the classic bug where an error check passes even when the error is nil:</p>
+
+<pre data-lang="go"><code class="language-go">type CustomErr struct{}
+func (e *CustomErr) Error() string { return "boom" }
+
+func fail() error {
+    var err *CustomErr = nil // Concrete pointer is nil
+    return err               // ❌ RETURNS an iface with tab=*CustomErr and data=nil!
+}
+
+func main() {
+    err := fail()
+    if err != nil {
+        // 🔥 THIS RUNS! Even though err is logically nil!
+        // Because iface.tab is NOT nil!
+        fmt.Println("Error is not nil!", err)
+    }
+}
+// ✅ THE FIX: Always return raw unadorned \`nil\` for error returns:
+func safe() error {
+    // return nil, NOT a typed pointer!
+    return nil
+}</code></pre>
+</div>
+
+<h3>Part 3: Struct Embedding (Composition)</h3>
+<p>Go uses struct embedding rather than class inheritance. Embedded fields and their methods are "promoted" to the outer struct:</p>
+
+<pre data-lang="go"><code class="language-go">type Entity struct {
+	ID        string
+	CreatedAt time.Time
+}
+
+func (e *Entity) Age() time.Duration {
+	return time.Since(e.CreatedAt)
+}
+
+type User struct {
+	Entity   // Embedded: Anonymous field
+	Username string
+}
+
+func main() {
+	u := User{
+		Entity:   Entity{ID: "usr_1", CreatedAt: time.Now()},
+		Username: "gopher",
+	}
+	// Direct access to promoted fields & methods
+	fmt.Println(u.ID)
+	fmt.Println(u.Age())
+}</code></pre>
+
+<details class="ex">
+  <summary><b>Drill: How to enforce at compile-time that a struct implements an interface?</b> (Click to expand)</summary>
+  <p><b>Question:</b> Since Go interfaces are implicit, how do you verify at compile-time that <code>*PostgresStore</code> satisfies the <code>Store</code> interface without allocating memory?</p>
+  <div class="callout key">
+    <p><b>Answer: The Blank Identifier Nil Assertion!</b></p>
+    <pre data-lang="go"><code class="language-go">type Store interface {
+    Get(id string) ([]byte, error)
+    Save(id string, data []byte) error
+}
+
+type PostgresStore struct{}
+func (p *PostgresStore) Get(id string) ([]byte, error) { return nil, nil }
+func (p *PostgresStore) Save(id string, data []byte) error { return nil }
+
+// ✅ COMPILE-TIME ASSERTION:
+// If PostgresStore misses any method or has a signature mismatch,
+// the Go compiler halts the build here with a clear error!
+var _ Store = (*PostgresStore)(nil)</code></pre>
+    <p>Using <code>(*PostgresStore)(nil)</code> creates a typed nil pointer without allocating any heap memory at runtime.</p>
+  </div>
+</details>
+`;export{e as default};

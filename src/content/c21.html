@@ -1,0 +1,50 @@
+<p class="goal">Writing code that stays easy to change.</p>
+<h3>Principles</h3>
+<table>
+<tr><th>Principle</th><th>Meaning</th><th>Misuse to avoid</th></tr>
+<tr><td><b>KISS</b></td><td>Keep it simple. The simplest solution that works.</td><td>…</td></tr>
+<tr><td><b>YAGNI</b></td><td>You aren't gonna need it. Don't build for imagined futures.</td><td>…</td></tr>
+<tr><td><b>DRY</b></td><td>Don't repeat <i>knowledge</i>: one source of truth.</td><td>Merging code that merely <i>looks</i> similar creates wrong abstractions. "Duplication is cheaper than the wrong abstraction." Rule of three: abstract on the third repetition.</td></tr>
+<tr><td><b>Separation of concerns</b></td><td>Each part does one kind of job (UI / logic / storage).</td><td>…</td></tr>
+<tr><td><b>High cohesion, low coupling</b></td><td>Things that change together live together; modules know little about each other.</td><td>…</td></tr>
+<tr><td><b>Law of Demeter</b></td><td>Talk to friends, not strangers: avoid <code>a.b().c().d()</code>.</td><td>…</td></tr>
+<tr><td><b>Principle of least surprise</b></td><td>Names and behaviour do what readers expect.</td><td>…</td></tr>
+</table>
+<h3>SOLID</h3>
+<ul>
+<li><b>S</b>ingle responsibility: a module has one reason to change.</li>
+<li><b>O</b>pen/closed: open for extension, closed for modification (via polymorphism, <a class="xref" data-old="c13">chapter 13</a>).</li>
+<li><b>L</b>iskov substitution: subtypes must be usable anywhere their parent is.</li>
+<li><b>I</b>nterface segregation: many small interfaces beat one fat one.</li>
+<li><b>D</b>ependency inversion: depend on abstractions, and pass dependencies in (<b>dependency injection</b>) rather than constructing them inside. This is what makes code testable.</li>
+</ul>
+<pre data-lang="python"><code class="language-python">class ReportService:                     # hard-wired: untestable without a real DB and email
+    def run(self): db = PostgresDB(); ...; SmtpMailer().send(...)
+
+class ReportService:                     # injected: tests pass fakes, production passes real ones
+    def __init__(self, db, mailer): self.db, self.mailer = db, mailer</code></pre>
+<h3>Design patterns worth knowing by name</h3>
+<table>
+<tr><th>Pattern</th><th>Problem it solves</th><th>Everyday example</th></tr>
+<tr><td><b>Strategy</b></td><td>Swap an algorithm at runtime</td><td>payment methods; <code>sorted(key=…)</code></td></tr>
+<tr><td><b>Observer / pub-sub</b></td><td>Notify many listeners of events</td><td>DOM events, webhooks, WebSocket order updates</td></tr>
+<tr><td><b>Factory</b></td><td>Centralise complex object creation</td><td><code>Payment.from_config(cfg)</code></td></tr>
+<tr><td><b>Adapter</b></td><td>Make an incompatible interface fit</td><td>wrapping a vendor SDK behind your own interface</td></tr>
+<tr><td><b>Decorator</b></td><td>Add behaviour without changing the class</td><td>Python <code>@decorators</code>, middleware</td></tr>
+<tr><td><b>Facade</b></td><td>A simple front for a complex subsystem</td><td>a <code>print_label()</code> hiding raw IPP details</td></tr>
+<tr><td><b>Singleton</b></td><td>One shared instance</td><td>often an anti-pattern (hidden global state); prefer injection</td></tr>
+<tr><td><b>Builder</b></td><td>Step-by-step construction of complex objects</td><td>query builders, <code>strings.Builder</code></td></tr>
+<tr><td><b>Iterator</b></td><td>Uniform traversal</td><td><code>for x in anything</code></td></tr>
+<tr><td><b>State machine</b></td><td>Behaviour depends on explicit states and transitions</td><td>order lifecycle: placed → paid → packed → shipped</td></tr>
+</table>
+<h3>Architecture</h3>
+<ul>
+<li><b>Layered / hexagonal (ports and adapters) / clean architecture:</b> the core domain logic has no dependencies on frameworks, databases or UI; adapters plug in at the edges.</li>
+<li><b>Monolith vs microservices:</b> a monolith is simple to build, deploy and debug, and is the right default. Microservices scale teams and components independently but add network failures, distributed data and ops cost. Split only when you have a real reason.</li>
+<li><b>Code smells:</b> long functions, long parameter lists, deep nesting, god classes, feature envy, primitive obsession, shotgun surgery (one change touches 12 files). The fix is <b>refactoring</b>: changing structure without changing behaviour, in small steps, with tests passing after each.</li>
+</ul>
+<h3>Naming and readability</h3>
+<p>Names should reveal intent (<code>days_until_expiry</code>, not <code>d</code>). Booleans read as questions (<code>is_paid</code>, <code>has_stock</code>). Functions are verbs (<code>calculate_total</code>). Name length should match scope size. Comments should explain <i>why</i>, never <i>what</i>. Keep functions small enough to see at once, and at one level of abstraction.</p>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>33.1 <span class="levels">think</span> Find the longest function in any project of yours and refactor it into smaller functions with intention-revealing names, keeping behaviour identical.</summary><div><p>Extract steps into named functions, replace nesting with guard clauses, and pass data in and out rather than sharing state. Verify with tests (or add some first). Behaviour must not change: that's the definition of a refactor.</p></div></details>
+</div>

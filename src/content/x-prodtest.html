@@ -1,0 +1,15 @@
+<p class="goal">Pre-release tests can't prove production works, so keep verifying after you ship.</p>
+<table>
+<tr><th>Technique</th><th>What it verifies</th></tr>
+<tr><td><b>Smoke tests</b> after every deploy</td><td>the app is up, a login works, one key read and write path works; roll back automatically if not</td></tr>
+<tr><td><b>Synthetic monitoring</b></td><td>scripted journeys (login → browse → checkout on a test account) every few minutes from outside, which alert before users notice (Checkly, Grafana synthetics, a cron'd Playwright script)</td></tr>
+<tr><td><b>Canary analysis</b></td><td>the new version's error rate and latency compared with the old one's on real traffic, before widening (<a class="xref" data-old="n125">Deployment Strategies</a>)</td></tr>
+<tr><td><b>Feature-flag rollouts</b></td><td>enable for staff, then 5%, then everyone, watching metrics at each step</td></tr>
+<tr><td><b>Real-user monitoring</b></td><td>actual page speed and errors from users' browsers</td></tr>
+<tr><td><b>Chaos experiments</b></td><td>deliberately kill an instance or slow a dependency, and confirm the system degrades gracefully (<a class="xref" data-old="n177">Resilience</a>)</td></tr>
+<tr><td><b>Data checks</b></td><td>scheduled reconciliations: payments vs orders, stock vs movements, catching silent data bugs</td></tr>
+</table>
+<p>Rules: use dedicated test accounts and tenants, tag synthetic traffic so it's excluded from business metrics, never touch real money or send real SMS, and make every check produce an alert that someone owns.</p>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>0.1 <span class="levels">basic</span> Write a Playwright script that checks the FreshOn demo landing page and the POS demo load, and schedule it every 15 minutes with a systemd timer that alerts on failure.</summary><div><p>Put the script in <code>check.spec.ts</code>, and make the timer&#39;s service run <code>npx playwright test check.spec.ts</code>. On a non-zero exit, send a notification (ntfy.sh, email, or a Telegram bot). That&#39;s real synthetic monitoring for free.</p></div></details>
+</div>

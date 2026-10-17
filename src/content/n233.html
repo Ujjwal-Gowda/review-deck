@@ -1,0 +1,22 @@
+<p class="goal">Estimating and controlling what AI features cost.</p>
+<pre data-lang="plaintext"><code class="language-plaintext">cost/request = input_tokens × input_price + output_tokens × output_price      (prices per million tokens)
+monthly      = requests/day × 30 × cost/request
+
+Example (illustrative prices): complaint classifier, 2,000 input + 150 output tokens, 5,000 requests/day
+  small model  @ $1 in / $5 out   → 2000×1e-6 + 150×5e-6 = $0.00275/req → ~$410/month
+  large model  @ $5 in / $25 out  →                        $0.01375/req → ~$2,060/month
+  + prompt caching of a 1,800-token static prefix (≈90% off cached reads) → the input cost drops sharply</code></pre>
+<h3>Levers, roughly in order of impact</h3>
+<ol>
+<li><b>The right model per task:</b> route easy tasks to small models and escalate only hard ones.</li>
+<li><b>Prompt caching:</b> put static instructions and documents first.</li>
+<li><b>Fewer tokens:</b> trim the conversation history, retrieve fewer and better chunks, use compact formats, set <code>max_tokens</code>, ask for concise answers.</li>
+<li><b>The Batch API</b> for offline jobs (typically about 50% off).</li>
+<li><b>Cache whole responses</b> for repeated identical questions.</li>
+<li><b>Limit agent loops:</b> step caps and budget checks (<a class="xref" data-old="n234">chapter 234</a>).</li>
+<li><b>Self-hosting</b> only at high, steady volume (<a class="xref" data-old="n231">chapter 231</a>).</li>
+</ol>
+<p>Measure <b>cost per successful outcome</b> (a resolved ticket, a correct extraction), not cost per call: a cheap model that fails half the time isn't cheap.</p>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>233.1 <span class="levels">basic</span> Estimate the monthly cost of a feature that summarises 200 store reports a day (about 3K tokens in, 300 out each) with a small and a large model.</summary><div><p>Work it through with current prices: 200 × 30 × (3000 × in + 300 × out) / 1e6 per model. Then apply prompt caching for the shared instructions, or the Batch API since it isn't urgent.</p></div></details>
+</div>

@@ -1,0 +1,22 @@
+const t=`<p class="goal">Planning for losing a server, a region, or a whole account.</p>
+<table>
+<tr><th>Metric</th><th>Question</th><th>Example</th></tr>
+<tr><td><b>RPO</b> (recovery point objective)</td><td>how much data can we afford to lose?</td><td>5 minutes of orders</td></tr>
+<tr><td><b>RTO</b> (recovery time objective)</td><td>how long can we be down?</td><td>1 hour for the POS, 1 day for reports</td></tr>
+</table>
+<table>
+<tr><th>Strategy</th><th>RTO</th><th>Cost</th></tr>
+<tr><td>Backup and restore</td><td>hours</td><td>low</td></tr>
+<tr><td>Pilot light (a minimal copy running elsewhere, data replicated)</td><td>tens of minutes</td><td>medium</td></tr>
+<tr><td>Warm standby (a scaled-down full copy)</td><td>minutes</td><td>higher</td></tr>
+<tr><td>Active-active in several regions</td><td>≈ 0</td><td>highest, plus data-consistency complexity</td></tr>
+</table>
+<ul>
+<li>Match the strategy to each system's RPO/RTO. Not everything needs active-active.</li>
+<li>Write a <b>runbook</b> (step-by-step recovery instructions) and <b>rehearse</b> it (game days). An untested disaster recovery plan is a hope, not a plan.</li>
+<li>Remember the non-technical parts: who decides to fail over, how customers get told, and whether the shop can run offline. A POS that keeps selling offline and syncs later is disaster recovery built into the product.</li>
+</ul>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>153.1 <span class="levels">think</span> Set RPO and RTO for the FreshOn POS, online orders and monthly reports, and pick a disaster-recovery strategy for each.</summary><div><p>POS: offline mode plus sync gives RPO ≈ 0 for sales and an RTO of minutes. Online orders: warm standby or fast restore, RPO in minutes. Reports: backup and restore, RTO of a day.</p></div></details>
+</div>
+`;export{t as default};

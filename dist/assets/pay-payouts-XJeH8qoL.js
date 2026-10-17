@@ -1,0 +1,14 @@
+const e=`<p class="goal">Marketplace and platform payments: Stripe Connect, split payments, platform commissions, and KYC onboarding.</p>
+<pre data-lang="typescript"><code class="language-typescript">export async function createMarketplaceCharge(connectedAccountId: string, totalAmount: number, feeAmount: number) {
+  return await stripe.paymentIntents.create({
+    amount: totalAmount,
+    currency: "usd",
+    application_fee_amount: feeAmount, // Your platform profit
+    transfer_data: {
+      destination: connectedAccountId, // Seller gets balance
+    },
+  });
+}</code></pre>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>372.1 <span class="levels">basic</span> Generate a Stripe Connect onboarding link for an affiliate vendor.</summary><div><p>Create Express account, then generate <code>accountLinks.create</code> URL.</p></div></details>
+</div>`;export{e as default};

@@ -1,0 +1,77 @@
+<p class="goal">Building bulletproof payment webhook handlers: HMAC signature verification, clock drift tolerance, replay attack prevention, and transactional idempotency.</p>
+
+<h3>1. Atomic Idempotency via Database Transactions</h3>
+<p>Webhook delivery is <i>at-least-once</i>. Stripe retries on timeouts or non-2xx codes. If two delivery attempts hit your cluster concurrently, a naive read-then-write check suffers from a race condition.</p>
+
+<pre data-lang="typescript"><code class="language-typescript">import express from "express";
+import Stripe from "stripe";
+import { db } from "../lib/db";
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+const router = express.Router();
+
+// Crucial: Webhook verification requires RAW buffer, not parsed JSON
+router.post("/webhook", express.raw({ type: "application/json" }), async (req, res) => {
+  const sig = req.headers["stripe-signature"] as string;
+  let event: Stripe.Event;
+
+  try {
+    // Verifies HMAC SHA-256 signature and rejects timestamps older than 300 seconds
+    event = stripe.webhooks.constructEvent(
+      req.body,
+      sig,
+      process.env.STRIPE_WEBHOOK_SECRET!,
+      300 // tolerance in seconds against replay attacks
+    );
+  } catch (err: any) {
+    return res.status(400).send(`Webhook signature failed: ${err.message}`);
+  }
+
+  try {
+    // Atomic insert with UNIQUE constraint on event_id prevents duplicate processing
+    await db.$transaction(async (tx) => {
+      const recorded = await tx.processedWebhookEvents.create({
+        data: { eventId: event.id, eventType: event.type },
+      }).catch((err) => {
+        if (err.code === "P2002") return null; // Prisma unique constraint code
+        throw err;
+      });
+
+      if (!recorded) {
+        // Event was already processed by another worker; return 200 immediately
+        return;
+      }
+
+      // Business logic execution
+      switch (event.type) {
+        case "payment_intent.succeeded": {
+          const pi = event.data.object as Stripe.PaymentIntent;
+          await tx.orders.update({
+            where: { id: pi.metadata.orderId },
+            data: { status: "PAID", stripePaymentId: pi.id },
+          });
+          break;
+        }
+        case "customer.subscription.deleted": {
+          const sub = event.data.object as Stripe.Subscription;
+          await tx.users.update({
+            where: { stripeCustomerId: sub.customer as string },
+            data: { planTier: "FREE" },
+          });
+          break;
+        }
+      }
+    });
+
+    res.json({ received: true });
+  } catch (err) {
+    // Return 500 so Stripe knows to retry later
+    res.status(500).json({ error: "Webhook processing failed" });
+  }
+});</code></pre>
+
+<div class="callout warn"><b class="t">Warning · Body Parser Pitfall</b><p>If your Express or Next.js app applies <code>express.json()</code> or <code>bodyParser.json()</code> globally before the webhook route, signature verification will permanently fail because JSON serialization normalizes whitespace.</p></div>
+
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>367.1 <span class="levels">basic</span> Trigger simulated webhooks with Stripe CLI and verify database idempotency.</summary><div><p>Run <code>stripe trigger payment_intent.succeeded</code> twice in rapid succession and check that the order is updated only once without DB errors.</p></div></details>
+</div>

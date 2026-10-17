@@ -1,0 +1,31 @@
+const e=`<p class="goal">Protecting services from overload, abuse and noisy neighbours, fairly.</p>
+<h3>Algorithms</h3>
+<table>
+<tr><th>Algorithm</th><th>How</th><th>Behaviour</th></tr>
+<tr><td>Fixed window</td><td>count per key per minute</td><td>simple; allows a double burst at window edges</td></tr>
+<tr><td>Sliding window (log or counter)</td><td>weight the previous window by how much of it overlaps</td><td>smooth, and cheap in its counter form</td></tr>
+<tr><td><b>Token bucket</b></td><td>tokens refill at rate r up to capacity b; each request spends one</td><td>allows bursts up to b while averaging r. <b>The usual choice.</b></td></tr>
+<tr><td>Leaky bucket</td><td>a queue drained at a constant rate</td><td>smooths output traffic</td></tr>
+<tr><td>Concurrency limit</td><td>at most N requests in flight</td><td>protects expensive or slow endpoints; adapts to latency</td></tr>
+</table>
+<pre data-lang="python"><code class="language-python">class TokenBucket:                                   # in-process; use Redis + Lua for many instances
+    def __init__(self, rate: float, capacity: int):
+        self.rate, self.capacity, self.tokens, self.t = rate, capacity, capacity, time.monotonic()
+    def allow(self) -&gt; bool:
+        now = time.monotonic()
+        self.tokens = min(self.capacity, self.tokens + (now - self.t) * self.rate); self.t = now
+        if self.tokens &gt;= 1: self.tokens -= 1; return True
+        return False</code></pre>
+<h3>Where to enforce</h3>
+<ul>
+<li><b>Edge</b> (CDN, WAF, reverse proxy): coarse per-IP limits against floods and scrapers.</li>
+<li><b>API gateway or middleware:</b> per API key, user or tenant; plan-based quotas.</li>
+<li><b>In front of expensive things:</b> login and OTP (anti-brute-force), SMS sending (cost), LLM calls (tokens), reports.</li>
+<li><b>Outbound:</b> respect third-party limits with a client-side limiter plus a queue.</li>
+</ul>
+<h3>Responses and fairness</h3>
+<p>Return <code>429 Too Many Requests</code> with <code>Retry-After</code> and <code>RateLimit-Limit/Remaining/Reset</code> headers, so well-behaved clients back off. Limit per <b>tenant</b> so one busy store can't starve the others. Under real overload, <b>shed load by priority</b>: keep checkout, drop analytics (<a class="xref" data-old="n177">Resilience</a>). Redis patterns are in <a class="xref" data-old="n102">Redis</a>.</p>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>0.1 <span class="levels">basic</span> Implement a Redis token bucket as a Lua script, so it&#39;s atomic across many API instances, and test it with 3 instances hitting one key.</summary><div><p>Store <code>tokens</code> and <code>ts</code> in a hash; the script computes the refill, decides, updates, and sets an expiry, all in one <code>EVAL</code>. With 3 instances firing, the total allowed per second stays at the rate: no races, because the Lua script runs atomically.</p></div></details>
+</div>
+`;export{e as default};

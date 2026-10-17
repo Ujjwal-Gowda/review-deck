@@ -1,0 +1,19 @@
+<p class="goal">The transformer architecture, one block at a time.</p>
+<div class="diagram">tokens → embeddings (+ position information)
+  ┌─────────────── × N layers ────────────────┐
+  │ x = x + MultiHeadSelfAttention(Norm(x))    │   tokens exchange information
+  │ x = x + FeedForward(Norm(x))               │   each position is transformed independently (MLP, often SwiGLU)
+  └────────────────────────────────────────────┘
+→ final norm → linear layer to the vocabulary → softmax → next-token probabilities</div>
+<h3>Self-attention</h3>
+<p>Each token produces a <b>Query</b>, a <b>Key</b> and a <b>Value</b> vector (learned projections). The attention weights are <code>softmax(Q·Kᵀ / √d)</code>: how much each token should look at each other token. The output is the weighted sum of the Values. A <b>causal mask</b> stops tokens from looking ahead (which is what makes it a generator). <b>Multi-head</b> attention runs this in parallel with different projections, so different heads learn different relationships (syntax, coreference, position).</p>
+<ul>
+<li><b>Positional information:</b> attention itself is order-blind, so position is injected. Modern LLMs use <b>RoPE</b> (rotary embeddings), which also helps extend context length.</li>
+<li><b>Cost:</b> attention is O(n²) in sequence length. Hence FlashAttention (memory-efficient kernels), GQA (a smaller KV cache: <a class="xref" data-old="c28">chapter 208</a>), and sliding-window or linear-attention variants.</li>
+<li><b>Variants:</b> encoder-only (BERT: understanding and embeddings), decoder-only (GPT, Claude, Llama: generation), encoder-decoder (T5, Whisper: translation, speech).</li>
+<li><b>Mixture of Experts:</b> the feed-forward sublayer is replaced by many "experts", and a router picks 1–2 per token.</li>
+</ul>
+<p>To really understand it: Karpathy's "Let's build GPT: from scratch, in code" (nanoGPT), and "The Illustrated Transformer" by Jay Alammar.</p>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>200.1 <span class="levels">basic</span> Run Karpathy's nanoGPT "shakespeare_char" example on CPU with a tiny config and watch the samples improve over iterations.</summary><div><p>Early samples are gibberish, and after training they're Shakespeare-shaped text. Seeing a transformer learn is the best way to demystify it.</p></div></details>
+</div>

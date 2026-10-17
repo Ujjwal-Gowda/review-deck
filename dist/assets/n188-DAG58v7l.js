@@ -1,0 +1,13 @@
+const e=`<p class="goal">Allocation, garbage collection, and memory layout as performance levers.</p>
+<ul>
+<li><b>Allocation is not free:</b> heap allocation plus GC work often dominates in Go, Java and JS services. Reduce it with preallocated slices (<code>make([]T, 0, n)</code>), reused buffers (<code>sync.Pool</code>), avoiding needless string concatenation, and streaming instead of loading whole files.</li>
+<li><b>GC trade-offs:</b> throughput vs pause time vs memory headroom. Go: <code>GOGC</code> (higher means less GC and more memory) and <code>GOMEMLIMIT</code> (a soft cap, good in containers). Node: <code>--max-old-space-size</code>. JVM: G1 or ZGC.</li>
+<li><b>Escape analysis</b> (Go, JVM) keeps short-lived values on the stack. <code>go build -gcflags=-m</code> shows what escapes to the heap.</li>
+<li><b>Rust and C:</b> no GC, but allocation still costs. Use arenas and small-vector optimisations in hot paths.</li>
+<li><b>Python:</b> every object carries overhead. For big numeric data use NumPy/arrays; <code>__slots__</code> for millions of small objects; generators instead of lists.</li>
+<li><b>Leaks in GC languages</b> are references kept by accident: global caches, listeners, closures. Compare two heap snapshots to find what keeps growing.</li>
+</ul>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>188.1 <span class="levels">basic</span> In Go, benchmark building a slice with and without preallocation (<code>make([]int, 0, n)</code>) using <code>-benchmem</code>.</summary><div><p>Preallocating removes the repeated grow-and-copy allocations, so allocs/op drops to 1 and ns/op drops noticeably.</p></div></details>
+</div>
+`;export{e as default};

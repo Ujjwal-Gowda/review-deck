@@ -1,0 +1,18 @@
+<p class="goal">Finding where time and memory actually go, instead of guessing.</p>
+<table>
+<tr><th>Language</th><th>CPU profiling</th><th>Memory profiling</th></tr>
+<tr><td>Python</td><td><code>py-spy record -o flame.svg --pid PID</code> (no code changes, safe in production); <code>cProfile</code></td><td><code>tracemalloc</code>, <code>memray</code></td></tr>
+<tr><td>Node</td><td><code>node --cpu-prof</code>, or Chrome DevTools via <code>--inspect</code>; clinic.js</td><td>heap snapshots in DevTools</td></tr>
+<tr><td>Go</td><td><code>import _ "net/http/pprof"</code>, then <code>go tool pprof -http=: localhost:6060/debug/pprof/profile</code></td><td><code>/debug/pprof/heap</code>, <code>-alloc_space</code></td></tr>
+<tr><td>Rust / C</td><td><code>perf record -g ./app; perf report</code>, <code>cargo flamegraph</code></td><td>heaptrack, valgrind massif</td></tr>
+</table>
+<h3>Reading a flame graph</h3>
+<p>The x-axis is the <b>share of samples</b> (not time order); the y-axis is stack depth. <b>Wide</b> bars are where the time goes. Look for wide "plateaus" at the top: functions doing the work themselves. Common findings: JSON serialisation, regex compilation inside loops, logging, and lock waits.</p>
+<ul>
+<li>Profile <b>realistic workloads</b> (production-like data, under load), not toy inputs.</li>
+<li>Distinguish CPU time from wall-clock time: an I/O-bound service shows little CPU. Use tracing for that (<a class="xref" data-old="n156">chapter 156</a>).</li>
+<li>Continuous profiling in production (Pyroscope, Parca) catches regressions after deploys.</li>
+</ul>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>186.1 <span class="levels">basic</span> Profile a slow Python script with py-spy and produce a flame graph. What's the widest frame?</summary><div><p><code>py-spy record -o out.svg -- python3 script.py</code>. The widest top frame is where to optimise first: often parsing, regex, or a quadratic loop.</p></div></details>
+</div>

@@ -1,0 +1,44 @@
+<p class="goal">Modelling "things" (an Order with items, a status and behaviour) in each language: records, methods, interfaces and variants.</p>
+<h3>A record with behaviour</h3>
+<pre data-lang="python"><code class="language-python">@dataclass
+class Order:
+    id: int
+    items: list[Item]
+    status: str = "placed"
+    def total(self) -&gt; int: return sum(i.qty * i.price for i in self.items)</code></pre>
+<pre data-lang="typescript"><code class="language-typescript">interface Order { id: number; items: Item[]; status: Status }
+const total = (o: Order) =&gt; o.items.reduce((s, i) =&gt; s + i.qty * i.price, 0);   // data + functions (idiomatic)
+class OrderModel { constructor(public id: number, public items: Item[]) {} total() { /* … */ } } // or a class</code></pre>
+<pre data-lang="go"><code class="language-go">type Order struct { ID int; Items []Item; Status Status }
+func (o Order) Total() int { t := 0; for _, i := range o.Items { t += i.Qty * i.Price }; return t }</code></pre>
+<pre data-lang="rust"><code class="language-rust">struct Order { id: u64, items: Vec&lt;Item&gt;, status: Status }
+impl Order { fn total(&amp;self) -&gt; u64 { self.items.iter().map(|i| i.qty * i.price).sum() } }</code></pre>
+<pre data-lang="c"><code class="language-c">typedef struct { int id; Item *items; size_t n_items; Status status; } Order;
+long order_total(const Order *o) { long t = 0; for (size_t i = 0; i &lt; o-&gt;n_items; i++) t += o-&gt;items[i].qty * o-&gt;items[i].price; return t; }</code></pre>
+<h3>Polymorphism: "anything that can be charged"</h3>
+<table>
+<tr><th></th><th>Mechanism</th><th>How a type opts in</th></tr>
+<tr><td>Python</td><td>duck typing; <code>Protocol</code> / ABC for checking</td><td>just has the method</td></tr>
+<tr><td>TS</td><td>structural interfaces</td><td>has the right shape</td></tr>
+<tr><td>Go</td><td>implicit interfaces</td><td>has the methods (no <code>implements</code> keyword)</td></tr>
+<tr><td>Rust</td><td>traits (static dispatch with generics, dynamic with <code>dyn</code>)</td><td>explicit <code>impl Trait for Type</code></td></tr>
+<tr><td>C</td><td>structs of function pointers (hand-made vtables)</td><td>fill in the pointers</td></tr>
+</table>
+<h3>"One of several variants" (sum types)</h3>
+<pre data-lang="plaintext"><code class="language-plaintext">Rust   enum Payment { Upi { vpa: String }, Card { last4: String }, Cash }       + exhaustive match   ← best support
+TS     type Payment = { kind: "upi"; vpa: string } | { kind: "card"; last4: string } | { kind: "cash" }
+Python Upi | Card | Cash  (dataclasses) + match/case     (type checkers check exhaustiveness)
+Go     an interface + concrete types + a type switch     (no exhaustiveness check)
+C      enum tag + union of payloads                      (you keep the tag and union in sync)</code></pre>
+<h3>Inheritance</h3>
+<p>Python, TS and C++ have class inheritance. <b>Go and Rust deliberately don't:</b> use composition (Go struct embedding, Rust fields) plus interfaces/traits. It's good advice in every language anyway (<a class="xref" data-old="c13">OOP</a>).</p>
+<h3>Traps when switching</h3>
+<ul>
+<li><b>Go value vs pointer receivers:</b> <code>func (o Order) SetStatus(…)</code> modifies a <i>copy</i>. Use <code>func (o *Order)</code> for anything that mutates.</li>
+<li><b>Rust <code>&amp;self</code> vs <code>&amp;mut self</code> vs <code>self</code>:</b> read, modify, or consume.</li>
+<li><b>TS classes vs interfaces:</b> interfaces vanish at runtime, so <code>instanceof</code> only works for classes. Use a discriminant field for unions.</li>
+<li><b>Python mutable defaults</b> in dataclasses: <code>items: list = field(default_factory=list)</code>.</li>
+</ul>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>0.1 <span class="levels">think</span> Model a Shape with Circle and Rectangle and an area() operation in all five languages: variants in Rust (enum), TS (union), Python (match), Go (interface) and C (tagged union). Which makes a forgotten variant a compile error?</summary><div><p>Rust&#39;s <code>match</code> does by default. TS does with a <code>never</code> check in the default branch. Python does only under a type checker with <code>assert_never</code>. Go and C won&#39;t tell you (C&#39;s <code>-Wswitch</code> warns for enum switches without a default).</p></div></details>
+</div>

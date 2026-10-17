@@ -1,0 +1,28 @@
+const e=`<p class="goal">Seeing, controlling and debugging running programs from the shell. The concepts are in <a class="xref" data-old="n04">chapter 4</a>.</p>
+<pre data-lang="shell"><code class="language-bash">ps aux --sort=-%mem | head          # top memory users (RSS column = real RAM, in KB)
+pgrep -a node                        # find by name (-a shows the full command)
+htop                                 # interactive: F6 sort, F9 kill, F5 tree view
+top -o %CPU                          # always available
+kill 1234        # SIGTERM: ask nicely  → kill -9 1234 only if it ignores that
+pkill -x firefox # by EXACT name. Careful: pkill -f matches full command lines, including your own shell's!
+kill -STOP 1234; kill -CONT 1234     # pause / resume
+nice -n 10 make -j12                 # start at low priority (19 lowest, -20 highest)
+renice 15 -p 1234                    # lower an already running process
+lsof -p 1234                         # files and sockets it has open
+lsof -i :5170                        # WHO is using port 5170?
+strace -f -e trace=openat -p 1234    # watch its system calls live</code></pre>
+<h3>Job control (processes started from this shell)</h3>
+<table>
+<tr><th>Keys / command</th><th>Effect</th></tr>
+<tr><td><code>cmd &amp;</code></td><td>run in the background</td></tr>
+<tr><td>Ctrl-Z</td><td>suspend the foreground job</td></tr>
+<tr><td><code>jobs</code>, <code>fg %1</code>, <code>bg %1</code></td><td>list / resume in the foreground / resume in the background</td></tr>
+<tr><td><code>nohup cmd &amp;</code> or <code>setsid</code></td><td>survive closing the terminal</td></tr>
+<tr><td><code>tmux</code></td><td>the real solution: sessions that survive disconnects (you already use it)</td></tr>
+</table>
+<h3>Reading memory correctly</h3>
+<p><code>free -h</code>: look at <b>available</b>, not "free". Linux uses spare RAM as disk cache (buff/cache) and gives it back instantly when programs need it. <b>RSS</b> (resident memory) counts shared libraries in every process, so summing RSS overestimates real use. <b>Swap</b> use plus a sluggish system means RAM is genuinely short. <code>vmstat 1</code> columns <code>si</code>/<code>so</code> show swapping happening live.</p>
+<h3>Process states (the STAT column)</h3>
+<p><code>R</code> running, <code>S</code> sleeping (waiting for an event, normal), <code>D</code> uninterruptible sleep (stuck on disk I/O; a failing HDD produces lots of these), <code>Z</code> zombie (finished but not yet collected by its parent), <code>T</code> stopped.</p>
+<details class="ex"><summary>53.1 <span class="levels">basic</span> Find which process holds port 5170, then stop it gracefully.</summary><div><p><code>lsof -i :5170</code> (or <code>ss -ltnp | grep 5170</code>) gives the PID; then <code>kill PID</code>. Only use <code>-9</code> if it's still there after a few seconds.</p></div></details>
+`;export{e as default};

@@ -1,0 +1,9 @@
+const e=`<p class="goal">Gracefully handling declined cards, insufficient funds, expired tokens, smart retries, and dunning notifications.</p>
+<ul>
+  <li><b>Immediate vs Asynchronous Failure:</b> Synchronous decline (wrong CVC/expired card) vs Async webhook failure (bank fraud review or ACH bounce).</li>
+  <li><b>Smart Retries:</b> Stripe Radar and Billing automatically retry failed recurring charges at optimal intervals.</li>
+  <li><b>Dunning Flow:</b> Soft fail (grace period of 3-7 days with banner in app) ──► Email reminders ──► Subscription suspension.</li>
+</ul>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>369.1 <span class="levels">basic</span> Build an in-app banner component that activates on <code>invoice.payment_failed</code> webhook.</summary><div><p>Prompt user with one-click update card link before revoking service access.</p></div></details>
+</div>`;export{e as default};

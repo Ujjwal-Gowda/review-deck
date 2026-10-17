@@ -1,0 +1,27 @@
+<p class="goal">Making web apps load fast and feel instant, measured the way Google and users measure it.</p>
+<h3>Core Web Vitals</h3>
+<table>
+<tr><th>Metric</th><th>Measures</th><th>Good</th><th>Usual fixes</th></tr>
+<tr><td><b>LCP</b> (Largest Contentful Paint)</td><td>when the main content appears</td><td>&lt; 2.5 s</td><td>smaller JS, preloaded hero image, SSR, a CDN</td></tr>
+<tr><td><b>INP</b> (Interaction to Next Paint)</td><td>responsiveness to clicks and typing</td><td>&lt; 200 ms</td><td>break up long tasks, less work per render, Web Workers</td></tr>
+<tr><td><b>CLS</b> (Cumulative Layout Shift)</td><td>content jumping around</td><td>&lt; 0.1</td><td><code>width</code>/<code>height</code> on images, reserved space for ads and embeds</td></tr>
+</table>
+<h3>Loading</h3>
+<ul>
+<li><b>Ship less JS:</b> check the bundle (<code>npx vite-bundle-visualizer</code>). The build warning about a 555 KB chunk on this site is exactly this. Heavy libraries (date, chart, editor) often dominate.</li>
+<li><b>Code-split:</b> <code>const Admin = lazy(() =&gt; import("./Admin"))</code> per route or feature.</li>
+<li><b>Images:</b> WebP/AVIF, the right size (<code>srcset</code>), <code>loading="lazy"</code> below the fold, and <code>fetchpriority="high"</code> for the hero image.</li>
+<li><b>Caching:</b> hashed filenames plus <code>Cache-Control: immutable</code>, so repeat visits cost nothing.</li>
+<li><b>Fonts:</b> <code>font-display: swap</code>, preload the one critical font, subset them.</li>
+</ul>
+<h3>Rendering (React)</h3>
+<ul>
+<li>Profile first with React DevTools Profiler: which components re-render, and why.</li>
+<li>Keep state low in the tree so updates re-render less; memoise expensive subtrees (<code>memo</code>) only where the profiler shows it matters.</li>
+<li>Virtualise long lists (TanStack Virtual). Rendering 5,000 order rows kills INP.</li>
+<li><code>useDeferredValue</code> / <code>startTransition</code> keep typing responsive during heavy filtering.</li>
+</ul>
+<p>Measure on a mid-range phone with network throttling (DevTools → Performance, "Slow 4G", 4× CPU slowdown). Your laptop hides the problems.</p>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>76.1 <span class="levels">basic</span> Run Lighthouse (mobile) on this site's built version. Identify the largest JS chunk and one change that would reduce the time until the main content appears (LCP).</summary><div><p>Content is now split per chapter, so check what remains in the main bundle (highlight.js languages, React). Ideas: lazy-load highlight.js languages, preload the font, and inline critical CSS.</p></div></details>
+</div>

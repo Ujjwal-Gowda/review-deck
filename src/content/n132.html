@@ -1,0 +1,26 @@
+<p class="goal">Cloud identity and access: who (or what) can do which action on which resource.</p>
+<table>
+<tr><th>Concept</th><th>Meaning</th></tr>
+<tr><td>Principal</td><td>a user, a group, or a <b>role</b> (an identity that workloads and people <i>assume</i> temporarily)</td></tr>
+<tr><td>Policy</td><td>a JSON document: Effect (Allow/Deny) + Action + Resource (+ Condition)</td></tr>
+<tr><td>Evaluation</td><td>default deny → an explicit Allow grants it → an explicit Deny always wins</td></tr>
+</table>
+<pre data-lang="json"><code class="language-json">{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Action": ["s3:GetObject", "s3:PutObject"],
+    "Resource": "arn:aws:s3:::freshon-invoices/*"
+  }]
+}</code></pre>
+<h3>Rules</h3>
+<ul>
+<li><b>No long-lived access keys for workloads:</b> give EC2, ECS and Lambda instance/task roles; CI uses OIDC (<a class="xref" data-old="n121">chapter 121</a>).</li>
+<li><b>Least privilege:</b> specific actions on specific resources, never <code>"Action": "*"</code> for an app.</li>
+<li><b>Humans:</b> SSO with MFA; no daily use of the root account (lock it away, with MFA).</li>
+<li>Separate accounts or projects for prod and dev: the strongest boundary there is.</li>
+<li>Audit with CloudTrail and IAM Access Analyzer; remove unused permissions.</li>
+</ul>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>132.1 <span class="levels">basic</span> Write a least-privilege IAM policy that lets a service put and get objects only under <code>invoices/</code> in one bucket.</summary><div><p>Allow <code>s3:PutObject</code> and <code>s3:GetObject</code> on <code>arn:aws:s3:::bucket/invoices/*</code>; add <code>s3:ListBucket</code> on the bucket with a <code>s3:prefix</code> condition only if listing is needed.</p></div></details>
+</div>

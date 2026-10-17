@@ -1,0 +1,46 @@
+const e=`<p class="goal">Production cost-engineering for AI features: prompt caching, semantic caches, local token estimation, and tiered model cascading.</p>
+
+<h3>1. Client-Side Token Pre-Flight Checks</h3>
+<pre data-lang="typescript"><code class="language-typescript">import { encoding_for_model } from "tiktoken";
+
+export function checkTokenBudget(text: string, maxAllowed = 4000): { ok: boolean; count: number } {
+  const enc = encoding_for_model("gpt-4o");
+  const tokens = enc.encode(text);
+  enc.free(); // Must free WASM memory
+  return {
+    ok: tokens.length <= maxAllowed,
+    count: tokens.length,
+  };
+}</code></pre>
+
+<h3>2. Model Cascades (Cheap $\rightarrow$ Frontier)</h3>
+<div class="diagram">
+User Query ──► Fast Classifier (Regex or 8B model)
+                     │
+         Is query complex / reasoning?
+              ├── NO  ──► Answer with Haiku / GPT-4o-mini ($0.15 / 1M)
+              └── YES ──► Route to Claude 3.5 Sonnet / O3 ($3.00 - $15.00 / 1M)
+</div>
+
+<h3>3. Anthropic Prompt Caching</h3>
+<pre data-lang="typescript"><code class="language-typescript">import Anthropic from "@anthropic-ai/sdk";
+const anthropic = new Anthropic();
+
+export async function askDocumentation(query: string, docsContext: string) {
+  return await anthropic.messages.create({
+    model: "claude-3-5-sonnet-20241022",
+    max_tokens: 1024,
+    system: [
+      {
+        type: "text",
+        text: docsContext, // Large documentation body (>1024 tokens)
+        cache_control: { type: "ephemeral" }, // Reads from cache for 5 min; saves 90% cost
+      },
+    ],
+    messages: [{ role: "user", content: query }],
+  });
+}</code></pre>
+
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>358.1 <span class="levels">basic</span> Implement semantic cache in Redis: query embedding hash lookup before LLM invocation.</summary><div><p>Hash query text or lookup nearest neighbor; return cached response if distance < 0.05.</p></div></details>
+</div>`;export{e as default};

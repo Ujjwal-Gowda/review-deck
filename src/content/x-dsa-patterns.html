@@ -1,0 +1,49 @@
+<p class="goal">Three patterns that turn "check every pair" (O(n²)) into a single pass (O(n)).</p>
+<h3>1. Two pointers</h3>
+<p>Move two indices toward each other, or in the same direction, instead of nesting loops.</p>
+<pre data-lang="python"><code class="language-python">def pair_with_sum(sorted_prices, budget):        # two items whose prices add to exactly budget
+    i, j = 0, len(sorted_prices) - 1
+    while i &lt; j:
+        s = sorted_prices[i] + sorted_prices[j]
+        if s == budget: return i, j
+        if s &lt; budget: i += 1                    # need more: move the small end up
+        else: j -= 1                             # need less: move the big end down
+    return None</code></pre>
+<div class="diagram">[100, 150, 200, 350, 400]  budget 550
+ i                     j    500 &lt; 550 → i++
+      i                j    550 → found (150, 400)</div>
+<p>Same-direction pointers: remove duplicates in place, partition, and fast/slow pointers on linked lists (<a class="xref" data-old="x-dsa-linked">Linked Lists</a>).</p>
+<h3>2. Sliding window</h3>
+<p>Keep a window <code>[left, right]</code> over the array: grow it on the right, shrink it from the left, and update the answer as it moves.</p>
+<pre data-lang="python"><code class="language-python">def max_sales_in_k_days(sales, k):               # FIXED window size
+    window = sum(sales[:k]); best = window
+    for i in range(k, len(sales)):
+        window += sales[i] - sales[i - k]        # slide: add the new day, drop the oldest
+        best = max(best, window)
+    return best
+
+def longest_without_repeat(s):                   # VARIABLE window size
+    seen, left, best = {}, 0, 0
+    for right, ch in enumerate(s):
+        if ch in seen and seen[ch] &gt;= left:
+            left = seen[ch] + 1                   # shrink past the previous copy
+        seen[ch] = right
+        best = max(best, right - left + 1)
+    return best</code></pre>
+<h3>3. Prefix sums</h3>
+<p>Precompute running totals once; then any range sum costs O(1).</p>
+<pre data-lang="python"><code class="language-python">sales = [3, 1, 4, 1, 5, 9, 2]
+prefix = [0]
+for x in sales: prefix.append(prefix[-1] + x)    # prefix[i] = sum of the first i items: [0,3,4,8,9,14,23,25]
+def range_sum(i, j): return prefix[j + 1] - prefix[i]   # sum of sales[i..j]
+range_sum(2, 5)   # 4+1+5+9 = 19 = 23 − 4</code></pre>
+<p>Extensions: 2-D prefix sums (the sum of any rectangle in a grid), <b>difference arrays</b> (add v to a whole range in O(1), then take one prefix sum at the end), and "subarray sums equal to K" (prefix sums + a hash map of the sums seen so far).</p>
+<table>
+<tr><th>Clue in the problem</th><th>Pattern</th></tr>
+<tr><td>sorted array, pairs or triples, partition in place</td><td>two pointers</td></tr>
+<tr><td>"contiguous subarray/substring", "longest/shortest with a condition", "in the last k"</td><td>sliding window</td></tr>
+<tr><td>many range-sum queries, "subarray sums to K"</td><td>prefix sums (+ a hash map)</td></tr>
+</table>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>0.1 <span class="levels">basic</span> Find the shortest run of consecutive days whose sales total at least a target (positive numbers only) using a variable sliding window.</summary><div><p>Expand right, adding sales. While the sum ≥ target, record the length and shrink from the left, subtracting. Each index enters and leaves once, so O(n).</p></div></details>
+</div>

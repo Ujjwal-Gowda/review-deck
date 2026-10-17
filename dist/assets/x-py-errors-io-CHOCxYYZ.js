@@ -1,0 +1,248 @@
+const e=`<p class="goal">Master Pythonic error handling, custom exception hierarchies, context managers, modern <code>pathlib</code> file paths, atomic file writes, and JSON/CSV serialization.</p>
+
+<p>Robust programs must gracefully handle failures, manage resource lifecycles without leaks, and parse files reliably. This chapter explores Python's exception model, custom errors, context managers, path manipulation, and atomic file persistence.</p>
+
+<h3>1. Custom Exception Hierarchies & EAFP Principle</h3>
+<p>In Python, exceptions are classes inheriting from <code>BaseException</code> (or more typically <code>Exception</code>). Building custom exception hierarchies allows callers to catch specific failure domains cleanly.</p>
+
+<p><b>EAFP vs LBYL:</b> Python embraces **"Easier to Ask Forgiveness than Permission" (EAFP)**. Rather than checking if a key exists before accessing it (Look Before You Leap), Pythonians prefer trying the action and catching the <code>KeyError</code> or <code>AttributeError</code>.</p>
+
+<pre data-lang="python"><code class="language-python"># 1. Custom Exception Hierarchy
+class InventoryError(Exception):
+    """Base exception for all inventory-related errors."""
+    pass
+
+class OutOfStockError(InventoryError):
+    def __init__(self, sku: str, requested: int, available: int):
+        super().__init__(f"SKU '{sku}' out of stock: requested {requested}, available {available}")
+        self.sku = sku
+        self.requested = requested
+        self.available = available
+
+
+# 2. Try-Except-Else-Finally Structure
+def reserve_item(sku: str, qty: int):
+    try:
+        # Simulated lookup
+        if qty > 5:
+            raise OutOfStockError(sku, qty, available=5)
+        print(f"Successfully reserved {qty} of {sku}")
+    except OutOfStockError as e:
+        print(f"Caught stock error: {e}")
+        # Re-raising with cause preservation (Python 3+)
+        # raise InventoryReservationFailed() from e
+    except Exception as err:
+        print(f"Unexpected system failure: {err}")
+        raise
+    else:
+        # Runs ONLY if no exception was raised in the try block
+        print("Reservation committed successfully.")
+    finally:
+        # Guaranteed cleanup (runs whether try succeeded, failed, or returned)
+        print("Releasing database connection lock.\\n")
+
+reserve_item("laptop_pro", 2)
+reserve_item("laptop_pro", 10)
+</code></pre>
+
+<h3>2. Context Managers: Guaranteed Resource Cleanup</h3>
+<p>Context managers (using the <code>with</code> statement) guarantee that resource acquisition and cleanup (such as closing file handles, releasing locks, or closing network sockets) happen reliably, even if exceptions occur inside the block.</p>
+
+<pre data-lang="python"><code class="language-python">import time
+from contextlib import contextmanager
+
+# 1. Using standard context managers (multiple files/resources)
+# with open("input.csv", encoding="utf-8") as fin, open("output.csv", "w", encoding="utf-8") as fout:
+#     fout.write(fin.read())
+
+
+# 2. Creating a custom context manager with the @contextmanager decorator
+@contextmanager
+def measure_execution_time(task_name: str):
+    start_time = time.perf_counter()
+    try:
+        # Yield control back to the 'with' block body
+        yield
+    finally:
+        elapsed = time.perf_counter() - start_time
+        print(f"[Timer] Task '{task_name}' completed in {elapsed:.4f} seconds.")
+
+# Usage:
+with measure_execution_time("Heavy Data Processing"):
+    # Simulated work
+    total = sum(i ** 2 for i in range(1_000_000))
+    print("Computed sum:", total)
+</code></pre>
+
+<h3>3. Modern File Management with <code>pathlib</code></h3>
+<p>Avoid legacy string concatenation for paths (like <code>os.path.join()</code>). Python's standard <code>pathlib.Path</code> provides an object-oriented, cross-platform filesystem path API.</p>
+
+<pre data-lang="python"><code class="language-python">from pathlib import Path
+
+# Create a path object relative to user home directory
+exports_dir = Path.home() / "enterprise" / "exports"
+
+# Create directories recursively (equivalent to mkdir -p), ignoring if they already exist
+exports_dir.mkdir(parents=True, exist_ok=True)
+
+# Searching for files using glob patterns
+for csv_file in exports_dir.glob("*.csv"):
+    file_size_bytes = csv_file.stat().st_size
+    print(f"Found CSV: {csv_file.name} ({file_size_bytes} bytes)")
+
+# Reading and writing text files cleanly
+target_file = exports_dir / "notes.txt"
+target_file.write_text("Hello, Enterprise Python!\\n", encoding="utf-8")
+
+# Stream reading line-by-line (constant memory usage for huge logs)
+log_file = exports_dir / "app.log"
+if log_file.exists():
+    with log_file.open(encoding="utf-8") as f:
+        for line_num, line in enumerate(f, start=1):
+            if "ERROR" in line:
+                print(f"Line {line_num}: {line.strip()}")
+</code></pre>
+
+<h3>4. JSON, CSV Serialization & Atomic File Writes</h3>
+<p>When writing important files (like configuration files or state logs), you must protect against power outages or application crashes midway through writing, which would result in a corrupted, half-written file. The solution is an **Atomic Write**.</p>
+
+<div class="diagram">
+  [ Atomic Write Pattern ]
+  1. Write content to a temporary file in the same directory (.tmp)
+  2. Flush buffers to disk (ensure OS writes complete)
+  3. Atomically replace the target file via OS system call (os.replace)
+     (guarantees target file is NEVER half-written or corrupted)
+</div>
+
+<pre data-lang="python"><code class="language-python">import json
+import csv
+from pathlib import Path
+
+# 1. JSON Serialization
+config_path = Path("config.json")
+config_data = {"host": "127.0.0.1", "port": 5432, "debug": True}
+
+# Write JSON with indentation and UTF-8 support
+config_path.write_text(json.dumps(config_data, indent=2, ensure_ascii=False), encoding="utf-8")
+
+# Read JSON back
+loaded_config = json.loads(config_path.read_text(encoding="utf-8"))
+
+
+# 2. CSV DictReader & DictWriter
+csv_path = Path("inventory.csv")
+
+# Writing CSV rows
+rows_to_write = [
+    {"sku": "milk_1L", "qty": 12},
+    {"sku": "bread_500g", "qty": 25}
+]
+
+with csv_path.open("w", newline="", encoding="utf-8") as f:
+    writer = csv.DictWriter(f, fieldnames=["sku", "qty"])
+    writer.writeheader()
+    writer.writerows(rows_to_write)
+
+# Reading CSV rows into dictionaries
+with csv_path.open("r", newline="", encoding="utf-8") as f:
+    reader = csv.DictReader(f)
+    for row in reader:
+        print(f"SKU: {row['sku']}, Qty: {row['qty']}")
+
+
+# 3. ATOMIC WRITE IMPLEMENTATION
+def atomic_write_text(file_path: Path, content: str) -> None:
+    temp_path = file_path.with_suffix(file_path.suffix + ".tmp")
+    try:
+        temp_path.write_text(content, encoding="utf-8")
+        # Atomic rename (replace operation is atomic on POSIX systems)
+        temp_path.replace(file_path)
+    except Exception as e:
+        if temp_path.exists():
+            temp_path.unlink() # Cleanup temp file on failure
+        raise e
+</code></pre>
+
+<div class="exercises">
+  <h3>Practice</h3>
+  <details class="ex">
+    <summary>0.1 <span class="levels">basic</span> Write a robust script with function <code>load_and_validate_orders(csv_path: Path)</code> that reads a CSV file containing order records (columns: <code>id</code>, <code>sku</code>, <code>qty</code>). If any row has a missing quantity or an invalid integer quantity, raise a custom <code>BadRowError</code> containing the exact line number. If successful, serialize the validated orders into a JSON file using the <b>atomic write</b> pattern.</summary>
+    <div>
+      <p><b>Solution Strategy:</b> We use <code>enumerate(csv.DictReader(f), start=2)</code> to track line numbers (line 1 is the header). We wrap the quantity parsing in a <code>try-except</code> block, raise our custom error if parsing fails, and then perform an atomic write using a temporary suffix.</p>
+<pre data-lang="python"><code class="language-python">import csv
+import json
+from pathlib import Path
+
+class BadRowError(Exception):
+    """Raised when a CSV row contains invalid or malformed data."""
+    def __init__(self, line_number: int, reason: str):
+        super().__init__(f"Line {line_number} validation error: {reason}")
+        self.line_number = line_number
+        self.reason = reason
+
+
+def load_and_validate_orders(csv_path: Path) -> list[dict]:
+    if not csv_path.exists():
+        raise FileNotFoundError(f"CSV file not found at: {csv_path}")
+
+    validated_orders = []
+
+    with csv_path.open("r", newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        
+        # Start at line 2 because line 1 is the CSV header
+        for line_num, row in enumerate(reader, start=2):
+            order_id = row.get("id", "").strip()
+            sku = row.get("sku", "").strip()
+            raw_qty = row.get("qty", "").strip()
+
+            if not order_id or not sku:
+                raise BadRowError(line_num, f"Missing order ID or SKU in row: {row}")
+
+            try:
+                qty = int(raw_qty)
+                if qty < 0:
+                    raise ValueError("Quantity cannot be negative.")
+            except ValueError as e:
+                raise BadRowError(line_num, f"Invalid quantity '{raw_qty}': {e}") from e
+
+            validated_orders.append({"id": order_id, "sku": sku, "qty": qty})
+
+    return validated_orders
+
+
+def atomic_save_json(target_path: Path, data: list[dict]) -> None:
+    json_content = json.dumps(data, indent=2, ensure_ascii=False)
+    temp_path = target_path.with_suffix(target_path.suffix + ".tmp")
+    try:
+        temp_path.write_text(json_content, encoding="utf-8")
+        temp_path.replace(target_path)
+        print(f"Successfully saved {len(data)} validated orders atomically to {target_path}")
+    except Exception as e:
+        if temp_path.exists():
+            temp_path.unlink()
+        raise RuntimeError(f"Atomic save failed: {e}") from e
+
+
+# Example Test Execution
+if __name__ == "__main__":
+    sample_csv = Path("test_orders.csv")
+    sample_csv.write_text("id,sku,qty\\nord_1,milk,10\\nord_2,bread,5\\n", encoding="utf-8")
+    
+    target_json = Path("validated_orders.json")
+
+    try:
+        orders = load_and_validate_orders(sample_csv)
+        atomic_save_json(target_json, orders)
+    except BadRowError as bre:
+        print("Validation Aborted:", bre)
+    finally:
+        # Cleanup test files
+        if sample_csv.exists(): sample_csv.unlink()
+        if target_json.exists(): target_json.unlink()
+        if target_json.with_suffix(".json.tmp").exists(): target_json.with_suffix(".json.tmp").unlink()
+</code></pre>
+    </div>
+  </details>
+</div>
+`;export{e as default};

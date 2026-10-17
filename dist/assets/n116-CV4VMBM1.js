@@ -1,0 +1,20 @@
+const e=`<p class="goal">How containers reach each other and the outside world.</p>
+<pre data-lang="shell"><code class="language-bash">docker network create shop
+docker run -d --name db  --network shop -e POSTGRES_PASSWORD=dev postgres:17
+docker run -d --name api --network shop -p 8080:8080 -e DATABASE_URL=postgres://postgres:dev@db:5432/postgres shop-api
+#   inside the network: the api reaches Postgres at hostname "db" (Docker's built-in DNS) on port 5432
+#   from the host: only the api is published → http://localhost:8080  (Postgres isn't exposed at all)
+docker network inspect shop</code></pre>
+<table>
+<tr><th>Concept</th><th>Meaning</th></tr>
+<tr><td>bridge network</td><td>a private virtual LAN for containers (user-defined bridges give DNS by container name)</td></tr>
+<tr><td><code>-p 8080:80</code></td><td>publish: host port 8080 → container port 80. <code>-p 127.0.0.1:5432:5432</code> binds to localhost only.</td></tr>
+<tr><td><code>EXPOSE</code></td><td>documentation only; it doesn't publish anything</td></tr>
+<tr><td>host network</td><td>shares the host's network stack (no isolation, no port mapping; Linux only)</td></tr>
+<tr><td><code>host.docker.internal</code></td><td>reach a service on the host from a container</td></tr>
+</table>
+<div class="callout warn"><b class="t">Classic mistakes</b><p><b>localhost inside a container means the container itself</b>, not your laptop and not another container: use the service name. An app listening on <code>127.0.0.1</code> inside the container can't be reached via <code>-p</code>; it must listen on <code>0.0.0.0</code>. And Docker's published ports bypass UFW firewall rules on Linux, so bind databases to 127.0.0.1 or don't publish them.</p></div>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>116.1 <span class="levels">basic</span> Put an API container and a Postgres container on a user network. Show the API reaches "db" by name but "localhost:5432" fails.</summary><div><p>Inside the API container, localhost means the API container itself. Docker's DNS resolves <code>db</code> to the Postgres container's IP.</p></div></details>
+</div>
+`;export{e as default};

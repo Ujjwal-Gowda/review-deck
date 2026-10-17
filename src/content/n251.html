@@ -1,0 +1,108 @@
+<p class="goal">Engineering Practice: Production Incident Response &amp; Blameless Postmortems. Master on-call war room command, severity triage, stakeholder communication, and systemic failure analysis.</p>
+
+<h3>The Psychology of High-Severity Outages</h3>
+<p>During a major production outage (SEV-1), normal human psychology works against effective resolution: adrenaline surges, cognitive tunnels narrow, people rush to make untested changes in panic, and executives demand instant estimates. Uncontrolled incident rooms degenerate into chaos where five engineers type random commands on production servers simultaneously, making the outage worse.</p>
+
+<p>World-class engineering organizations handle outages not through individual heroics, but through rigid command structures inspired by emergency response teams (FEMA / ICS protocols).</p>
+
+<div class="diagram">
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                                 The Incident War Room Matrix                           │
+│                                                                                        │
+│   ┌──────────────────────────────────────────────────────────────────────────────┐     │
+│   │                      Incident Commander (IC)                                 │     │
+│   │   • Owns the incident decision hierarchy &amp; pacing                           │     │
+│   │   • Does NOT touch code or terminals! Coordinates the room                   │     │
+│   │   • Directs: "Sarah, investigate Redis latency. Alex, verify DB locks."      │     │
+│   └──────────────┬───────────────────────────────┬───────────────────────────────┘     │
+│                  │                               │                                     │
+│                  ▼                               ▼                                     │
+│   ┌──────────────────────────────┐┌──────────────────────────────┐                     │
+│   │   Operations / Tech Leads    ││      Communications Lead     │                     │
+│   │   • Investigate telemetry    ││   • Updates public status pg │                     │
+│   │   • Execute rollbacks/flags  ││   • Shields engineers from   │                     │
+│   │   • Test mitigations         ││     executive interruptions  │                     │
+│   └──────────────┬───────────────┘└──────────────────────────────┘                     │
+│                  │                                                                     │
+│                  ▼                                                                     │
+│   ┌──────────────────────────────────────────────────────────────┐                     │
+│   │                         The Scribe                           │                     │
+│   │   • Logs exact timestamps of every observation and action    │                     │
+│   │   • Forms the immutable chronological timeline for postmortem│                     │
+│   └──────────────────────────────────────────────────────────────┘                     │
+└────────────────────────────────────────────────────────────────────────────────────────┘
+</div>
+
+<h3>Part 1: The Severity Classification Matrix</h3>
+<table>
+  <tr><th>Severity</th><th>Definition</th><th>Target Response Time</th><th>Action Protocol</th></tr>
+  <tr><td><b>SEV-1 (Critical)</b></td><td>Core revenue flow completely down for all users (e.g. <code>/checkout</code> failing 100%).</td><td>&lt; 5 minutes</td><td>Immediate pager broadcast; open dedicated War Room voice bridge; assign IC immediately.</td></tr>
+  <tr><td><b>SEV-2 (Major)</b></td><td>Significant degradation or core feature broken for subset of users (e.g. search down, reports slow).</td><td>&lt; 15 minutes</td><td>Page primary on-call engineer; escalate if not mitigated within 30 minutes.</td></tr>
+  <tr><td><b>SEV-3 (Minor)</b></td><td>Non-critical bug with functional workaround (e.g. CSV export formatting error).</td><td>Business hours</td><td>File high-priority sprint ticket; resolve in standard release cycle.</td></tr>
+</table>
+
+<h3>Part 2: The 4 Golden Rules of Live Crisis Management</h3>
+<ol>
+  <li><b>Mitigate Before Diagnosing:</b> If a code rollout occurred 10 minutes ago, do not spend 45 minutes reading the commit diff to find the offending line. <b>Roll back immediately.</b> Restore customer service first, diagnose in staging later.</li>
+  <li><b>Maintain Continuous Stakeholder Updates:</b> Publish updates on the status page every 20 minutes like clockwork. Even if the update is <i>"We are actively investigating database connection pool saturation; next update in 20m"</i>, regular communication prevents panicked executives and customers from flooding engineers with DMs.</li>
+  <li><b>One Voice in the Room:</b> Only the Incident Commander authorizes changes to production. If an engineer proposes running a script, they state: <i>"IC, I propose restarting the Celery worker pool"</i>. The IC responds: <i>"Approved"</i> or <i>"Hold"</i>.</li>
+  <li><b>Preserve the Timeline:</b> The Scribe records every event with UTC timestamps in a live document:
+    <pre data-lang="plaintext"><code class="language-plaintext">14:02 UTC - Automated alert fires: P99 latency > 3000ms
+14:05 UTC - Incident declared SEV-1. IC assigned: @maria
+14:11 UTC - Tech Lead identifies spike in unindexed query on `orders` table
+14:14 UTC - Feature flag `enable_advanced_order_filter` disabled
+14:16 UTC - Latency returns to baseline (45ms). Incident mitigated.</code></pre>
+  </li>
+</ol>
+
+<h3>Part 3: The Complete Blameless Postmortem Template</h3>
+<p>A postmortem is not a witch hunt—it is an investment in systemic resilience. If an engineer typed <code>DROP TABLE</code>, the root cause is not "the engineer was careless", but <b>why did the production database allow single-key destructive commands without confirmation or permissions?</b></p>
+
+<pre data-lang="markdown"><code class="language-markdown"># Incident Postmortem: SEV-1 Checkout Outage
+**Date:** 2026-10-09  
+**Duration:** 28 minutes  
+**Impact:** 4,200 users unable to complete checkout; estimated $38,000 lost GMV.  
+**Incident Commander:** Maria Sanchez  
+
+## Executive Summary
+At 14:02 UTC, an unindexed query introduced in release `v2.14.0` saturated the primary
+PostgreSQL connection pool, causing all checkout requests to timeout with HTTP 504.
+The incident was mitigated at 14:30 UTC by rolling back the deployment.
+
+## Contributing Factors (The 5 Whys)
+1. **Why did checkouts fail?** Connection pool was exhausted.
+2. **Why was the pool exhausted?** Queries on `orders(customer_id, created_at)` were performing sequential table scans taking 4.2s per execution.
+3. **Why did the query lack an index?** The migration adding the composite index was omitted in the PR.
+4. **Why was the missing index not caught in CI?** The staging database had only 200 rows, where sequential scans run in 0.1ms.
+5. **Why was there no query timeout?** The connection pool statement timeout was set to `0` (unlimited).
+
+## What Went Well
+- Rollback was executed cleanly in 3 minutes once decided.
+- Telemetry immediately highlighted the exact offending query via OpenTelemetry spans.
+
+## What Went Badly
+- The initial alert took 7 minutes to page due to overly conservative alert thresholds.
+- The status page update was delayed by 15 minutes because login credentials were not in 1Password.
+
+## Action Items
+| Action Item | Type | Owner | Target Date |
+|:---|:---|:---|:---|
+| Add `statement_timeout = 3000` default to all database connection pools | Prevent | @alex | 2026-10-12 |
+| Enforce synthetic load test with 1M rows in CI for schema changes | Prevent | @david | 2026-10-18 |
+| Reduce P99 latency alert trigger threshold from 5m to 2m | Detect | @maria | 2026-10-11 |
+| Store status page credentials in shared engineering vault | Mitigate | @sarah | 2026-10-10 |</code></pre>
+
+<details class="ex">
+  <summary><b>Drill: Why blaming individuals destroys an engineering organization's reliability</b> (Click to expand)</summary>
+  <p><b>Scenario:</b> A company fires an engineer who pushed a bug that caused an outage.</p>
+  <p><b>Question:</b> What is the immediate cultural and technical consequence across the remaining engineering team?</p>
+  <div class="callout key">
+    <p><b>Answer: Fear, concealment, and slow shipping!</b></p>
+    <p>When engineers know they will be punished for failures:</p>
+    <ol>
+      <li>They hide mistakes, delay reporting incidents, and avoid taking on-call shifts.</li>
+      <li>They resist shipping improvements or refactoring brittle legacy code out of fear of being blamed for unexpected side effects.</li>
+      <li>The underlying systemic flaws (poor test suites, lack of staging parity, dangerous raw credentials) remain unfixed, guaranteeing that the exact same disaster will happen again with a different engineer.</li>
+    </ol>
+  </div>
+</details>

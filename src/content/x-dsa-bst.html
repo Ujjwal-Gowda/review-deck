@@ -1,0 +1,57 @@
+<p class="goal">A binary tree with one rule (smaller keys to the left, larger to the right) that makes search, insert and sorted traversal fast.</p>
+<div class="diagram">insert 50, 30, 70, 20, 40, 60, 80:
+
+              50
+            /    \
+          30      70          rule at EVERY node: left subtree &lt; node &lt; right subtree
+         /  \    /  \
+       20   40  60   80
+search 60:  60 &gt; 50 → go right;  60 &lt; 70 → go left;  found.   3 comparisons for 7 keys (log₂ 7 ≈ 3)</div>
+<pre data-lang="python"><code class="language-python">class Node:
+    def __init__(self, key): self.key, self.left, self.right = key, None, None
+
+def insert(root, key):
+    if root is None: return Node(key)
+    if key &lt; root.key: root.left = insert(root.left, key)
+    elif key &gt; root.key: root.right = insert(root.right, key)
+    return root                                  # duplicates ignored
+
+def search(root, key):
+    while root and root.key != key:
+        root = root.left if key &lt; root.key else root.right
+    return root
+
+def minimum(root):
+    while root.left: root = root.left
+    return root</code></pre>
+<h3>Deleting: three cases</h3>
+<div class="diagram">1. a leaf (20):             just remove it
+2. one child (70 with 60):  replace the node with its child
+3. two children (50):       replace its key with its in-order SUCCESSOR (the smallest key in its right subtree, 60),
+                            then delete that successor from the right subtree (it has at most one child)</div>
+<pre data-lang="python"><code class="language-python">def delete(root, key):
+    if root is None: return None
+    if key &lt; root.key: root.left = delete(root.left, key)
+    elif key &gt; root.key: root.right = delete(root.right, key)
+    else:
+        if root.left is None: return root.right          # cases 1 and 2
+        if root.right is None: return root.left
+        succ = minimum(root.right)                       # case 3
+        root.key = succ.key
+        root.right = delete(root.right, succ.key)
+    return root</code></pre>
+<h3>Sorted for free</h3>
+<p>An in-order traversal visits the keys in ascending order. That's why BSTs (and their balanced cousins) back ordered maps: <b>range queries</b> ("keys between 30 and 60"), <b>floor/ceiling</b> ("the largest price ≤ ₹500"), and min and max, none of which a hash table can do.</p>
+<h3>The catch: degeneration</h3>
+<div class="diagram">insert 10, 20, 30, 40, 50 (already sorted):
+10
+  \
+   20
+     \
+      30          ← it's a linked list now: search is O(n), not O(log n)
+        \
+         40</div>
+<p>The fix is <b>self-balancing</b> trees, which rotate nodes to keep the height about log n (<a class="xref" data-old="x-dsa-balanced">Balanced Trees</a>). In real code, use the library: Rust <code>BTreeMap</code>, Java <code>TreeMap</code>, C++ <code>std::map</code>; in Python, the <code>sortedcontainers</code> package or <code>bisect</code> on a sorted list.</p>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>0.1 <span class="levels">basic</span> Write <code>is_valid_bst(root)</code>. Why is comparing each node only with its direct children wrong?</summary><div><p>A node deep in the left subtree must be less than <i>every</i> ancestor that it sits to the left of, not just its parent. Pass down bounds: <code>valid(n, lo, hi)</code> checks <code>lo &lt; n.key &lt; hi</code>, then recurses with <code>(lo, n.key)</code> on the left and <code>(n.key, hi)</code> on the right. Alternatively, an in-order traversal must be strictly increasing.</p></div></details>
+</div>

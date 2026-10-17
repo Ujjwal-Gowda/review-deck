@@ -1,0 +1,22 @@
+<p class="goal">Images: the immutable, layered templates containers start from.</p>
+<pre data-lang="shell"><code class="language-bash">docker pull node:22-alpine
+docker images                                   # local images and their sizes
+docker history node:22-alpine                   # the layers, and what created each one
+docker image inspect node:22-alpine | less      # env, entrypoint, architecture
+docker run --rm node:22-alpine node -v          # a container = an image + a writable layer + a process
+docker system df; docker image prune -a         # disk usage / clean unused images</code></pre>
+<h3>Layers</h3>
+<p>Each Dockerfile instruction that changes the filesystem creates a <b>layer</b> (a diff). Layers are content-addressed (by SHA-256) and <b>shared</b>: ten images based on <code>node:22-alpine</code> store the base once. A container adds a thin writable layer on top, which is thrown away when the container is removed. That's why data must live in volumes (<a class="xref" data-old="n115">chapter 115</a>).</p>
+<h3>Names and tags</h3>
+<p><code>ghcr.io/ujjwal/shop-api:1.4.2</code> = registry / repository : tag. Tags are <b>mutable pointers</b>. <code>latest</code> is just a default name, not "newest". For reproducible deploys, reference the <b>digest</b>: <code>shop-api@sha256:ab12…</code>.</p>
+<table>
+<tr><th>Base image</th><th>Size</th><th>Notes</th></tr>
+<tr><td><code>debian:bookworm-slim</code> / <code>node:22-slim</code></td><td>~75–200 MB</td><td>glibc; the most compatible choice</td></tr>
+<tr><td><code>alpine</code></td><td>~7 MB</td><td>musl libc, so occasional native-module or DNS surprises</td></tr>
+<tr><td>distroless (<code>gcr.io/distroless/…</code>)</td><td>~20 MB</td><td>no shell or package manager: a small attack surface</td></tr>
+<tr><td><code>scratch</code></td><td>0</td><td>just your static binary (Go, Rust musl)</td></tr>
+</table>
+<p>Images are per CPU architecture (amd64, arm64). Multi-platform images bundle several; build them with <code>docker buildx build --platform linux/amd64,linux/arm64</code>.</p>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>113.1 <span class="levels">basic</span> Compare the sizes of <code>node:22</code>, <code>node:22-slim</code> and <code>node:22-alpine</code>, and inspect the layers of one with <code>docker history</code>.</summary><div><p>Roughly 1 GB, 200 MB and 150 MB. <code>docker history</code> shows each layer with the instruction that created it. Base-image choice dominates image size.</p></div></details>
+</div>

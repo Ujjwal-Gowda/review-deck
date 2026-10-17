@@ -1,0 +1,25 @@
+const e=`<p class="goal">A backup only counts if you've successfully restored from it.</p>
+<h3>The 3-2-1 rule</h3>
+<p>Keep <b>3</b> copies of the data, on <b>2</b> different kinds of media, with <b>1</b> off-site (another region or provider). Add a copy that can't be changed (object lock / WORM storage) so ransomware or a compromised admin account can't delete it.</p>
+<table>
+<tr><th>Type</th><th>What it is</th></tr>
+<tr><td>Full</td><td>everything; simple to restore, large</td></tr>
+<tr><td>Incremental / differential</td><td>changes since the last backup / since the last full one</td></tr>
+<tr><td>Snapshot</td><td>a point-in-time copy of a disk or volume, fast; still keep a copy outside the same account</td></tr>
+<tr><td>Logical (<code>pg_dump</code>)</td><td>portable SQL; slow for large databases</td></tr>
+<tr><td>Physical + WAL (point-in-time recovery)</td><td>restore to any second, e.g. just before a bad <code>DELETE</code></td></tr>
+</table>
+<pre data-lang="shell"><code class="language-bash">restic -r s3:s3.amazonaws.com/freshon-backups init
+restic -r … backup /var/lib/app --tag daily            # deduplicated, encrypted, incremental
+restic -r … forget --keep-daily 7 --keep-weekly 4 --keep-monthly 12 --prune
+restic -r … restore latest --target /tmp/restore-test  # the step everyone skips</code></pre>
+<ul>
+<li><b>Back up everything you'd need:</b> databases, uploaded files, configuration, secrets (in encrypted form), and infrastructure code.</li>
+<li><b>Automate restore drills:</b> restore to a scratch environment every month, then check that row counts match and the app starts.</li>
+<li><b>Encrypt</b> backups, and store the keys separately from the backups.</li>
+<li><b>Monitor</b> the last successful backup's age and alert if it's older than a day. A backup job that has quietly failed for 3 months is the classic disaster.</li>
+</ul>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>152.1 <span class="levels">basic</span> Back up a folder with restic to a second disk or bucket, delete a file, and restore it.</summary><div><p><code>restic backup</code>, then <code>restic snapshots</code>, then <code>restic restore latest --target /tmp/r --include path</code>. Then schedule it with a systemd timer and alert on failures.</p></div></details>
+</div>
+`;export{e as default};

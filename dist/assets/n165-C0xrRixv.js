@@ -1,0 +1,17 @@
+const e=`<p class="goal">Running a secret manager: central storage, access control, auditing and rotation.</p>
+<pre data-lang="shell"><code class="language-bash">aws secretsmanager create-secret --name prod/orders/db --secret-string '{"url":"postgres://…"}'
+aws secretsmanager get-secret-value --secret-id prod/orders/db      # only roles allowed by IAM can read it; every read is logged
+vault kv put secret/orders/razorpay key_id=… key_secret=…          # HashiCorp Vault
+vault read database/creds/orders-app                                # DYNAMIC secret: a fresh DB user that expires in 1 hour</code></pre>
+<ul>
+<li><b>Centralise:</b> one place, organised by environment and service, instead of <code>.env</code> files copied between laptops.</li>
+<li><b>Inject at runtime:</b> environment variables or mounted files, fetched by the platform (ECS task definitions, External Secrets in Kubernetes, <code>doppler run</code>).</li>
+<li><b>Least privilege:</b> each service reads only its own secrets.</li>
+<li><b>Rotation:</b> scheduled rotation (the manager updates both the provider and the stored value); apps reload new values without redeploying, or during the next rolling restart.</li>
+<li><b>Dynamic, short-lived credentials</b> beat static ones: if one leaks, it's already expired.</li>
+<li><b>Audit logs</b> show who read which secret, and when.</li>
+</ul>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>165.1 <span class="levels">think</span> Your team shares one .env file on WhatsApp. Describe the migration to a secret manager step by step.</summary><div><p>Pick a tool (Doppler, Infisical or a cloud manager). Import the secrets per environment, give each service its own read scope, inject them at runtime, rotate every secret that was shared, and delete the old copies.</p></div></details>
+</div>
+`;export{e as default};

@@ -1,0 +1,21 @@
+const e=`<p class="goal">The spectrum of guarantees about what a read returns after a write.</p>
+<table>
+<tr><th>Model</th><th>Guarantee</th><th>Example problem if missing</th></tr>
+<tr><td><b>Linearizable</b> (strong)</td><td>behaves like a single copy: once a write completes, every later read sees it</td><td>…</td></tr>
+<tr><td><b>Read-your-writes</b></td><td>you always see your own updates</td><td>you edit your address, refresh, and it's the old one (the read went to a lagging replica)</td></tr>
+<tr><td><b>Monotonic reads</b></td><td>you never see time go backwards</td><td>an order shows "shipped", then "paid" again on the next refresh</td></tr>
+<tr><td><b>Causal</b></td><td>effects never appear before their causes</td><td>a reply shows up before the message it answers</td></tr>
+<tr><td><b>Eventual</b></td><td>if writes stop, all replicas converge… eventually</td><td>temporary disagreement between replicas</td></tr>
+</table>
+<h3>Quorums</h3>
+<p>With N replicas, write to W and read from R. If <b>W + R &gt; N</b>, every read overlaps with the latest write (e.g. N=3, W=2, R=2). Lower W or R buys speed and availability at the cost of consistency.</p>
+<h3>Practical techniques</h3>
+<ul>
+<li>Route a user's reads to the leader for a few seconds after they write (read-your-writes on top of async replicas).</li>
+<li>Pin a session to one replica (monotonic reads).</li>
+<li>Conflict resolution for concurrent writes: last-writer-wins (simple, but loses data), version vectors, or CRDTs (data types that merge automatically: counters, sets, collaborative text).</li>
+</ul>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>170.1 <span class="levels">basic</span> With N=5 replicas, which (W, R) pairs guarantee reads see the latest write? Which favours fast writes?</summary><div><p>Any pair with W+R&gt;5: (3,3), (4,2), (5,1), (2,4), (1,5). (1,5) gives the fastest writes and the slowest reads; (5,1) is the opposite.</p></div></details>
+</div>
+`;export{e as default};

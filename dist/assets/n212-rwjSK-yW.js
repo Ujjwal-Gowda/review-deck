@@ -1,0 +1,19 @@
+const e=`<p class="goal">Combining keyword and semantic search, because each catches what the other misses.</p>
+<table>
+<tr><th>Query</th><th>BM25 (keywords)</th><th>Vectors (meaning)</th></tr>
+<tr><td>"SKU FRS-PNR-200"</td><td>✓ exact match</td><td>✗ codes embed poorly</td></tr>
+<tr><td>"dairy for making curry"</td><td>✗ no shared words</td><td>✓ finds paneer</td></tr>
+</table>
+<p><b>Hybrid search</b> runs both and merges the results. The standard merge is <b>Reciprocal Rank Fusion</b>, which needs no score calibration:</p>
+<pre data-lang="python"><code class="language-python">def rrf(result_lists, k=60):
+    scores = {}
+    for results in result_lists:                 # each is an ordered list of doc ids
+        for rank, doc in enumerate(results):
+            scores[doc] = scores.get(doc, 0) + 1 / (k + rank + 1)
+    return sorted(scores, key=scores.get, reverse=True)
+merged = rrf([bm25_search(q, 50), vector_search(q, 50)])[:20]</code></pre>
+<p>In Postgres: <code>tsvector</code> + pgvector in the same database, fused in SQL or in your app (<a class="xref" data-old="n103">chapter 103</a>). Elasticsearch, OpenSearch, Qdrant and Weaviate have hybrid search built in. Hybrid search plus reranking is the strongest general-purpose retrieval setup.</p>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>212.1 <span class="levels">basic</span> Implement RRF over BM25 (Postgres tsvector) and vector results for 10 queries. Did the hybrid beat either one alone on your golden set?</summary><div><p>Usually yes: the hybrid catches both exact-term and semantic matches. Measure recall@5 for each of the three methods.</p></div></details>
+</div>
+`;export{e as default};

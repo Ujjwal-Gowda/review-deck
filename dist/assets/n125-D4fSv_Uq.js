@@ -1,0 +1,15 @@
+const t=`<p class="goal">Releasing new versions without downtime, while limiting the damage when something's wrong.</p>
+<table>
+<tr><th>Strategy</th><th>How</th><th>Pros</th><th>Cons</th></tr>
+<tr><td><b>Recreate</b></td><td>stop all old, start all new</td><td>simple</td><td>downtime</td></tr>
+<tr><td><b>Rolling</b></td><td>replace instances a few at a time (the Kubernetes default)</td><td>no downtime, no extra capacity</td><td>old and new versions run side by side; rollback is another roll</td></tr>
+<tr><td><b>Blue-green</b></td><td>deploy the full new environment (green) alongside the old (blue), then switch traffic at once</td><td>instant switch and instant rollback</td><td>double the capacity during the deploy; the DB must suit both versions</td></tr>
+<tr><td><b>Canary</b></td><td>send 1%, then 10%, then 50%, then 100% of traffic to the new version, watching metrics at each step</td><td>real-traffic validation with a small blast radius; can be automated (Argo Rollouts, Flagger)</td><td>needs good metrics and traffic splitting</td></tr>
+<tr><td><b>Feature flags</b></td><td>code ships dark; turn it on per user, percentage or store</td><td>release ≠ deploy; instant kill switch</td><td>flag debt; testing combinations</td></tr>
+<tr><td><b>Shadow / dark launch</b></td><td>mirror real traffic to the new version and discard its responses</td><td>test under real load safely</td><td>side effects must be disabled</td></tr>
+</table>
+<p>Whatever the strategy: health checks gate traffic, you watch the <b>golden signals</b> (errors, latency, traffic, saturation) during a rollout, and rollback is automatic or one command away. For a POS in shops, also consider <i>when</i> you deploy: not during the evening rush.</p>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>125.1 <span class="levels">think</span> For a POS used in 50 stores, which deployment strategy fits the backend API, and which fits the tablet app itself?</summary><div><p>API: rolling or canary with automatic rollback, deployed outside peak hours. Tablet app: staged rollout by store (1 store, then 5, then all), with feature flags and offline-safe versioning.</p></div></details>
+</div>
+`;export{t as default};

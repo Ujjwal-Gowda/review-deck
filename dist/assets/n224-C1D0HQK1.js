@@ -1,0 +1,38 @@
+const e=`<p class="goal">Building your own MCP server, locally first, then hosted.</p>
+<pre data-lang="python"><code class="language-python"># notes_server.py    pip install "mcp[cli]"      run/test: mcp dev notes_server.py
+from mcp.server.fastmcp import FastMCP
+from pathlib import Path
+mcp = FastMCP("notes")
+NOTES = Path.home() / "notes"
+
+@mcp.tool()
+def search_notes(query: str, limit: int = 5) -&gt; list[dict]:
+    """Search my notes for a phrase. Returns the file name and matching line."""
+    hits = []
+    for f in NOTES.rglob("*.md"):
+        for line in f.read_text(encoding="utf-8").splitlines():
+            if query.lower() in line.lower():
+                hits.append({"file": f.name, "line": line.strip()})
+                if len(hits) &gt;= limit: return hits
+    return hits
+
+@mcp.resource("notes://{name}")
+def read_note(name: str) -&gt; str:
+    """Full text of one note."""
+    p = (NOTES / name).resolve()
+    if not p.is_relative_to(NOTES): raise ValueError("outside notes dir")   # path traversal guard (<a class="xref" data-old="c26">chapter 162</a>)
+    return p.read_text(encoding="utf-8")
+
+if __name__ == "__main__":
+    mcp.run()          # stdio by default; mcp.run(transport="streamable-http") to serve over HTTP</code></pre>
+<pre data-lang="shell"><code class="language-bash">claude mcp add notes -- python3 ~/mcp/notes_server.py      # register it with Claude Code (stdio)
+# TypeScript: @modelcontextprotocol/sdk   ·  Go and Rust SDKs exist too</code></pre>
+<ul>
+<li><b>Local vs hosted:</b> a stdio server needs no hosting: the host starts it on demand. Host it (HTTP, behind TLS with OAuth) only when several users or devices need it, or when it wraps a server-side system.</li>
+<li>Design tools like APIs: few, clear, well-described, validated, least-privilege, with concise outputs.</li>
+<li>Test with the MCP Inspector (<code>npx @modelcontextprotocol/inspector</code>).</li>
+</ul>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>224.1 <span class="levels">basic</span> Build the notes MCP server from this chapter, add a <code>list_recent(n)</code> tool, and use it from Claude Code.</summary><div><p>Add a function decorated with <code>@mcp.tool()</code> that sorts files by mtime. Restart the server; the new tool appears in the tool list.</p></div></details>
+</div>
+`;export{e as default};

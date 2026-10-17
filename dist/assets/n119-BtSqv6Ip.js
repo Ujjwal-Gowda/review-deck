@@ -1,0 +1,16 @@
+const e=`<p class="goal">Running containers in production: secure, observable and well-behaved.</p>
+<table>
+<tr><th>Area</th><th>Practice</th></tr>
+<tr><td>Security</td><td>non-root <code>USER</code>; read-only root filesystem (<code>--read-only</code> + a tmpfs for /tmp); drop capabilities (<code>--cap-drop ALL</code>); no <code>--privileged</code>; minimal or distroless base; scan images in CI; never mount the Docker socket into app containers</td></tr>
+<tr><td>Resources</td><td>set memory and CPU limits (<code>--memory 512m --cpus 1</code>). Without limits, one leaky container can OOM the whole host. Runtimes should respect them (Node <code>--max-old-space-size</code>, JVM container awareness).</td></tr>
+<tr><td>Health</td><td>a <code>HEALTHCHECK</code> or orchestrator probes; restart policies (<code>unless-stopped</code>)</td></tr>
+<tr><td>Signals</td><td>exec-form <code>CMD</code> so the app is PID 1 and gets SIGTERM; or <code>--init</code> (tini) to reap zombies; handle graceful shutdown within the stop timeout</td></tr>
+<tr><td>Logging</td><td>write to stdout/stderr (the runtime collects it); set log rotation (<code>--log-opt max-size=10m</code>) or the logs fill the disk</td></tr>
+<tr><td>Config</td><td>env vars and secrets injected at runtime; the same image in every environment (build once, promote everywhere)</td></tr>
+<tr><td>Statelessness</td><td>state in volumes, DBs or object storage, so containers can be killed and replaced at any time</td></tr>
+<tr><td>Time</td><td>UTC everywhere; the image timezone doesn't matter if you store UTC</td></tr>
+</table>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>119.1 <span class="levels">basic</span> Run a container with <code>--read-only --cap-drop ALL --user 1000 --memory 256m</code>. What breaks, and how do you fix it properly?</summary><div><p>Writes to /tmp or caches fail: mount a <code>--tmpfs /tmp</code>. Binding ports below 1024 fails: listen on 8080. Out-of-memory kills show up in <code>docker inspect</code> as OOMKilled.</p></div></details>
+</div>
+`;export{e as default};

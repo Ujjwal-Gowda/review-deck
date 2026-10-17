@@ -1,0 +1,48 @@
+const t=`<p class="goal">What happens between your source and the silicon, and why some code is 100× faster.</p>
+<h3>The compilation pipeline</h3>
+<div class="diagram">source ─► LEXER ─► tokens ─► PARSER ─► AST ─► semantic analysis ─► IR ─► optimiser ─► codegen ─► machine code ─► LINKER ─► executable
+"x=a+1"     [x][=][a][+][1]    (=)            (types, scopes)     (SSA)   (inline,        (x86/ARM)       (join .o files
+                              /   \\                                        dead code,                      + libraries)
+                             x    (+)                                      constant fold)
+                                 /   \\
+                                a     1</div>
+<table>
+<tr><th>Term</th><th>Meaning</th></tr>
+<tr><td><b>Lexer / tokenizer</b></td><td>Splits text into tokens (keywords, names, numbers).</td></tr>
+<tr><td><b>Parser / AST</b></td><td>Builds an Abstract Syntax Tree from the grammar. Linters and formatters work on ASTs too.</td></tr>
+<tr><td><b>IR</b></td><td>Intermediate representation (e.g. LLVM IR, used by Rust, Clang and Swift).</td></tr>
+<tr><td><b>Optimisations</b></td><td>Inlining, constant folding, dead-code elimination, loop unrolling, vectorisation (SIMD).</td></tr>
+<tr><td><b>Linker</b></td><td>Combines object files and libraries, and resolves symbol addresses.</td></tr>
+<tr><td><b>Interpreter</b></td><td>Walks the AST or bytecode, executing directly.</td></tr>
+<tr><td><b>JIT</b></td><td>Just-in-time: profiles running code and compiles hot paths to machine code (V8, JVM HotSpot, PyPy).</td></tr>
+<tr><td><b>AOT</b></td><td>Ahead-of-time compilation (C, Rust, Go).</td></tr>
+<tr><td><b>Transpiler</b></td><td>Source-to-source compilation (TypeScript → JavaScript, which is what your Remotion build does).</td></tr>
+<tr><td><b>WebAssembly (Wasm)</b></td><td>A portable bytecode that runs in browsers and elsewhere at near-native speed.</td></tr>
+<tr><td><b>ABI</b></td><td>The binary-level calling convention that lets compiled code from different compilers or languages interoperate.</td></tr>
+</table>
+<h3>The memory hierarchy: the performance fact that matters most</h3>
+<table>
+<tr><th>Level</th><th>Typical latency</th><th>Size</th></tr>
+<tr><td>CPU register</td><td>~0.3 ns</td><td>bytes</td></tr>
+<tr><td>L1 cache</td><td>~1 ns</td><td>32–64 KB per core</td></tr>
+<tr><td>L2 cache</td><td>~4 ns</td><td>256 KB–2 MB</td></tr>
+<tr><td>L3 cache</td><td>~15 ns</td><td>8–64 MB shared</td></tr>
+<tr><td>RAM</td><td>~80–100 ns</td><td>GBs</td></tr>
+<tr><td>NVMe SSD</td><td>~20–100 µs</td><td>TBs</td></tr>
+<tr><td>HDD seek</td><td>~5–10 ms</td><td>TBs</td></tr>
+<tr><td>Network, same datacentre / cross-continent</td><td>~0.5 ms / ~150 ms</td><td>…</td></tr>
+</table>
+<p>Memory moves in <b>cache lines</b> (64 bytes). Reading array elements in order is fast, because each line brings in the next several items and the <b>prefetcher</b> predicts what's coming. Chasing pointers through scattered objects causes cache misses that are about 100× slower. This <b>locality</b> is why arrays beat linked lists, why "structure of arrays" layouts exist in games and ML, and why NumPy (contiguous C arrays) is about 50× faster than Python lists of objects.</p>
+<p>Other hardware realities: <b>branch prediction</b> (unpredictable <code>if</code>s in hot loops are costly), <b>SIMD</b> (one instruction processes 4–16 numbers at once), <b>multicore</b> (parallelism, <a class="xref" data-old="c20">chapter 20</a>), and <b>GPUs</b> (thousands of simple cores; <a class="xref" data-old="c28">chapter 28</a>).</p>
+<h3>Performance workflow</h3>
+<ol>
+<li><b>Make it work, make it right, then make it fast</b>, and only where it's needed. "Premature optimisation is the root of all evil" (Knuth).</li>
+<li><b>Measure:</b> profile to find the hotspot (it's rarely where you'd guess). Tools: <code>cProfile</code>, <code>py-spy</code>, <code>perf</code>, Chrome DevTools, <code>pprof</code>, flame graphs.</li>
+<li><b>Fix in order of leverage:</b> a better algorithm or data structure (100–1000×), then fewer I/O round trips (batch queries, add caching), then better memory layout and less allocation, then micro-optimisations last.</li>
+<li><b>Benchmark</b> before and after, on realistic data.</li>
+</ol>
+<p><b>Latency</b> is the time for one operation. <b>Throughput</b> is operations per second. They're different goals: batching raises throughput but can raise latency. <b>Caching</b> is the universal speed trick, but "there are only two hard things in computer science: cache invalidation and naming things."</p>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>5.1 <span class="levels">basic</span> Run <code>python3 -c "import dis; dis.dis(lambda x: x*2+1)"</code> and <code>gcc -O2 -S</code> on the equivalent C function. Compare the bytecode with the assembly.</summary><div><p>Python shows stack-machine bytecode (<code>LOAD_FAST</code>, <code>BINARY_OP</code>, <code>RETURN_VALUE</code>) interpreted at runtime. GCC emits 1–2 real CPU instructions (e.g. <code>lea eax, [rdi+rdi+1]</code>). That's the interpreter-vs-compiler gap in miniature.</p></div></details>
+</div>
+`;export{t as default};

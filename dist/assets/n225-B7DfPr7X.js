@@ -1,0 +1,13 @@
+const e=`<p class="goal">The client side of MCP: how hosts connect to and use servers.</p>
+<ul>
+<li><b>Configuration:</b> hosts list their servers (command + arguments for stdio; a URL for HTTP) in a config file (<code>.mcp.json</code>, <code>claude mcp add</code>, a desktop app's settings).</li>
+<li><b>Handshake:</b> the client sends <code>initialize</code> with its protocol version and capabilities; the server replies with its own (tools, resources, prompts, logging), and the two sides use what both support.</li>
+<li><b>Discovery:</b> <code>tools/list</code>, <code>resources/list</code> and <code>prompts/list</code>. Tool schemas are then given to the model, and <code>tools/call</code> runs when the model chooses a tool.</li>
+<li><b>Client capabilities</b> servers can use: <i>sampling</i> (the server asks the host's model to generate text), <i>roots</i> (which folders the server may see), and <i>elicitation</i> (asking the user for input).</li>
+<li><b>Writing your own client</b> (in the Python or TS SDK) lets your app use any MCP server. Useful when you build agents (<a class="xref" data-old="n245">chapter 245</a>).</li>
+<li><b>Trust:</b> a server's tool descriptions and results are untrusted input. Only install servers you trust, review the permissions they need, and prefer hosts that ask for approval before tool calls.</li>
+</ul>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>225.1 <span class="levels">basic</span> Write a minimal MCP client in Python that connects to your notes server over stdio and calls one tool.</summary><div><p>Use the SDK's <code>stdio_client</code> and <code>ClientSession</code>, then <code>initialize()</code>, <code>list_tools()</code> and <code>call_tool("search_notes", {"query": "…"})</code>.</p></div></details>
+</div>
+`;export{e as default};

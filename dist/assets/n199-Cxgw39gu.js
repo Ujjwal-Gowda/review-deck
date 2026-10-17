@@ -1,0 +1,13 @@
+const e=`<p class="goal">Convolutional networks: the architecture that made computer vision work.</p>
+<ul>
+<li><b>Convolution:</b> a small filter (e.g. 3×3) slides across the image, computing dot products. It detects local patterns wherever they appear (<b>translation equivariance</b>) and shares weights across positions, so it needs far fewer parameters than a dense layer on raw pixels.</li>
+<li><b>Hierarchy:</b> early layers detect edges, middle layers textures and parts, deep layers objects.</li>
+<li><b>Pooling / strides</b> shrink the spatial size and grow the receptive field.</li>
+<li><b>Landmark architectures:</b> LeNet → AlexNet (2012, the GPU breakthrough) → VGG → <b>ResNet</b> (residual connections) → EfficientNet. Vision Transformers (ViT) now rival or beat CNNs at scale.</li>
+<li><b>Transfer learning:</b> take a pretrained model (ResNet or ViT trained on ImageNet), replace the final layer, and fine-tune on a few hundred of your own images (e.g. "fresh vs spoiled produce"). This is the practical default.</li>
+<li>Tasks: classification, detection (YOLO), segmentation, OCR.</li>
+</ul>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>199.1 <span class="levels">basic</span> Fine-tune a pretrained ResNet-18 on ~100 photos of two classes (e.g. two products) with frozen layers except the last.</summary><div><p>Replace <code>model.fc</code>, freeze the other parameters, and train for a few epochs. With transfer learning, even 50 images per class usually gives high accuracy.</p></div></details>
+</div>
+`;export{e as default};

@@ -1,0 +1,22 @@
+<p class="goal">Mapping URLs to screens in single-page apps.</p>
+<p>In an SPA, the browser loads one HTML page. The router intercepts link clicks, updates the URL with the History API (<code>history.pushState</code>) without a reload, and renders the matching component. That's why deploying SPAs needs a <b>fallback rule</b> (the <code>/* /index.html 200</code> you added for Netlify): refreshing <code>/orders/42</code> must still serve <code>index.html</code>.</p>
+<pre data-lang="typescript"><code class="language-typescript">// React Router (data router)
+const router = createBrowserRouter([
+  { path: "/", element: &lt;Layout /&gt;, children: [
+    { index: true, element: &lt;Home /&gt; },
+    { path: "orders", element: &lt;Orders /&gt; },
+    { path: "orders/:id", element: &lt;OrderDetail /&gt;, loader: ({ params }) =&gt; getOrder(params.id!) },
+    { path: "*", element: &lt;NotFound /&gt; },
+  ]},
+]);
+// inside components: const { id } = useParams(); const [sp, setSp] = useSearchParams(); navigate("/orders")</code></pre>
+<table>
+<tr><th>Mode</th><th>URL</th><th>Server config</th></tr>
+<tr><td>History (browser)</td><td><code>/orders/42</code></td><td>needs the index.html fallback</td></tr>
+<tr><td>Hash</td><td><code>/#/orders/42</code></td><td>none (the part after <code>#</code> never reaches the server). This site uses it, so it works from any static host.</td></tr>
+<tr><td>File-based (Next.js)</td><td>folders = routes</td><td>handled by the framework</td></tr>
+</table>
+<p><b>Nested routes</b> share layouts (a sidebar stays mounted while the child view changes). <b>Put filters and page numbers in the query string</b> (<code>?status=paid&amp;page=2</code>) so views are shareable and the back button behaves. <b>Code-split per route</b> with <code>lazy()</code> so users download only the screens they visit.</p>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>73.1 <span class="levels">basic</span> Add a "status" filter to a list page that's stored in the URL query string, so refresh and the back button both work.</summary><div><p>Use <code>useSearchParams()</code> in React Router, or read and write <code>location.search</code>. Deriving the filtered list from the URL value means there's no duplicated state.</p></div></details>
+</div>

@@ -1,0 +1,13 @@
+const e=`<p class="goal">Tracking and enforcing consumption limits (API calls, storage, seats, AI tokens) using Redis sliding windows and DB counters.</p>
+<pre data-lang="typescript"><code class="language-typescript">export async function checkAndIncrementUsage(tenantId: string, limit: number): Promise<boolean> {
+  const currentMonth = new Date().toISOString().slice(0, 7); // e.g. '2026-10'
+  const key = \`usage:\${tenantId}:\${currentMonth}\`;
+  
+  const current = await redis.incr(key);
+  if (current === 1) await redis.expire(key, 60 * 60 * 24 * 35);
+  
+  return current <= limit;
+}</code></pre>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>381.1 <span class="levels">basic</span> Send an email alert when a tenant reaches 80% and 100% of their monthly limit.</summary><div><p>Check usage threshold after increment and trigger email notification once per cycle.</p></div></details>
+</div>`;export{e as default};

@@ -1,0 +1,32 @@
+const e=`<p class="goal">How to approach embedding AI into products: architectures, cost vs latency tradeoffs, and evaluating whether an LLM or ML model is even needed.</p>
+<h3>Core Mental Models: Rule-Based vs ML vs LLM</h3>
+<p>Before writing code, classify your task into one of three buckets:</p>
+<ul>
+  <li><b>Deterministic / Rule-based:</b> Syntax parsing, validation, arithmetic, precise business logic. Never use an LLM here.</li>
+  <li><b>Specialized Classical ML / Distilled:</b> Spam classification, fraud scoring, recommendation re-ranking. Lower latency (&lt;10ms), predictable costs.</li>
+  <li><b>Generative / Reasoning LLMs:</b> Open-ended summarization, extraction from unstructured messy text, flexible semantic understanding. High latency (200ms - 5s), per-token cost.</li>
+</ul>
+
+<div class="diagram">
+Client Request ──► Feature Flag / Router ──► [Static Rules / Cache] (0ms, $0.00)
+                         │
+                         ├──► [Semantic Cache / Embeddings] (20ms, $0.0001)
+                         │
+                         ├──► [Small Fine-Tuned / Fast Model] (150ms, $0.001)
+                         │
+                         └──► [Frontier Reasoning LLM] (1500ms, $0.03)
+</div>
+
+<h3>Integration Architecture Patterns</h3>
+<ul>
+  <li><b>Direct Synchronous Proxy:</b> User request waits for LLM completion. Only acceptable for sub-second tasks or background workers.</li>
+  <li><b>Server-Sent Events (SSE) Streaming:</b> Stream tokens directly to UI as they decode. Perceived latency drops from 4s to 250ms (Time-To-First-Token).</li>
+  <li><b>Asynchronous Job Queue:</b> For deep analysis or document processing. Return <code>202 Accepted</code> with a job ID, run via Celery/BullMQ, notify client via WebSockets or polling.</li>
+</ul>
+
+<div class="callout warn"><b class="t">Warning · Cognitive Bias & Cost Spirals</b><p>Don't fall into the trap of using a frontier $15/1M token model where an open-weights 8B model or regex would work. Always measure cost per successful user outcome.</p></div>
+
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>349.1 <span class="levels">basic</span> Design a triaging flowchart for a customer support feature deciding when to use rules vs LLM.</summary><div><p>Map out intent detection: known FAQs & status checks route to deterministic DB queries; unhandled complex phrasing routes to RAG/LLM.</p></div></details>
+<details class="ex"><summary>349.2 <span class="levels">intermediate</span> Calculate unit economics: compare 100k daily queries on Claude 3.5 Sonnet vs Haiku vs self-hosted vLLM.</summary><div><p>Account for average input tokens (context + system prompt) and output tokens, plus concurrency peaks for self-hosted instances.</p></div></details>
+</div>`;export{e as default};

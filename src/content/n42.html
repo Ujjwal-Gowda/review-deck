@@ -1,0 +1,29 @@
+<p class="goal">Recording <i>why</i> a technical decision was made, so nobody has to rediscover it.</p>
+<p>Six months later someone asks, "why are we using NATS instead of Kafka?" Without a record, you either re-argue it or change it without understanding it. An <b>Architecture Decision Record</b> is a short, dated, immutable note, kept in the repo (<code>docs/adr/0007-use-nats-for-order-events.md</code>).</p>
+<h3>Template (Michael Nygard's format)</h3>
+<pre data-lang="plaintext"><code class="language-plaintext"># 7. Use NATS JetStream for order events
+Date: 2026-09-25        Status: Accepted   (Proposed | Accepted | Deprecated | Superseded by #12)
+
+## Context
+Order placement must trigger stock reservation, SMS and analytics without the order service
+knowing about them. ~50 events/sec peak, a small team, we already run Docker Compose on one VM.
+
+## Decision
+Publish domain events to NATS JetStream subjects `orders.*`; consumers use durable pull subscriptions.
+
+## Alternatives considered
+- Kafka: best-in-class throughput and ecosystem, but heavy to operate for our scale.
+- Redis Streams: already have Redis, but weaker delivery guarantees for our retry needs.
+- Direct HTTP calls: simplest, but couples services and loses events when a consumer is down.
+
+## Consequences
++ Consumers can be added without touching the order service; events survive consumer downtime.
+− New infrastructure to run and monitor; team must learn NATS; idempotent consumers required.</code></pre>
+<h3>Rules</h3>
+<ul>
+<li>Write one when a decision is <b>significant and hard to reverse</b>: a database, framework, architecture style, protocol, auth model or hosting.</li>
+<li>Keep it to a page. Record the trade-offs honestly, including the downsides you're accepting.</li>
+<li>Never edit an accepted ADR's decision. Write a new ADR that supersedes it: the history is the point.</li>
+<li>Review them in PRs like code.</li>
+</ul>
+<details class="ex"><summary>42.1 <span class="levels">basic</span> Write ADR #1 for your own film project: "Use Remotion (React) instead of HyperFrames for the FreshOn film."</summary><div><p>Context: an 11-minute data-driven film with 220 panels, a voiceover and SFX. Decision: Remotion. Alternatives: HyperFrames, After Effects, ffmpeg scripts. Consequences: data-driven scenes and TS reuse; the cost is long renders on 8 GB RAM, handled with chunked rendering. That last point already happened, as your <code>out/chunks</code> folder shows.</p></div></details>

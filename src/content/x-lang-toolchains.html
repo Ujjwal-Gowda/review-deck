@@ -1,0 +1,30 @@
+<p class="goal">How each language turns source into a running program, and the everyday commands you'll use for each.</p>
+<table>
+<tr><th></th><th>Python</th><th>TypeScript</th><th>Go</th><th>Rust</th><th>C</th></tr>
+<tr><td>Execution model</td><td>bytecode on the CPython VM</td><td>compiled to JS (types erased), run by V8 (JIT)</td><td>compiled to a static native binary</td><td>compiled to native code via LLVM</td><td>compiled to native code</td></tr>
+<tr><td>Try code quickly</td><td><code>python3</code> (REPL)</td><td><code>node</code>, or <code>npx tsx file.ts</code></td><td><code>go run .</code></td><td><code>cargo run</code></td><td><code>gcc a.c &amp;&amp; ./a.out</code></td></tr>
+<tr><td>New project</td><td><code>uv init app</code></td><td><code>npm init -y</code> + <code>npm i -D typescript tsx</code></td><td><code>go mod init example.com/app</code></td><td><code>cargo new app</code></td><td>a folder + <code>Makefile</code></td></tr>
+<tr><td>Add a dependency</td><td><code>uv add httpx</code></td><td><code>npm i zod</code></td><td><code>go get github.com/x/y</code></td><td><code>cargo add serde</code></td><td>system package + <code>-lname</code></td></tr>
+<tr><td>Build for release</td><td>(not compiled) <code>uv build</code> for a wheel</td><td><code>tsc</code> or a bundler</td><td><code>go build -o app</code></td><td><code>cargo build --release</code></td><td><code>gcc -O2 -o app *.c</code></td></tr>
+<tr><td>Test</td><td><code>pytest</code></td><td><code>vitest</code> / <code>node --test</code></td><td><code>go test ./...</code></td><td><code>cargo test</code></td><td>your own runner / Unity</td></tr>
+<tr><td>Format</td><td><code>ruff format</code></td><td><code>prettier -w .</code></td><td><code>gofmt -w .</code></td><td><code>cargo fmt</code></td><td><code>clang-format -i</code></td></tr>
+<tr><td>Lint / check</td><td><code>ruff check</code>, <code>pyright</code></td><td><code>eslint</code>, <code>tsc --noEmit</code></td><td><code>go vet</code>, staticcheck</td><td><code>cargo clippy</code></td><td><code>-Wall -Wextra</code>, sanitizers</td></tr>
+<tr><td>Debugger</td><td>pdb / debugpy</td><td>Chrome DevTools (<code>--inspect</code>)</td><td>Delve</td><td>rust-gdb / CodeLLDB</td><td>gdb</td></tr>
+<tr><td>Docs for a symbol</td><td><code>help(str.split)</code></td><td>editor hover, MDN</td><td><code>go doc strings.Split</code></td><td><code>cargo doc --open</code></td><td><code>man 3 printf</code></td></tr>
+</table>
+<h3>What "compiled" changes day to day</h3>
+<ul>
+<li><b>Errors arrive earlier:</b> Go, Rust and C (and TS's type checker) reject many mistakes before the program runs. In Python, most mistakes only appear when the line executes, so tests matter even more.</li>
+<li><b>Deployment:</b> a Go or Rust binary is one file you copy to a server. Python and Node need their runtime and dependencies installed (or a container).</li>
+<li><b>Edit–run loop:</b> interpreted languages start instantly; Rust compiles slowly (incremental builds help); Go compiles very fast.</li>
+<li><b>Startup and speed:</b> native binaries start in milliseconds and run CPU-heavy code 10–100× faster than CPython.</li>
+</ul>
+<h3>A minimal project in each</h3>
+<pre data-lang="shell"><code class="language-bash">uv init wc-py &amp;&amp; cd wc-py &amp;&amp; uv run main.py
+mkdir wc-ts &amp;&amp; cd wc-ts &amp;&amp; npm init -y &amp;&amp; npm i -D typescript tsx @types/node &amp;&amp; npx tsc --init &amp;&amp; npx tsx main.ts
+mkdir wc-go &amp;&amp; cd wc-go &amp;&amp; go mod init wc &amp;&amp; go run .
+cargo new wc-rs &amp;&amp; cd wc-rs &amp;&amp; cargo run
+mkdir wc-c &amp;&amp; cd wc-c &amp;&amp; printf 'wc: main.c\n\tgcc -std=c17 -Wall -Wextra -g -o wc main.c\n' &gt; Makefile &amp;&amp; make</code></pre>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>0.1 <span class="levels">basic</span> Create the five minimal projects above, each printing "hello from &lt;language&gt;". Time <code>hyperfine</code> on each hello-world binary or script.</summary><div><p>Native binaries (C, Rust, Go) start in about 1 ms; Node in about 40 ms; Python in about 20 ms. Startup matters for CLIs run thousands of times, and barely matters for long-running servers.</p></div></details>
+</div>

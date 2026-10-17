@@ -1,0 +1,46 @@
+const e=`<p class="goal">Building an intelligent hybrid search bar: combining lexical BM25 matching with semantic dense vector similarity and Reciprocal Rank Fusion (RRF).</p>
+
+<h3>1. The Correct Reciprocal Rank Fusion (RRF) Formula</h3>
+<p>RRF combines rankings from different retrieval systems. It is strictly computed over <b>ordinal rank positions</b> ($1, 2, 3...$), not raw similarity scores! Using raw scores invalidates the ranking because vector cosine similarities ($0.7 - 0.9$) have a completely different distribution from BM25 scores ($0.0 - 15.0+$).</p>
+
+<div class="diagram">
+RRF Score = 1 / (k + rank_semantic) + 1 / (k + rank_keyword)
+(where k is a smoothing constant, typically 60)
+</div>
+
+<h3>2. PostgreSQL + pgvector Hybrid Search Query</h3>
+<pre data-lang="sql"><code class="language-sql">WITH semantic_ranked AS (
+    SELECT 
+        id,
+        ROW_NUMBER() OVER (ORDER BY embedding <=> $1::vector) AS sem_rank
+    FROM documents
+    WHERE embedding IS NOT NULL
+    ORDER BY embedding <=> $1::vector
+    LIMIT 40
+),
+keyword_ranked AS (
+    SELECT 
+        id,
+        ROW_NUMBER() OVER (ORDER BY ts_rank_cd(to_tsvector('english', title || ' ' || content), plainto_tsquery('english', $2)) DESC) AS kw_rank
+    FROM documents
+    WHERE to_tsvector('english', title || ' ' || content) @@ plainto_tsquery('english', $2)
+    LIMIT 40
+)
+SELECT 
+    d.id,
+    d.title,
+    d.content,
+    COALESCE(1.0 / (60 + sem.sem_rank), 0.0) +
+    COALESCE(1.0 / (60 + kw.kw_rank), 0.0) AS rrf_score
+FROM documents d
+LEFT JOIN semantic_ranked sem ON d.id = sem.id
+LEFT JOIN keyword_ranked kw ON d.id = kw.id
+WHERE sem.id IS NOT NULL OR kw.id IS NOT NULL
+ORDER BY rrf_score DESC
+LIMIT 10;</code></pre>
+
+<div class="callout key"><b class="t">Key insight · Hybrid Search Advantage</b><p>Keyword search guarantees precision for exact SKUs, variable names, and error codes. Semantic search captures intent, synonyms, and paraphrasing. RRF fuses them without needing heuristic score normalization weights.</p></div>
+
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>355.1 <span class="levels">basic</span> Implement Cross-Encoder re-ranking on the top 10 RRF candidates.</summary><div><p>Pass the query and 10 candidate snippets to a fast cross-encoder (e.g. <code>bge-reranker-small</code>) to produce the final ordering.</p></div></details>
+</div>`;export{e as default};

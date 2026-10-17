@@ -1,0 +1,17 @@
+const e=`<p class="goal">A second, more precise pass that reorders the retrieved candidates.</p>
+<p>Embedding search compares a query vector against document vectors that were computed <i>separately</i> (a bi-encoder: fast, but coarse). A <b>cross-encoder reranker</b> reads the query and each candidate <i>together</i> and scores how relevant they are. It's much more accurate, and too slow to run over everything, so run it only on the top ~50 candidates.</p>
+<div class="diagram">query → hybrid retrieval (top 50, fast, high recall) → reranker (score 50 pairs) → top 5 → LLM prompt</div>
+<pre data-lang="python"><code class="language-python">from sentence_transformers import CrossEncoder              # local: e.g. a BGE reranker model
+reranker = CrossEncoder("BAAI/bge-reranker-v2-m3")
+scores = reranker.predict([(query, c.body) for c in candidates])
+top = [c for _, c in sorted(zip(scores, candidates), key=lambda t: -t[0])][:5]
+# hosted alternatives: Cohere Rerank, Voyage rerank, Jina reranker</code></pre>
+<ul>
+<li>Rerankers usually give the largest single quality gain in a RAG pipeline.</li>
+<li><b>Tune k:</b> retrieve enough candidates to catch the answer (recall), then pass few enough to the LLM to keep it focused and cheap (precision). Too many chunks dilute attention and cost tokens.</li>
+<li>Drop candidates below a score threshold. Returning "I don't know" beats answering from weak context.</li>
+</ul>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>213.1 <span class="levels">basic</span> Add a local cross-encoder reranker to your retrieval and measure the change in recall@3.</summary><div><p>Retrieve the top 30, rerank, and keep 3. Recall@3 typically improves noticeably, at a small latency cost.</p></div></details>
+</div>
+`;export{e as default};

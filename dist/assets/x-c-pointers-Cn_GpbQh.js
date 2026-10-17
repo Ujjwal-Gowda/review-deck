@@ -1,0 +1,55 @@
+const e=`<p class="goal">Pointers explained slowly: what they are, the two operators, pointer arithmetic, arrays, and function pointers.</p>
+<h3>A pointer is an address</h3>
+<div class="diagram">int qty = 42;             memory:   address 0x1000 → [ 42 ]   (qty)
+int *p = &amp;qty;                      address 0x2000 → [0x1000]  (p holds the ADDRESS of qty)
+
+&amp;qty   "address of qty"            → 0x1000
+*p     "the value at address p"     → 42
+*p = 7 writes through the pointer   → qty is now 7</div>
+<pre data-lang="c"><code class="language-c">int qty = 42;
+int *p = &amp;qty;
+printf("%d %p %d\\n", qty, (void *)p, *p);   /* 42 0x7ffd… 42 */
+*p += 1;                                     /* qty == 43 */
+int **pp = &amp;p;  **pp = 0;                    /* pointer to pointer: qty == 0 */
+int *nothing = NULL;                          /* points nowhere: dereferencing it crashes (segfault) */</code></pre>
+<h3>Why pointers exist</h3>
+<ol>
+<li><b>Let functions modify the caller's data</b> (C passes copies): <code>swap(&amp;a, &amp;b)</code>.</li>
+<li><b>Avoid copying big structs</b>: pass <code>const Order *</code> instead of <code>Order</code>.</li>
+<li><b>Dynamic memory</b>: <code>malloc</code> returns a pointer (<a class="xref" data-old="x-c-memory">Dynamic Memory</a>).</li>
+<li><b>Linked structures</b>: lists, trees and graphs (<a class="xref" data-old="x-dsa-linked">Linked Lists</a>).</li>
+</ol>
+<h3>Arrays and pointer arithmetic</h3>
+<pre data-lang="c"><code class="language-c">int prices[4] = {40, 60, 120, 260};
+int *q = prices;              /* the array name "decays" to &amp;prices[0] */
+q[2] == *(q + 2)              /* true: indexing IS pointer arithmetic */
+q + 1                         /* advances by sizeof(int) = 4 bytes, not 1 */
+for (int *it = prices; it &lt; prices + 4; it++) printf("%d\\n", *it);
+
+void print_all(const int *a, size_t n);   /* a function can't know an array's length: always pass n */
+sizeof prices                 /* 16 here, but sizeof(a) inside print_all is 8: just a pointer! */</code></pre>
+<h3>const and pointers</h3>
+<pre data-lang="c"><code class="language-c">const char *name     /* can't change the chars through name (read-only view): use for inputs */
+char *const buf      /* can't point buf elsewhere, but the chars can change */
+const char *const k  /* neither */</code></pre>
+<h3>Function pointers: C's callbacks</h3>
+<pre data-lang="c"><code class="language-c">int by_qty_desc(const void *a, const void *b) {
+    const Item *x = a, *y = b;
+    return (y-&gt;qty &gt; x-&gt;qty) - (y-&gt;qty &lt; x-&gt;qty);   /* avoids overflow from subtraction */
+}
+qsort(items, n, sizeof items[0], by_qty_desc);
+
+typedef void (*Handler)(const char *msg);           /* name the type for readability */
+Handler handlers[] = { log_msg, send_sms };
+for (size_t i = 0; i &lt; 2; i++) handlers[i]("stock low");</code></pre>
+<h3>Common pointer bugs</h3>
+<ul>
+<li><b>Dereferencing NULL or uninitialised pointers:</b> a segfault, or silent garbage.</li>
+<li><b>Dangling pointers:</b> returning the address of a local variable (it dies when the function returns), or using memory after <code>free</code>.</li>
+<li><b>Out-of-bounds arithmetic:</b> reading past the end silently corrupts data.</li>
+</ul>
+<p>AddressSanitizer (<code>-fsanitize=address</code>) finds most of these instantly, so always use it while learning.</p>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>0.1 <span class="levels">basic</span> Write <code>void minmax(const int *a, size_t n, int *min, int *max)</code>, <code>void reverse(int *a, size_t n)</code> using two pointers, and <code>int *find(int *a, size_t n, int x)</code> that returns a pointer or NULL.</summary><div><p>Reverse: <code>for (int *l = a, *r = a + n - 1; l &lt; r; l++, r--) { int t = *l; *l = *r; *r = t; }</code>, guarding n == 0 first. find: loop, <code>if (a[i] == x) return &amp;a[i];</code>, then <code>return NULL;</code>. The caller checks for NULL.</p></div></details>
+</div>
+`;export{e as default};

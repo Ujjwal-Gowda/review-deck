@@ -1,0 +1,201 @@
+const e=`<p class="goal">React 19 in Depth: The Fiber Reconciler, Double-Buffering Tree, Hook Linked Lists, and Concurrent Rendering. Master how React coordinates state, scheduling, and DOM updates under the hood.</p>
+
+<h3>The Real Mental Model of React</h3>
+<p>Most developers think of React as a template library that re-runs when variables change. In reality, React is a <b>declarative state reconciler and runtime scheduler</b>. You do not touch DOM nodes directly; you describe what the UI tree should look like for a given snapshot of state, and React determines the minimal set of physical DOM mutations required to bring the browser screen in sync.</p>
+
+<div class="diagram">
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                              The React 19 Fiber Architecture                           │
+│                                                                                        │
+│   Component State Updates ──► React Scheduler (Prioritizes Urgent vs Transitions)      │
+│                                              │                                         │
+│                                              ▼                                         │
+│   ┌──────────────────────────────────────────────────────────────────────────────┐     │
+│   │                        Phase 1: Render Phase (Asynchronous)                  │     │
+│   │   • Calls component functions to generate virtual JSX elements               │     │
+│   │   • Builds the \`workInProgress\` Fiber tree                                   │     │
+│   │   • Can be paused, aborted, or restarted (Concurrent Rendering)             │     │
+│   │   • PURE: MUST NOT have side effects!                                        │     │
+│   └──────────────────────────────────────┬───────────────────────────────────────┘     │
+│                                          │ Tagged with mutation flags (Placement, Update)│
+│                                          ▼                                             │
+│   ┌──────────────────────────────────────────────────────────────────────────────┐     │
+│   │                        Phase 2: Commit Phase (Synchronous)                   │     │
+│   │   • Mutates physical browser DOM in one atomic pass                          │     │
+│   │   • Swaps tree pointers: \`root.current = workInProgress\` (Double Buffering)  │     │
+│   │   • Executes \`useLayoutEffect\` synchronously, then \`useEffect\` on idle      │     │
+│   └──────────────────────────────────────────────────────────────────────────────┘     │
+└────────────────────────────────────────────────────────────────────────────────────────┘
+</div>
+
+<h3>Part 1: The Fiber Node &amp; Double-Buffering Tree</h3>
+<p>In React 16+, every component instance is backed by a <b>Fiber node</b>—a JavaScript object representing a unit of work. Fibers form a singly linked list tree structure using three pointers:</p>
+<ul>
+  <li><code>child</code>: Points to its first immediate child.</li>
+  <li><code>sibling</code>: Points to its next sibling.</li>
+  <li><code>return</code>: Points back to its parent (return destination after work finishes).</li>
+</ul>
+
+<div class="callout key"><b class="t">Why React Uses Double Buffering (Like Graphics Engines)</b>
+<p>Video games never draw pixels directly to the active monitor buffer while computing physics, because users would see tearing and partial frames. They render the next frame onto an off-screen buffer, then swap pointers instantly.</p>
+<p>React does the exact same thing: it keeps the <b>Current Fiber Tree</b> (reflecting what is currently visible on the screen) untouched while computing changes on a <b>workInProgress Fiber Tree</b> in memory. Only when all components finish rendering without errors does React swap the root pointer.</p>
+</div>
+
+<h3>Part 2: How Hooks Actually Work (The Linked List)</h3>
+<p>Have you ever wondered why React forbids calling hooks inside <code>if</code> statements, loops, or nested functions? <i>"React hooks must be called at the top level."</i></p>
+<p>Because React does NOT store hook state in a hash map by name! Each Fiber node has a property <code>fiber.memoizedState</code> that points to the head of a <b>singly linked list of Hook objects</b>:</p>
+
+<div class="diagram">
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                                Fiber Hook Linked List                                  │
+│                                                                                        │
+│   fiber.memoizedState                                                                  │
+│            │                                                                           │
+│            ▼                                                                           │
+│   ┌─────────────────┐       ┌─────────────────┐       ┌─────────────────┐              │
+│   │ Hook 1:         │  next │ Hook 2:         │  next │ Hook 3:         │              │
+│   │ useState(count) │──────►│ useEffect(...)  │──────►│ useRef(inputEl) │──► null      │
+│   │ memoized: 42    │       │ memoized: effect│       │ memoized: {cur} │              │
+│   └─────────────────┘       └─────────────────┘       └─────────────────┘              │
+└────────────────────────────────────────────────────────────────────────────────────────┘
+</div>
+
+<p>When your component function executes on a re-render, React traverses this linked list one hook at a time using an internal pointer. If you place a hook inside an <code>if</code> statement and the condition evaluates to false on the second render, the hook order shifts! Hook 3 is read into Hook 2's slot, corrupting state across the entire component.</p>
+
+<h3>Part 3: The Hook Masterclass</h3>
+
+<pre data-lang="tsx"><code class="language-tsx">import React, { useState, useEffect, useRef, useMemo, useCallback, useTransition } from "react";
+
+interface Product {
+  id: string;
+  name: string;
+  priceCents: number;
+}
+
+export function ProductCatalog({ categoryId }: { categoryId: string }) {
+  // 1. Local State & Functional Updaters
+  const [query, setQuery] = useState("");
+  const [products, setProducts] = useState&lt;Product[]&gt;([]);
+  
+  // 2. Concurrent Transitions (React 18/19)
+  // Keeps the input responsive while filtering 10,000 items in the background
+  const [isPending, startTransition] = useTransition();
+
+  // 3. Mutable Ref (Escape hatch that survives renders without re-rendering)
+  const renderCountRef = useRef(0);
+  renderCountRef.current++;
+
+  // 4. Synchronization with External System (HTTP Network)
+  useEffect(() => {
+    let ignore = false; // Flag to prevent race conditions from out-of-order responses
+    const controller = new AbortController();
+
+    async function loadData() {
+      try {
+        const res = await fetch(\`/api/products?cat=\${categoryId}\`, { signal: controller.signal });
+        const data = await res.json();
+        if (!ignore) {
+          setProducts(data);
+        }
+      } catch (err: any) {
+        if (err.name !== "AbortError") console.error("Fetch failed", err);
+      }
+    }
+
+    loadData();
+
+    // Cleanup function: runs before next effect execution and on component unmount
+    return () => {
+      ignore = true;
+      controller.abort();
+    };
+  }, [categoryId]); // Only re-run when categoryId changes!
+
+  // 5. Derived State (Compute during render! Do NOT put in useEffect!)
+  const filteredProducts = useMemo(() => {
+    return products.filter((p) => p.name.toLowerCase().includes(query.toLowerCase()));
+  }, [products, query]);
+
+  // 6. Non-urgent state update scheduled with useTransition
+  const handleSearchChange = (e: React.ChangeEvent&lt;HTMLInputElement&gt;) => {
+    const val = e.target.value;
+    // Urgent update: update text field immediately
+    setQuery(val);
+    
+    // Non-urgent update: low-priority render that can be interrupted by new keystrokes
+    startTransition(() => {
+      // background transition state if needed
+    });
+  };
+
+  return (
+    &lt;div className="catalog"&gt;
+      &lt;input value={query} onChange={handleSearchChange} placeholder="Search products..." /&gt;
+      {isPending &amp;&amp; &lt;span className="spinner"&gt;Updating results...&lt;/span&gt;}
+      &lt;div className="grid"&gt;
+        {filteredProducts.map((p) => (
+          // Always use stable IDs as keys, NEVER array index!
+          &lt;div key={p.id} className="card"&gt;
+            &lt;h4&gt;{p.name}&lt;/h4&gt;
+            &lt;p&gt;\${(p.priceCents / 100).toFixed(2)}&lt;/p&gt;
+          &lt;/div&gt;
+        ))}
+      &lt;/div&gt;
+    &lt;/div&gt;
+  );
+}</code></pre>
+
+<h3>Part 4: The 3 Deadliest React Anti-Patterns</h3>
+
+<div class="cheat">
+  <div class="card">
+    <h4>1. Storing Derived State in \`useEffect\`</h4>
+    <pre data-lang="typescript"><code class="language-typescript">// ❌ CRITICAL ANTI-PATTERN: Wasted renders & state desync
+const [items, setItems] = useState([]);
+const [total, setTotal] = useState(0);
+
+useEffect(() => {
+  setTotal(items.reduce((s, i) => s + i.price, 0));
+}, [items]); // Triggers a SECOND render cycle after every update!
+
+// ✅ THE FIX: Derive during render!
+const total = items.reduce((s, i) => s + i.price, 0);</code></pre>
+  </div>
+  <div class="card">
+    <h4>2. Array Index as Key in Dynamic Lists</h4>
+    <pre data-lang="tsx"><code class="language-tsx">// ❌ DANGEROUS BUG:
+{items.map((item, index) => (
+  &lt;TodoItem key={index} text={item.text} /&gt;
+))}
+// If you delete item 0, item 1 now gets key={0}!
+// React assumes the FIRST element never moved,
+// preserving internal input state and corrupting user form values!
+
+// ✅ THE FIX:
+{items.map((item) => (
+  &lt;TodoItem key={item.id} text={item.text} /&gt;
+))}</code></pre>
+  </div>
+</div>
+
+<details class="ex">
+  <summary><b>Drill: What is the Stale Closure Bug in React?</b> (Click to expand)</summary>
+  <pre data-lang="tsx"><code class="language-tsx">function Timer() {
+  const [count, setCount] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => {
+      setCount(count + 1); // Bug here!
+    }, 1000);
+    return () => clearInterval(id);
+  }, []); // Empty dependency array!
+  return &lt;h1&gt;{count}&lt;/h1&gt;;
+}</code></pre>
+  <p><b>Question:</b> Why does this timer get permanently stuck at <code>1</code> instead of counting up every second?</p>
+  <div class="callout warn">
+    <p><b>Answer: Stale Closure over the initial render scope!</b></p>
+    <p>Because the dependency array is <code>[]</code>, the effect runs only once when <code>Timer</code> first mounts. The callback passed to <code>setInterval</code> captures the lexical variable <code>count</code> from the <i>first render</i>, where <code>count === 0</code>.</p>
+    <p>Every second, <code>setInterval</code> fires and evaluates <code>setCount(0 + 1)</code>. It repeatedly sets the state to 1!</p>
+    <p><b>The Fix:</b> Use the functional updater form: <code>setCount(prev =&gt; prev + 1)</code>. The updater receives the current live value from React's internal fiber state, bypassing stale closures entirely!</p>
+  </div>
+</details>
+`;export{e as default};

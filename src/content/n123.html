@@ -1,0 +1,20 @@
+<p class="goal">Handling credentials across the software lifecycle without ever leaking them.</p>
+<table>
+<tr><th>Stage</th><th>Where secrets live</th></tr>
+<tr><td>Local dev</td><td><code>.env</code> (gitignored) or a secret manager's CLI (<code>doppler run --</code>, <code>op run --</code>)</td></tr>
+<tr><td>CI</td><td>encrypted CI secrets (GitHub Actions secrets and environments); cloud access via <b>OIDC</b> short-lived tokens, not long-lived keys</td></tr>
+<tr><td>Runtime</td><td>a secret manager (AWS Secrets Manager, GCP Secret Manager, Vault, Doppler, Infisical) injected as env vars or files; Kubernetes Secrets (base64 is <i>not</i> encryption, so enable encryption at rest or use external-secrets)</td></tr>
+</table>
+<h3>Rules</h3>
+<ul>
+<li><b>Never commit a secret.</b> Enable GitHub push protection and a pre-commit scanner (gitleaks).</li>
+<li><b>If one leaks: rotate it first</b>, then clean up history. Assume it has already been scraped: bots scan GitHub within minutes.</li>
+<li><b>Least privilege and scoping:</b> separate keys per environment and service, with the minimum permissions.</li>
+<li><b>Short-lived over long-lived:</b> OIDC, IAM roles, workload identity and dynamic database credentials expire automatically.</li>
+<li><b>Rotate regularly</b> and design for rotation (accept two valid keys during the switch).</li>
+<li>Never log secrets, and redact them from error reports.</li>
+</ul>
+<p>Worth checking now: the Google API key embedded in the FreshOn demo kit's JS is <i>meant</i> to be public (browser keys always are), which is exactly why it must be restricted by HTTP referrer and API in Google Cloud Console.</p>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>123.1 <span class="levels">basic</span> Install gitleaks and scan the history of your repos. Add it as a pre-commit hook.</summary><div><p><code>gitleaks detect --source . -v</code> scans the history. If it finds a real secret: rotate it first, then rewrite history. Add it to pre-commit to block new leaks.</p></div></details>
+</div>

@@ -1,0 +1,29 @@
+<p class="goal">Running work outside the request: retries, scheduling, and not doing anything twice.</p>
+<pre data-lang="typescript"><code class="language-typescript">import { Queue, Worker } from "bullmq";                        // Redis-backed jobs for Node
+const invoices = new Queue("invoices", { connection });
+await invoices.add("render", { orderId: 42 }, {
+  jobId: "invoice-42",                          // dedupe: adding the same jobId again is a no-op
+  attempts: 5, backoff: { type: "exponential", delay: 2000 },
+  removeOnComplete: 1000,
+});
+new Worker("invoices", async job =&gt; {
+  const pdf = await renderInvoice(job.data.orderId);
+  await storage.put(`invoices/${job.data.orderId}.pdf`, pdf);   // idempotent: re-running overwrites the same key
+}, { connection, concurrency: 4 });
+await invoices.upsertJobScheduler("daily-report", { pattern: "0 23 * * *" }, { name: "report" });   // cron</code></pre>
+<pre data-lang="sql"><code class="language-sql">-- the same idea with Postgres only: many workers, no double-processing
+UPDATE jobs SET status = 'running', started_at = now()
+WHERE id = (SELECT id FROM jobs WHERE status = 'queued' ORDER BY id
+            FOR UPDATE SKIP LOCKED LIMIT 1)
+RETURNING *;</code></pre>
+<h3>Design rules</h3>
+<ul>
+<li><b>Idempotent jobs:</b> safe to run twice (upserts, deterministic keys, "already done?" checks).</li>
+<li><b>Small payloads:</b> pass IDs, not whole objects; load fresh data inside the job.</li>
+<li><b>Transactional outbox:</b> to enqueue reliably with a DB write, insert the job row <i>in the same transaction</i>, and have a relay publish it. Otherwise a crash between "commit" and "enqueue" loses the job.</li>
+<li>Set timeouts, cap retries, send failures to a dead-letter queue, and alert on it. Monitor queue depth and job age.</li>
+<li>Graceful worker shutdown: finish the current job on SIGTERM.</li>
+</ul>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>91.1 <span class="levels">basic</span> Implement a Postgres-backed job queue with <code>FOR UPDATE SKIP LOCKED</code>, and run 3 workers to show each job runs exactly once.</summary><div><p>Use a <code>jobs(id, status, payload, attempts)</code> table. Each worker loops: claim one job in a transaction with SKIP LOCKED, process it, mark it done, commit. Count the executions per job to verify.</p></div></details>
+</div>

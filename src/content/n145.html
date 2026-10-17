@@ -1,0 +1,23 @@
+<p class="goal">Controlling who can do what inside the cluster: humans, CI and the pods themselves.</p>
+<pre data-lang="yaml"><code class="language-yaml">apiVersion: rbac.authorization.k8s.io/v1
+kind: Role                                  # namespaced (ClusterRole = cluster-wide)
+metadata: { namespace: shop, name: deployer }
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "patch", "update"]
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata: { namespace: shop, name: ci-deployer }
+subjects: [{ kind: ServiceAccount, name: ci, namespace: shop }]
+roleRef: { kind: Role, name: deployer, apiGroup: rbac.authorization.k8s.io }</code></pre>
+<ul>
+<li><b>Namespaces</b> separate teams and environments (<code>shop-staging</code>, <code>shop-prod</code>) and scope RBAC, quotas and network policies.</li>
+<li>Every pod runs as a <b>ServiceAccount</b>. Give apps their own, with minimal rights (usually none), and set <code>automountServiceAccountToken: false</code> if the app doesn't call the API.</li>
+<li>Check permissions with <code>kubectl auth can-i delete pods -n shop --as system:serviceaccount:shop:ci</code>.</li>
+<li><b>Pod Security Standards</b> (the <code>restricted</code> profile): non-root, no privilege escalation, dropped capabilities, enforced per namespace.</li>
+</ul>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>145.1 <span class="levels">basic</span> Create a ServiceAccount that can only list pods in one namespace, and verify with <code>kubectl auth can-i</code>.</summary><div><p>A Role with verbs [list] on resources [pods], plus a RoleBinding. <code>kubectl auth can-i delete pods --as system:serviceaccount:ns:sa</code> should return "no".</p></div></details>
+</div>

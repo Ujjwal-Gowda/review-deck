@@ -1,0 +1,44 @@
+const e=`<p class="goal">Writing Dockerfiles that build fast, produce small images, and run safely.</p>
+<pre data-lang="plaintext"><code class="language-plaintext"># Node app: multi-stage build
+FROM node:22-slim AS deps
+WORKDIR /app
+COPY package.json package-lock.json ./          # copy the lockfile FIRST: this layer is cached until deps change
+RUN npm ci
+
+FROM deps AS build
+COPY . .                                         # source changes only invalidate from here down
+RUN npm run build &amp;&amp; npm prune --omit=dev
+
+FROM node:22-slim AS runtime                     # final image: no compilers, no dev deps, no source
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/dist ./dist
+USER node                                        # never run as root
+EXPOSE 8080
+HEALTHCHECK CMD node -e "fetch('http://localhost:8080/healthz').then(r=&gt;process.exit(r.ok?0:1))"
+CMD ["node", "dist/server.js"]                   # exec form: the app is PID 1 and receives SIGTERM</code></pre>
+<pre data-lang="plaintext"><code class="language-plaintext"># Go: a static binary on an empty image (~10 MB total)
+FROM golang:1.26 AS build
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o /app ./cmd/api
+FROM gcr.io/distroless/static-debian12
+COPY --from=build /app /app
+USER nonroot
+ENTRYPOINT ["/app"]</code></pre>
+<h3>Rules</h3>
+<ul>
+<li><b>Order for caching:</b> things that rarely change first (base image, system packages, dependency manifests), then source code.</li>
+<li><b>.dockerignore:</b> <code>node_modules</code>, <code>.git</code>, <code>.env</code>, <code>dist</code>, <code>out</code>. That keeps the build context small, and keeps secrets out of the image.</li>
+<li>Combine update and install in one RUN and clean up in the same layer: <code>RUN apt-get update &amp;&amp; apt-get install -y --no-install-recommends curl &amp;&amp; rm -rf /var/lib/apt/lists/*</code>.</li>
+<li><b>Never</b> <code>COPY .env</code> or put secrets in <code>ENV</code>/<code>ARG</code>: they're readable in the layers forever. Use build secrets (<code>RUN --mount=type=secret</code>) or runtime env vars.</li>
+<li><code>CMD</code> vs <code>ENTRYPOINT</code>: ENTRYPOINT is the executable; CMD is the default arguments (overridable by <code>docker run image args</code>).</li>
+</ul>
+<div class="callout seclens"><b class="t">Security lens · Dockerfiles</b><p>Secrets baked into image layers are recoverable forever: use build secrets. Run as non-root, pin base images by digest, and keep the image minimal.</p></div>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>114.1 <span class="levels">basic</span> Dockerise a small Go API with a multi-stage build into a distroless image. What's the final size?</summary><div><p>Build with <code>CGO_ENABLED=0</code> in <code>golang</code>, then copy the binary into <code>gcr.io/distroless/static</code>. Typically 10–20 MB.</p></div></details>
+</div>
+`;export{e as default};

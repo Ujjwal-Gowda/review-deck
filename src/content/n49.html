@@ -1,0 +1,40 @@
+<p class="goal">Reviewing code well: what to look for, in what order, and how to say it.</p>
+<p>Code review is also the most direct way to use the foundation you're rebuilding: every chapter so far is a lens for reading code. And reviewing AI-generated code is now a core daily skill.</p>
+<h3>Review in passes, from biggest to smallest</h3>
+<ol>
+<li><b>Understanding:</b> read the description. Is the problem real, and is this the right approach at all? (Catching a wrong design here saves the most time.)</li>
+<li><b>Correctness:</b> edge cases (empty, zero, huge, unicode, concurrency), error paths, off-by-ones, null handling, race conditions, transactions around multi-step writes.</li>
+<li><b>Security:</b> input validation, injection, authorisation checks, secrets, what gets logged (<a class="xref" data-old="c26">chapter 162</a>).</li>
+<li><b>Tests:</b> do they cover the change and its edge cases? Would they fail if the code were wrong?</li>
+<li><b>Design:</b> boundaries, naming, duplication, complexity, fit with the existing architecture.</li>
+<li><b>Performance:</b> queries in loops (N+1), unbounded memory, missing indexes, only where it matters.</li>
+<li><b>Style:</b> leave it to formatters and linters. Humans shouldn't argue about commas.</li>
+</ol>
+<h3>Writing comments</h3>
+<table>
+<tr><th>Instead of</th><th>Write</th></tr>
+<tr><td>"This is wrong."</td><td>"If <code>items</code> is empty, <code>max()</code> raises here. Should we return 0?"</td></tr>
+<tr><td>"Why did you do it this way?"</td><td>"I'd have reached for a map here for O(1) lookup. Was there a reason for the list?"</td></tr>
+<tr><td>A vague nit</td><td>A prefixed, actionable one: <b>nit:</b> (optional), <b>question:</b>, <b>suggestion:</b>, <b>blocking:</b></td></tr>
+</table>
+<p>Also praise good things specifically. Approve with minor comments when you trust the author to fix them.</p>
+<h3>A checklist to keep by your desk</h3>
+<pre data-lang="plaintext"><code class="language-plaintext">□ I can explain what this change does and why, in one sentence
+□ Empty / one / many / huge / invalid inputs are handled
+□ Errors are handled once, with context; nothing silently swallowed
+□ No secrets, no PII in logs; authz checked server-side
+□ Resources closed (files, connections); timeouts on network calls
+□ Concurrency: shared state protected; no await inside a lock
+□ Tests would fail if the logic broke
+□ Names reveal intent; no dead code or debug prints
+□ Docs/config/migrations updated alongside the code</code></pre>
+<h3>Reviewing AI-generated code</h3>
+<p>Apply the same checklist more strictly. AI code is fluent, so it <i>looks</i> right. Common failure modes: invented APIs or options, subtly wrong edge cases, swallowed errors, missing authorisation checks, over-engineering, and plausible but untested logic. <b>Rule from <a class="xref" data-old="c00">chapter 0</a>:</b> never merge a line you couldn't have written and can't explain.</p>
+<details class="ex"><summary>49.1 <span class="levels">think</span> Review this and write three comments using the prefixes above:
+<pre data-lang="python"><code class="language-python">def get_user_orders(user_id):
+    orders = db.execute(f"SELECT * FROM orders WHERE user_id = {user_id}")
+    result = []
+    for o in orders:
+        o["items"] = db.execute(f"SELECT * FROM items WHERE order_id = {o['id']}")
+        result.append(o)
+    return result</code></pre></summary><div><p><b>blocking:</b> SQL injection via f-strings. Use parameterised queries. <b>blocking (perf):</b> an N+1 query, one per order; use a JOIN or <code>WHERE order_id = ANY(%s)</code>. <b>question:</b> is there an authorisation check that the caller may see this user's orders? Also a <b>nit:</b> <code>SELECT *</code> couples the code to the schema, so list the columns.</p></div></details>

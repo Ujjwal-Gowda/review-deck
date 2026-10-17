@@ -1,0 +1,41 @@
+const e=`<p class="goal">The preprocessor that runs before compilation, and the catalogue of undefined behaviour every C programmer must know.</p>
+<h3>The preprocessor: text substitution</h3>
+<pre data-lang="c"><code class="language-c">#include &lt;stdio.h&gt;        /* paste a system header */
+#include "stock.h"        /* paste your own header */
+#define MAX_ITEMS 64
+#define SQUARE(x) ((x) * (x))           /* parenthesise EVERYTHING */
+#define ARRAY_LEN(a) (sizeof (a) / sizeof (a)[0])
+#ifdef DEBUG
+#  define LOG(...) fprintf(stderr, __VA_ARGS__)
+#else
+#  define LOG(...) ((void)0)
+#endif
+/* gcc -E file.c   shows the code after preprocessing */</code></pre>
+<pre data-lang="c"><code class="language-c">#define BAD_SQUARE(x) x * x
+BAD_SQUARE(1 + 2)        /* expands to 1 + 2 * 1 + 2 = 5, not 9 */
+SQUARE(i++)              /* i++ evaluated TWICE: undefined behaviour */
+/* prefer static inline functions and const/enum constants; use macros only when you must */</code></pre>
+<h3>Undefined behaviour (UB)</h3>
+<p>For these operations the C standard says <i>anything</i> may happen, and optimising compilers assume they never occur, which can delete your safety checks.</p>
+<table>
+<tr><th>UB</th><th>Example</th><th>Instead</th></tr>
+<tr><td>signed integer overflow</td><td><code>INT_MAX + 1</code></td><td>check before, use wider types, or <code>__builtin_add_overflow</code></td></tr>
+<tr><td>out-of-bounds access</td><td><code>a[len]</code></td><td>track lengths; check bounds</td></tr>
+<tr><td>null / dangling pointer dereference</td><td><code>*p</code> after <code>free(p)</code></td><td>set to NULL; clear ownership rules</td></tr>
+<tr><td>uninitialised reads</td><td><code>int x; printf("%d", x);</code></td><td>always initialise</td></tr>
+<tr><td>modifying a string literal</td><td><code>char *s = "hi"; s[0] = 'H';</code></td><td><code>char s[] = "hi";</code></td></tr>
+<tr><td>shifting too far / negative values</td><td><code>1 &lt;&lt; 32</code>, <code>-1 &lt;&lt; 1</code></td><td>unsigned types, and checks</td></tr>
+<tr><td>unsequenced modifications</td><td><code>i = i++ + 1</code></td><td>one side effect per statement</td></tr>
+<tr><td>strict aliasing violations</td><td>reading a <code>float</code> through an <code>int *</code></td><td><code>memcpy</code> between types</td></tr>
+<tr><td>data races</td><td>two threads writing unsynchronised</td><td>mutexes and atomics</td></tr>
+</table>
+<h3>Your safety net</h3>
+<pre data-lang="shell"><code class="language-bash">gcc -std=c17 -Wall -Wextra -Wpedantic -Wshadow -Wconversion -g \\
+    -fsanitize=address,undefined -fno-omit-frame-pointer main.c   # development builds
+gcc -O2 -D_FORTIFY_SOURCE=2 -fstack-protector-strong main.c       # hardened release builds
+clang-tidy main.c; cppcheck .                                     # static analysis</code></pre>
+<p>This is exactly the class of bug Rust's compiler rules out, and why so much new systems code is written in Rust. Knowing C's UB makes you appreciate, and understand, what safe languages do for you (<a class="xref" data-old="x-rs-ownership">Rust Ownership</a>).</p>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>0.1 <span class="levels">think</span> Why might <code>if (x + 1 &lt; x) handle_overflow();</code> (with int x) be deleted entirely by <code>gcc -O2</code>? Demonstrate it and write a correct check.</summary><div><p>Signed overflow is UB, so the compiler may assume <code>x + 1 &lt; x</code> is never true and remove the branch. Correct: <code>if (x == INT_MAX)</code> before adding, or <code>if (__builtin_add_overflow(x, 1, &amp;r))</code>. <code>-fsanitize=undefined</code> reports the overflow at runtime.</p></div></details>
+</div>
+`;export{e as default};

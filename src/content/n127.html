@@ -1,0 +1,24 @@
+<p class="goal">A map of the AWS services you'll actually meet, with their GCP and Azure equivalents.</p>
+<table>
+<tr><th>Need</th><th>AWS</th><th>GCP</th><th>Azure</th></tr>
+<tr><td>Virtual machines</td><td>EC2</td><td>Compute Engine</td><td>Virtual Machines</td></tr>
+<tr><td>Containers (serverless)</td><td>ECS Fargate / App Runner</td><td>Cloud Run</td><td>Container Apps</td></tr>
+<tr><td>Kubernetes</td><td>EKS</td><td>GKE</td><td>AKS</td></tr>
+<tr><td>Functions</td><td>Lambda</td><td>Cloud Functions</td><td>Functions</td></tr>
+<tr><td>Object storage</td><td>S3</td><td>Cloud Storage</td><td>Blob Storage</td></tr>
+<tr><td>Relational DB</td><td>RDS / Aurora</td><td>Cloud SQL / AlloyDB</td><td>Azure Database for PostgreSQL</td></tr>
+<tr><td>Key-value / NoSQL</td><td>DynamoDB</td><td>Firestore / Bigtable</td><td>Cosmos DB</td></tr>
+<tr><td>Cache</td><td>ElastiCache</td><td>Memorystore</td><td>Azure Cache for Redis</td></tr>
+<tr><td>Queue / pub-sub</td><td>SQS / SNS / EventBridge</td><td>Pub/Sub</td><td>Service Bus / Event Grid</td></tr>
+<tr><td>Networking</td><td>VPC, ALB/NLB, Route 53</td><td>VPC, Cloud Load Balancing, Cloud DNS</td><td>VNet, App Gateway, Azure DNS</td></tr>
+<tr><td>CDN</td><td>CloudFront</td><td>Cloud CDN</td><td>Front Door</td></tr>
+<tr><td>Identity</td><td>IAM</td><td>IAM</td><td>Entra ID + RBAC</td></tr>
+<tr><td>Secrets</td><td>Secrets Manager / SSM</td><td>Secret Manager</td><td>Key Vault</td></tr>
+<tr><td>Logs and metrics</td><td>CloudWatch</td><td>Cloud Logging / Monitoring</td><td>Azure Monitor</td></tr>
+<tr><td>Container registry</td><td>ECR</td><td>Artifact Registry</td><td>ACR</td></tr>
+<tr><td>AI models</td><td>Bedrock</td><td>Vertex AI</td><td>Azure AI Foundry</td></tr>
+</table>
+<p>Learn one provider's versions of these ~15 services deeply; the concepts transfer. Use the free tier and set a <b>billing alarm</b> on day one.</p>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>127.1 <span class="levels">basic</span> Create a free-tier AWS account with a billing alarm and an IAM user protected by MFA. Never use the root account for daily work.</summary><div><p>Billing → Budgets → a monthly budget with email alerts. IAM Identity Center or an IAM user with MFA. Lock the root account away with MFA.</p></div></details>
+</div>

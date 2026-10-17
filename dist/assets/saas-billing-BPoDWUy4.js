@@ -1,0 +1,14 @@
+const e=`<p class="goal">Connecting subscriptions to product features: gating UI and API endpoints by active plan tiers, feature flags, and billing portals.</p>
+<pre data-lang="typescript"><code class="language-typescript">export async function requirePlanTier(req: Request, res: Response, next: NextFunction) {
+  const team = req.team;
+  if (!team.plan || team.plan === "free") {
+    return res.status(403).json({
+      error: "Upgrade required",
+      upgrade_url: "/settings/billing"
+    });
+  }
+  next();
+}</code></pre>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>380.1 <span class="levels">basic</span> Build a plan comparison table with dynamic checkout links corresponding to monthly and annual Stripe price IDs.</summary><div><p>Include toggle for 20% annual discount.</p></div></details>
+</div>`;export{e as default};

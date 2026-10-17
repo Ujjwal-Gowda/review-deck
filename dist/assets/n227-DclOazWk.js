@@ -1,0 +1,25 @@
+const e=`<p class="goal">Evaluations: the tests of AI systems. Without them every prompt change is a guess.</p>
+<ol>
+<li><b>Collect cases:</b> real inputs (logs, support tickets) covering typical, edge and adversarial cases, each with its expected output or grading criteria.</li>
+<li><b>Choose graders:</b>
+<ul>
+<li><b>Code checks</b> (cheapest, most reliable): valid JSON, the correct category, contains the order ID, under 100 words, the right tool called with the right arguments.</li>
+<li><b>LLM-as-judge</b> for fuzzy qualities (helpful, faithful to the sources, polite). Give it a clear rubric, ask for reasoning then a score, prefer pairwise comparisons, and check it against human labels.</li>
+<li><b>Human review</b> of a sample, especially early on and for high-stakes outputs.</li>
+</ul></li>
+<li><b>Run on every change</b> (prompt, model, retrieval, tools), and compare scores against the baseline: a regression suite for behaviour.</li>
+<li><b>Track over time</b> and add each production failure as a new case.</li>
+</ol>
+<pre data-lang="python"><code class="language-python">cases = json.load(open("evals/complaints.json"))
+passed = 0
+for c in cases:
+    out = classify_complaint(c["input"])
+    ok = out.category == c["expected_category"] and (c.get("order_id") is None or out.order_id == c["order_id"])
+    passed += ok
+    if not ok: print("FAIL", c["id"], out)
+print(f"{passed}/{len(cases)} = {passed/len(cases):.0%}")</code></pre>
+<p>Tools: promptfoo, Braintrust, LangSmith, DeepEval, Inspect, or a script like the one above in CI. Evals are what let you switch models or cut costs confidently.</p>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>227.1 <span class="levels">basic</span> Write a 20-case eval for one of your prompts with code-based checks, run it, change the prompt, and compare the scores.</summary><div><p>Put the cases in a JSON file and the grading in a script, printing a pass rate and the failures. Commit it and run it before every prompt change.</p></div></details>
+</div>
+`;export{e as default};

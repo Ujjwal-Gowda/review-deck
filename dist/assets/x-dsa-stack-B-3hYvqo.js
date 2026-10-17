@@ -1,0 +1,48 @@
+const e=`<p class="goal">Last in, first out, like a stack of plates. Simple, and behind undo, function calls, parsers and backtracking.</p>
+<div class="diagram">push 1, push 2, push 3        pop → 3        pop → 2
+   │ 3 │ ← top                  │   │          │   │
+   │ 2 │                        │ 2 │ ← top    │   │
+   │ 1 │                        │ 1 │          │ 1 │ ← top
+   └───┘                        └───┘          └───┘
+Only the TOP is reachable. push, pop and peek are all O(1).</div>
+<pre data-lang="python"><code class="language-python">class Stack:
+    def __init__(self): self._items = []            # a dynamic array: push/pop at the END are O(1)
+    def push(self, x): self._items.append(x)
+    def pop(self):
+        if not self._items: raise IndexError("pop from empty stack")
+        return self._items.pop()
+    def peek(self): return self._items[-1]
+    def __len__(self): return len(self._items)
+# In practice: Python list, JS array push/pop, Go slice, Rust Vec, C array + top index</code></pre>
+<h3>Where stacks show up</h3>
+<ul>
+<li><b>The call stack:</b> each function call pushes a frame; each return pops one (<a class="xref" data-old="c05">Functions</a>).</li>
+<li><b>Undo / redo:</b> push each edit; undo pops it onto a redo stack.</li>
+<li><b>Browser back button</b>, <b>DFS</b> (<a class="xref" data-old="x-dsa-graphs">Graphs</a>), and <b>backtracking</b>.</li>
+<li><b>Matching brackets</b> and <b>evaluating expressions</b> (compilers, calculators).</li>
+</ul>
+<h3>Worked example: evaluating Reverse Polish Notation</h3>
+<pre data-lang="python"><code class="language-python">def eval_rpn(tokens):          # "3 4 + 2 *"  →  (3 + 4) * 2 = 14
+    st = []
+    for t in tokens:
+        if t in "+-*/":
+            b, a = st.pop(), st.pop()           # careful: the right operand comes off first
+            st.append({"+": a + b, "-": a - b, "*": a * b, "/": a / b}[t])
+        else:
+            st.append(float(t))
+    return st.pop()</code></pre>
+<div class="diagram">tokens: 3   4    +     2     *
+stack:  [3] [3,4] [7]  [7,2]  [14]</div>
+<h3>The monotonic stack pattern</h3>
+<p>"For each day, how many days until a warmer temperature?" Keep a stack of indices whose answer isn't known yet. When a warmer day arrives, pop and answer all the colder ones. It's O(n) overall, because each index is pushed and popped once.</p>
+<pre data-lang="python"><code class="language-python">def days_until_warmer(temps):
+    ans, st = [0] * len(temps), []
+    for i, t in enumerate(temps):
+        while st and temps[st[-1]] &lt; t:
+            j = st.pop(); ans[j] = i - j
+        st.append(i)
+    return ans</code></pre>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>0.1 <span class="levels">basic</span> Write <code>balanced(s)</code> for <code>()[]{}</code> using a stack, then extend it to report the position of the first error.</summary><div><p>Push opening brackets with their index. On a closing bracket: if the stack is empty or the top doesn&#39;t match, the error is at this index. At the end, if the stack isn&#39;t empty, the error is at the index of the unclosed bracket on top.</p></div></details>
+</div>
+`;export{e as default};

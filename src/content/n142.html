@@ -1,0 +1,16 @@
+<p class="goal">Persistent storage for pods that need to keep data.</p>
+<div class="diagram">StorageClass (how to provision: e.g. gp3 SSD, with a reclaim policy)
+   ↑ dynamic provisioning
+PersistentVolumeClaim ("I need 20Gi, ReadWriteOnce")  ──bound──►  PersistentVolume (an actual cloud disk)
+   ↑ referenced by
+Pod / StatefulSet volumeClaimTemplates (one PVC per replica: data-db-0, data-db-1)</div>
+<table>
+<tr><th>Access mode</th><th>Meaning</th></tr>
+<tr><td>ReadWriteOnce</td><td>mounted read-write by one node (a cloud block disk). The usual mode.</td></tr>
+<tr><td>ReadWriteMany</td><td>many nodes at once (NFS/EFS-type storage)</td></tr>
+<tr><td>ReadOnlyMany</td><td>shared read-only</td></tr>
+</table>
+<p>Watch the <b>reclaim policy</b>: <code>Delete</code> destroys the disk when the PVC is deleted, while <code>Retain</code> keeps it. Block disks are tied to one availability zone, so a pod can only move to nodes in that zone. Running databases in Kubernetes is possible (with operators like CloudNativePG), but managed databases are simpler for most teams.</p>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>142.1 <span class="levels">think</span> A StatefulSet database pod was rescheduled and is stuck Pending. What's a likely cause involving volumes?</summary><div><p>Its PersistentVolume is a zonal disk in zone A, but there's no schedulable node left in zone A. The pod can only run where its disk can attach.</p></div></details>
+</div>

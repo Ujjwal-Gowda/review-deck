@@ -1,0 +1,22 @@
+<p class="goal">The mechanics of internet money: payment gateways, acquiring banks, card networks, interchange, PCI-DSS compliance, and settlement flows.</p>
+<h3>The 5-Party Payment Model</h3>
+<div class="diagram">
+Customer ──► Merchant Store ──► Payment Gateway (Stripe/Razorpay)
+                                         │
+                                         ▼
+                                   Acquiring Bank
+                                         │
+                                         ▼
+                                   Card Network (Visa/Mastercard)
+                                         │
+                                         ▼
+                                   Issuing Bank (Customer's Bank: approves/declines)
+</div>
+<ul>
+  <li><b>Interchange Fee:</b> Paid to the card-issuing bank (typically 1.5% - 3% + fixed fee).</li>
+  <li><b>Chargeback:</b> Customer disputes transaction with issuing bank. Merchant loses funds plus $15-30 penalty fee unless proven legitimate.</li>
+  <li><b>Settlement:</b> Funds clear into merchant bank account on T+2 or T+7 schedule.</li>
+</ul>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>363.1 <span class="levels">basic</span> Map out fee calculations for a $100 international transaction under 2.9% + 30c fee structure.</summary><div><p>Net revenue = 100 - (100 * 0.029 + 0.30) = $96.80.</p></div></details>
+</div>

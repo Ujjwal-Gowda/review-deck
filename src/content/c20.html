@@ -1,0 +1,68 @@
+<p class="goal">Doing many things at once correctly. The hardest bugs in programming live here.</p>
+<p><b>Concurrency</b> means <i>dealing</i> with many things at once: tasks interleave, possibly on one core. <b>Parallelism</b> means <i>doing</i> many things at once, on multiple cores simultaneously. A single waiter serving ten tables is concurrent; ten waiters are parallel.</p>
+<table>
+<tr><th>Unit</th><th>What it is</th><th>Cost</th></tr>
+<tr><td><b>Process</b></td><td>Separate memory space; isolated; talks via IPC (pipes, sockets)</td><td>heavy (MBs, slow to start); safe</td></tr>
+<tr><td><b>OS thread</b></td><td>Shares its process's memory; scheduled by the OS; can run in parallel</td><td>~1–8 MB stack; context switches cost</td></tr>
+<tr><td><b>Green thread / goroutine</b></td><td>Scheduled by the language runtime onto OS threads</td><td>~KBs; millions possible</td></tr>
+<tr><td><b>Async task / coroutine</b></td><td>Cooperatively yields at <code>await</code>; usually a single-threaded event loop</td><td>very cheap; great for I/O</td></tr>
+</table>
+<h3>I/O-bound vs CPU-bound</h3>
+<p><b>I/O-bound</b> work mostly waits on the network or disk (web requests, DB queries). Concurrency helps because you wait on many things at once: use async or threads. <b>CPU-bound</b> work mostly computes (image processing, rendering video frames). Only parallelism across cores helps: use processes, or threads in languages without a GIL. Your Remotion renders use multiple Chrome processes for exactly this reason.</p>
+<h3>The race condition</h3>
+<pre data-lang="python"><code class="language-python">import threading
+count = 0
+def work():
+    global count
+    for _ in range(100_000):
+        count += 1      # NOT atomic: read count → add 1 → write back. Two threads can interleave:
+                        # A reads 5, B reads 5, A writes 6, B writes 6 → one increment lost
+ts = [threading.Thread(target=work) for _ in range(4)]
+for t in ts: t.start()
+for t in ts: t.join()
+print(count)            # may be less than 400000
+
+lock = threading.Lock()
+def safe_work():
+    global count
+    for _ in range(100_000):
+        with lock:      # MUTUAL EXCLUSION: one thread in this "critical section" at a time
+            count += 1</code></pre>
+<p>A <b>data race</b> is two threads accessing the same memory, at least one of them writing, without synchronisation. The results depend on timing, so the bugs are intermittent and nearly impossible to reproduce. Rust's "sharing XOR mutation" rule (<a class="xref" data-old="c10">chapter 10</a>) makes data races a <b>compile error</b>.</p>
+<h3>Synchronisation primitives and hazards</h3>
+<table>
+<tr><th>Term</th><th>Meaning</th></tr>
+<tr><td><b>Mutex / lock</b></td><td>Only one holder at a time.</td></tr>
+<tr><td><b>RW lock</b></td><td>Many readers or one writer.</td></tr>
+<tr><td><b>Semaphore</b></td><td>At most N holders (e.g. limit to 5 concurrent downloads).</td></tr>
+<tr><td><b>Atomic</b></td><td>A CPU-level indivisible operation (atomic increment), with no lock needed.</td></tr>
+<tr><td><b>Condition variable</b></td><td>Wait until some condition becomes true.</td></tr>
+<tr><td><b>Deadlock</b></td><td>A holds lock 1 and waits for 2; B holds 2 and waits for 1: both stuck forever. Fix: always acquire locks in the same global order.</td></tr>
+<tr><td><b>Livelock / starvation</b></td><td>Threads keep reacting to each other without progress / one thread never gets a turn.</td></tr>
+<tr><td><b>Thread-safe</b></td><td>Correct when used from many threads at once.</td></tr>
+</table>
+<h3>Safer models: share by communicating</h3>
+<p>"Don't communicate by sharing memory; share memory by communicating" (Go). Pass messages through <b>channels</b>/queues so each piece of data has one owner at a time. The <b>actor model</b> (Erlang, Akka) works the same way: actors own state and exchange messages.</p>
+<pre data-lang="go"><code class="language-go">results := make(chan int)
+for _, url := range urls {
+    go func(u string) { results &lt;- fetchSize(u) }(url)   // goroutine per URL
+}
+total := 0
+for range urls { total += &lt;-results }                     // collect results; no locks needed</code></pre>
+<h3>Async / await and the event loop</h3>
+<p>A single thread runs an <b>event loop</b>. When a task hits <code>await</code> on I/O, it yields and the loop runs another ready task. That's how Node.js serves thousands of connections on one thread.</p>
+<pre data-lang="python"><code class="language-python">import asyncio
+async def fetch(i):
+    await asyncio.sleep(1)          # stands in for a network call; yields to the loop
+    return i
+async def main():
+    results = await asyncio.gather(*(fetch(i) for i in range(100)))   # ~1 second total, not 100
+asyncio.run(main())</code></pre>
+<div class="callout warn"><b class="t">Async pitfalls</b><p>One blocking call (<code>time.sleep</code>, heavy CPU work, synchronous file I/O) inside async code freezes <i>everything</i>. Async is "contagious": a function that awaits must itself be async (the "function colouring" problem). Always add timeouts.</p></div>
+<p><b>Python's GIL</b> (Global Interpreter Lock) means only one thread runs Python bytecode at a time in CPython, so threads help with I/O but not with CPU work. Use <code>multiprocessing</code>/<code>ProcessPoolExecutor</code> for CPU work (Python 3.13 has an experimental free-threaded build). Go, Rust, Java and C# threads run truly in parallel. JS is single-threaded, with Web Workers and <code>worker_threads</code> for parallel work.</p>
+<div class="callout key"><b class="t">Trade-offs</b><p><b>Threads + locks:</b> flexible and familiar, but races and deadlocks are easy to cause. <b>Message passing:</b> much easier to reason about, at the cost of some copying overhead. <b>Async:</b> huge I/O concurrency on little memory, but code colouring and blocking pitfalls. <b>Processes:</b> real isolation and parallelism, but heavy, with serialisation costs. <b>Default:</b> avoid shared mutable state; use a pool or queue; reach for locks last.</p></div>
+<details class="ex"><summary>20.1 <span class="levels">think</span> Download 20 URLs with a max of 5 at a time, using <code>asyncio.Semaphore</code>. What happens without the limit?</summary><div><pre data-lang="python"><code class="language-python">sem = asyncio.Semaphore(5)
+async def get(u):
+    async with sem:
+        return await fetch(u)
+await asyncio.gather(*(get(u) for u in urls))</code></pre><p>Without it you open every connection at once, which can hit rate limits, exhaust file descriptors, or overwhelm the server.</p></div></details>

@@ -1,0 +1,27 @@
+const e=`<p class="goal">Adapting an open model to your task with LoRA and QLoRA. When to do it is covered in <a class="xref" data-old="c31">chapter 209</a>.</p>
+<pre data-lang="python"><code class="language-python"># QLoRA with Hugging Face transformers + peft + trl   (needs an NVIDIA GPU with ~10–16 GB for an 8B model; rent one)
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+from peft import LoraConfig
+from trl import SFTTrainer, SFTConfig
+from datasets import load_dataset
+
+base = "Qwen/Qwen2.5-7B-Instruct"                                  # any open-weights model
+bnb = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="nf4", bnb_4bit_compute_dtype="bfloat16")
+model = AutoModelForCausalLM.from_pretrained(base, quantization_config=bnb, device_map="auto")
+data = load_dataset("json", data_files="train.jsonl")               # {"messages":[{"role":"user",…},{"role":"assistant",…}]}
+lora = LoraConfig(r=16, lora_alpha=32, lora_dropout=0.05, target_modules="all-linear", task_type="CAUSAL_LM")
+trainer = SFTTrainer(model=model, train_dataset=data["train"], peft_config=lora,
+                     args=SFTConfig(output_dir="out", num_train_epochs=2, per_device_train_batch_size=2,
+                                    gradient_accumulation_steps=8, learning_rate=2e-4, bf16=True))
+trainer.train(); trainer.save_model("out/adapter")                  # the adapter is only a few MB to a few hundred MB</code></pre>
+<ul>
+<li><b>LoRA:</b> freeze the base weights W and learn a low-rank update ΔW = B·A (rank r ≈ 8–64). That trains about 0.1–1% of the parameters. <b>QLoRA:</b> the same, on a 4-bit base model.</li>
+<li><b>Data is everything:</b> hundreds to thousands of high-quality, consistent examples of <i>exactly</i> the output you want. Hold out an evaluation set.</li>
+<li><b>SFT</b> teaches the format and behaviour; <b>DPO</b> learns from (chosen, rejected) pairs to push towards preferred answers.</li>
+<li>Tools: Unsloth (2× faster, less memory), Axolotl, and hosted fine-tuning APIs. Merge the adapter, or serve it with vLLM's LoRA support.</li>
+<li>Risks: overfitting, and forgetting general skills. Always compare against the base model plus a good prompt.</li>
+</ul>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>204.1 <span class="levels">think</span> You have 300 examples of perfect complaint summaries. Should you fine-tune or use few-shot prompting? How would you decide?</summary><div><p>Start with few-shot prompting on a strong model and measure it with evals. Fine-tune a small model only if you need lower cost or latency at high volume, and the eval shows it matches the quality.</p></div></details>
+</div>
+`;export{e as default};

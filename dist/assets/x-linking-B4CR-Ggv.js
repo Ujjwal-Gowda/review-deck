@@ -1,0 +1,29 @@
+const e=`<p class="goal">What happens between "compiled" and "running": object files, symbols, the linker, and the loader.</p>
+<h3>From many files to one program</h3>
+<div class="diagram">main.c ─cc -c─► main.o ─┐                                  (object files: machine code + a SYMBOL TABLE
+util.c ─cc -c─► util.o ─┼─► LINKER (ld) ─► ./app            listing what each defines and what it still needs)
+libm.a / libc.so ───────┘   resolves every "undefined" symbol to an address</div>
+<pre data-lang="shell"><code class="language-bash">gcc -c util.c                  # compile only → util.o
+nm util.o                      # symbols: T = defined function, U = undefined (needed from elsewhere)
+gcc main.o util.o -o app       # link
+ldd ./app                      # shared libraries it needs at runtime (libc.so.6 …)
+readelf -h ./app | head        # ELF header: the Linux executable format
+objdump -d ./app | less        # disassemble</code></pre>
+<h3>Static vs dynamic linking</h3>
+<table>
+<tr><th></th><th>Static (<code>.a</code>, copied in)</th><th>Dynamic (<code>.so</code>/<code>.dll</code>/<code>.dylib</code>, loaded at start)</th></tr>
+<tr><td>Deploy</td><td>one self-contained file (Go's default; Rust with musl)</td><td>needs the right library versions on the machine</td></tr>
+<tr><td>Security updates</td><td>rebuild every program</td><td>update the library once, and every program gets the fix</td></tr>
+<tr><td>Size / memory</td><td>bigger binaries</td><td>shared in RAM across processes</td></tr>
+<tr><td>Failure mode</td><td>none at load time</td><td>"version GLIBC_2.38 not found", "error while loading shared libraries"</td></tr>
+</table>
+<h3>The loader</h3>
+<p>When you run a dynamic program, the kernel maps it into memory and starts the <b>dynamic loader</b> (<code>ld-linux.so</code>). The loader finds each needed <code>.so</code> (via the paths in the binary, <code>LD_LIBRARY_PATH</code> and <code>/etc/ld.so.cache</code>), maps it in, resolves symbols, and jumps to <code>main</code>. <code>LD_PRELOAD</code> can inject a library first, which is used for profilers and for hooking functions.</p>
+<h3>ABI and FFI</h3>
+<p>The <b>ABI</b> (application binary interface) fixes how functions receive arguments (registers or stack), how structs are laid out, and how names appear. Because every language can speak the C ABI, Python (<code>ctypes</code>, <code>cffi</code>), Go (<code>cgo</code>), Rust (<code>extern "C"</code>) and Node (N-API) can all call C libraries. This is <b>FFI</b> (foreign function interface), and it's how NumPy, SQLite bindings and GPU libraries work.</p>
+<pre data-lang="rust"><code class="language-rust">#[no_mangle]
+pub extern "C" fn add(a: i32, b: i32) -&gt; i32 { a + b }   // build as a cdylib → callable from C, Python, Go</code></pre>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>0.1 <span class="levels">basic</span> Build a tiny C library as both <code>libutil.a</code> and <code>libutil.so</code>, link a program against each, and compare the binary sizes and the <code>ldd</code> output.</summary><div><p>Build the static version with <code>ar rcs libutil.a util.o</code> and the shared one with <code>gcc -shared -fPIC -o libutil.so util.c</code>. The static binary contains the code; the dynamic one lists <code>libutil.so</code> in <code>ldd</code> and needs <code>LD_LIBRARY_PATH=.</code> to run.</p></div></details>
+</div>
+`;export{e as default};

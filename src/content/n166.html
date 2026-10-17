@@ -1,0 +1,12 @@
+<p class="goal">Hardening container images and runtimes.</p>
+<ul>
+<li><b>Minimal images</b> (distroless, slim, scratch): fewer packages means fewer known vulnerabilities (CVEs), and no shell for an attacker to use.</li>
+<li><b>Scan</b> images in CI and in the registry: <code>trivy image ghcr.io/ujjwal/shop-api:sha</code>. Fail builds on critical vulnerabilities that have a fix available. Rebuild regularly to pick up base-image patches.</li>
+<li><b>Runtime:</b> non-root user, read-only root filesystem, <code>--cap-drop ALL</code>, <code>no-new-privileges</code>, seccomp defaults, no <code>--privileged</code>, no host network or PID namespace, and never mount the Docker socket.</li>
+<li><b>Resource limits</b> stop a compromised or buggy container from exhausting the host.</li>
+<li><b>Sign and verify:</b> cosign-signed images, with an admission policy (Kyverno, Sigstore policy-controller) that only lets signed images from your registry run.</li>
+<li><b>Runtime detection:</b> Falco alerts on suspicious behaviour, such as a shell spawned inside a container, or writes to <code>/etc</code>.</li>
+</ul>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>166.1 <span class="levels">basic</span> Scan one of your images with <code>trivy image</code>. How many critical vulnerabilities have a fix available, and does a newer base image remove them?</summary><div><p>Usually most go away just by rebuilding on the latest slim or distroless base. Add <code>trivy</code> to CI with <code>--severity CRITICAL --ignore-unfixed --exit-code 1</code>.</p></div></details>
+</div>

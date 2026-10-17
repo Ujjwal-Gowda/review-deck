@@ -1,0 +1,31 @@
+<p class="goal">A branch is just a movable label. Once that sinks in, branching stops being scary.</p>
+<h3>What a branch actually is</h3>
+<p>A branch is a file containing one commit ID (<code>cat .git/refs/heads/main</code>). Committing on a branch moves its label forward to the new commit. <b>HEAD</b> points at the current branch. Creating a branch costs 41 bytes.</p>
+<div class="diagram">          A ── B ── C   ◄── main
+                     \
+                      D ── E   ◄── feature/stock   ◄── HEAD</div>
+<pre data-lang="shell"><code class="language-bash">git switch -c feature/stock      # create + switch (the modern form of: git checkout -b)
+git branch                       # list local branches (* = current)
+git branch -vv                   # with upstream tracking info
+git switch main                  # go back
+git branch -d feature/stock      # delete (refuses if unmerged; -D forces)</code></pre>
+<h3>Merging: two kinds</h3>
+<div class="diagram">FAST-FORWARD (main has no new commits):     THREE-WAY (both moved on):
+A ── B ── C ── D ── E                     A ── B ── C ── F ────── M   ◄── main
+                    ▲ main just slides               \           /
+                                                      D ── E ───┘      M has two parents</div>
+<pre data-lang="shell"><code class="language-bash">git switch main
+git merge feature/stock          # fast-forward if possible, otherwise creates a merge commit M
+git merge --no-ff feature/stock  # always make a merge commit (keeps the feature grouped in history)</code></pre>
+<h3>Detached HEAD</h3>
+<p><code>git switch --detach &lt;sha&gt;</code> (or checking out a tag) points HEAD straight at a commit, with no branch. You can look around and even commit, but those commits belong to no branch, and leaving strands them (reflog can still recover them). If you want to keep work done there: <code>git switch -c new-branch</code>.</p>
+<h3>Branching strategies</h3>
+<table>
+<tr><th>Strategy</th><th>How</th><th>Good for</th></tr>
+<tr><td><b>GitHub Flow</b></td><td>main is always deployable; short-lived feature branches; PR → review → merge → deploy</td><td>most teams and web apps. <b>Your default.</b></td></tr>
+<tr><td><b>Trunk-based</b></td><td>everyone merges to main at least daily; unfinished work hidden behind feature flags</td><td>high-velocity teams with strong CI</td></tr>
+<tr><td><b>Git Flow</b></td><td>develop, release/*, hotfix/* branches</td><td>versioned software with scheduled releases; heavy for web apps</td></tr>
+<tr><td><b>Release branches</b></td><td>main + <code>release/1.x</code> for maintaining old versions</td><td>libraries and self-hosted products</td></tr>
+</table>
+<p><b>Long-lived branches are the enemy</b>: the longer a branch lives, the more it diverges and the worse the merge. Keep branches to days, not weeks.</p>
+<details class="ex"><summary>44.1 <span class="levels">basic</span> In a scratch repo, create a branch, commit on both it and main, merge, and view the result with <code>git log --oneline --graph --all</code>. Then repeat with no commits on main and watch it fast-forward.</summary><div><p>The first case shows a diamond with a merge commit; the second is a straight line. <code>git merge</code> prints "Fast-forward" in the second case.</p></div></details>

@@ -1,0 +1,55 @@
+<p class="goal">The same failure ("the stock file is missing or malformed") handled in each language's style. Strategy is in <a class="xref" data-old="c19">Error-Handling Strategies</a>.</p>
+<pre data-lang="python"><code class="language-python">def load_stock(path: Path) -&gt; dict[str, int]:
+    try:
+        rows = path.read_text(encoding="utf-8").splitlines()
+    except FileNotFoundError:
+        raise StockError(f"stock file missing: {path}") from None
+    try:
+        return {sku: int(qty) for sku, qty in (r.split(",") for r in rows)}
+    except ValueError as e:
+        raise StockError(f"bad stock file {path}: {e}") from e</code></pre>
+<pre data-lang="typescript"><code class="language-typescript">async function loadStock(path: string): Promise&lt;Map&lt;string, number&gt;&gt; {
+  let text: string;
+  try { text = await readFile(path, "utf8"); }
+  catch (e) { throw new Error(`stock file missing: ${path}`, { cause: e }); }   // ES2022 error cause
+  /* parse; throw on bad rows */
+}</code></pre>
+<pre data-lang="go"><code class="language-go">func LoadStock(path string) (map[string]int, error) {
+    data, err := os.ReadFile(path)
+    if err != nil { return nil, fmt.Errorf("loading stock %s: %w", path, err) }
+    // … strconv.Atoi per row, returning fmt.Errorf("line %d: %w", n, err) on failure
+}
+if errors.Is(err, fs.ErrNotExist) { /* specific handling */ }</code></pre>
+<pre data-lang="rust"><code class="language-rust">fn load_stock(path: &amp;Path) -&gt; anyhow::Result&lt;HashMap&lt;String, u32&gt;&gt; {
+    let text = fs::read_to_string(path).with_context(|| format!("loading stock {}", path.display()))?;
+    text.lines().enumerate().map(|(i, l)| {
+        let (sku, q) = l.split_once(',').with_context(|| format!("line {}: missing comma", i + 1))?;
+        Ok((sku.to_string(), q.trim().parse().with_context(|| format!("line {}: bad qty", i + 1))?))
+    }).collect()
+}</code></pre>
+<pre data-lang="c"><code class="language-c">int load_stock(const char *path, Stock *out) {
+    FILE *f = fopen(path, "r");
+    if (!f) { fprintf(stderr, "loading stock %s: %s\n", path, strerror(errno)); return -1; }
+    /* parse with fgets + strtol, checking every return value; on error: fclose(f); return -1; */
+    fclose(f);
+    return 0;
+}</code></pre>
+<table>
+<tr><th></th><th>Failure is…</th><th>Propagate</th><th>Add context</th><th>Cleanup</th><th>Unrecoverable bug</th></tr>
+<tr><td>Python</td><td>an exception</td><td>automatic</td><td><code>raise X(...) from e</code></td><td><code>with</code> / <code>finally</code></td><td><code>assert</code> / uncaught</td></tr>
+<tr><td>TS</td><td>an exception / rejected promise</td><td>automatic (<code>await</code>)</td><td><code>new Error(msg, { cause })</code></td><td><code>finally</code></td><td>uncaught</td></tr>
+<tr><td>Go</td><td>an <code>error</code> value</td><td><code>if err != nil { return … }</code></td><td><code>fmt.Errorf("…: %w", err)</code></td><td><code>defer</code></td><td><code>panic</code></td></tr>
+<tr><td>Rust</td><td>a <code>Result&lt;T,E&gt;</code></td><td><code>?</code></td><td><code>.context()</code> (anyhow) / <code>map_err</code></td><td>automatic (Drop)</td><td><code>panic!</code>, <code>unwrap</code></td></tr>
+<tr><td>C</td><td>a return code + <code>errno</code></td><td>check and return manually</td><td>print or wrap yourself</td><td><code>goto cleanup;</code> pattern</td><td><code>abort()</code> / <code>assert</code></td></tr>
+</table>
+<h3>Traps when switching</h3>
+<ul>
+<li><b>Go:</b> assigning an error to <code>_</code> ignores it silently. Linters (errcheck) catch this.</li>
+<li><b>Rust:</b> <code>.unwrap()</code> in library code turns every error into a crash. Reserve it for tests and truly impossible cases (and prefer <code>expect("why")</code>).</li>
+<li><b>JS:</b> an un-awaited promise that rejects doesn't throw where you expect; it becomes an "unhandled rejection".</li>
+<li><b>Python:</b> a bare <code>except:</code> also swallows KeyboardInterrupt and your own bugs.</li>
+<li><b>C:</b> every function that can fail needs its result checked, including <code>malloc</code>, <code>fclose</code> and <code>printf</code> to a pipe.</li>
+</ul>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>0.1 <span class="levels">basic</span> Implement <code>parse_port(s)</code> → a valid port 1–65535, or a descriptive error, in all five languages, with one test each for "8080", "0", "abc" and "70000".</summary><div><p>Python raises ValueError; TS throws or returns a result object; Go returns <code>(int, error)</code>; Rust returns <code>Result&lt;u16, String&gt;</code> (parsing into u16 rejects 70000 for free); C returns -1 and checks <code>end</code> and the range after <code>strtol</code>.</p></div></details>
+</div>

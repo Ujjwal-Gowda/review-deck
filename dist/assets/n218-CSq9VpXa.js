@@ -1,0 +1,25 @@
+const e=`<p class="goal">Getting machine-readable output you can trust your code to parse.</p>
+<pre data-lang="python"><code class="language-python">from pydantic import BaseModel, Field
+class Complaint(BaseModel):
+    category: str = Field(description="one of: late, damaged, missing, quality, other")
+    severity: int = Field(ge=1, le=5)
+    order_id: str | None
+    summary: str
+
+# Option A: tool/JSON-schema constrained output (the provider enforces the schema)
+tool = {"name": "record_complaint", "description": "Record the extracted complaint",
+        "input_schema": Complaint.model_json_schema()}
+resp = client.messages.create(model="claude-haiku-4-5", max_tokens=500, tools=[tool],
+                              tool_choice={"type": "tool", "name": "record_complaint"},
+                              messages=[{"role": "user", "content": email_text}])
+data = Complaint.model_validate(resp.content[0].input)       # ALWAYS validate anyway</code></pre>
+<ul>
+<li><b>Prefer schema-enforced modes</b> (forced tool use, "structured outputs" / JSON-schema response formats, grammar-constrained decoding for local models) over "please reply in JSON".</li>
+<li><b>Validate</b> with Pydantic or zod. On failure, <b>repair</b>: send the validation error back and ask for a corrected object (limit this to 1–2 attempts).</li>
+<li><b>Design schemas for the model:</b> clear field descriptions, enums instead of free text, optional fields for things that may be missing (otherwise the model invents values), and a <code>reasoning</code> field placed <i>before</i> the answer fields if you want it to think first.</li>
+<li>Test on messy real inputs (Hinglish emails, empty messages), and track the parse-failure rate.</li>
+</ul>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>218.1 <span class="levels">basic</span> Extract (category, severity, order_id) from 20 real or made-up complaint messages using forced tool output plus Pydantic validation. What's the failure rate?</summary><div><p>Log the validation errors, then tighten the field descriptions and enums until nearly everything parses. Keep the 20 messages as an eval set.</p></div></details>
+</div>
+`;export{e as default};

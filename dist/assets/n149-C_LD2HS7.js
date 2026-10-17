@@ -1,0 +1,46 @@
+const e=`<p class="goal">The server that sits in front of your apps: TLS, routing, load balancing and protection.</p>
+<div class="diagram">internet → DNS → (CDN) → REVERSE PROXY :443 ──► api:8080 (×3, load-balanced)
+                           TLS termination      ──► web:3000
+                           compression, caching ──► /static from disk
+                           rate limits, headers</div>
+<pre data-lang="plaintext"><code class="language-plaintext"># Caddyfile: automatic HTTPS (it obtains and renews Let's Encrypt certificates by itself)
+api.freshon.in {
+    reverse_proxy api1:8080 api2:8080 {
+        lb_policy least_conn
+        health_uri /healthz
+    }
+    encode zstd gzip
+    header Strict-Transport-Security "max-age=31536000"
+}
+app.freshon.in {
+    root * /srv/web
+    try_files {path} /index.html        # SPA fallback
+    file_server
+}</code></pre>
+<pre data-lang="plaintext"><code class="language-plaintext"># nginx equivalent (TLS via certbot)
+upstream api { least_conn; server 10.0.11.5:8080; server 10.0.11.6:8080; }
+server {
+  listen 443 ssl http2; server_name api.freshon.in;
+  ssl_certificate /etc/letsencrypt/live/api.freshon.in/fullchain.pem;
+  ssl_certificate_key /etc/letsencrypt/live/api.freshon.in/privkey.pem;
+  client_max_body_size 10m;
+  location / {
+    proxy_pass http://api;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_read_timeout 60s;
+  }
+  location /ws { proxy_pass http://api; proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade; proxy_set_header Connection "upgrade"; }   # WebSockets need these
+}</code></pre>
+<table><tr><th>Proxy</th><th>Strength</th></tr>
+<tr><td>Caddy</td><td>automatic HTTPS, the simplest config: great for single servers</td></tr>
+<tr><td>nginx</td><td>battle-tested, fast, everywhere; more manual</td></tr>
+<tr><td>Traefik</td><td>auto-discovers Docker and Kubernetes services via labels</td></tr>
+<tr><td>HAProxy / Envoy</td><td>advanced load balancing / the service-mesh data plane</td></tr></table>
+<p>Behind a proxy, your app sees the proxy's IP. Read the client's IP from <code>X-Forwarded-For</code>, but only trust it when it's set by your own proxy (configure "trusted proxies" in your framework).</p>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>149.1 <span class="levels">basic</span> Put Caddy in front of two instances of a local app, with load balancing and a health check. Stop one instance and watch traffic move.</summary><div><p><code>reverse_proxy a:8080 b:8080 { health_uri /healthz }</code>. Killing one takes it out of rotation after failed health checks, and requests keep succeeding.</p></div></details>
+</div>
+`;export{e as default};

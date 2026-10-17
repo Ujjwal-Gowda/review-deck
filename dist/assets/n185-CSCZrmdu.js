@@ -1,0 +1,23 @@
+const e=`<p class="goal">Every design decision trades something away. Practise making those trades explicitly.</p>
+<table>
+<tr><th>Axis</th><th>Tension</th></tr>
+<tr><td>Consistency ↔ availability / latency</td><td>synchronous replication and locks vs fast, stale-tolerant reads</td></tr>
+<tr><td>Simplicity ↔ scalability</td><td>a monolith with one database vs services, queues and shards</td></tr>
+<tr><td>Cost ↔ performance / reliability</td><td>more replicas, regions and headroom cost money</td></tr>
+<tr><td>Build ↔ buy</td><td>control vs time-to-market (auth, search, payments)</td></tr>
+<tr><td>Normalised ↔ denormalised</td><td>clean writes vs fast reads</td></tr>
+<tr><td>Push ↔ pull</td><td>real-time fan-out vs on-demand computation</td></tr>
+</table>
+<h3>Practice problems (45 minutes each, using the method from this part)</h3>
+<ul>
+<li><b>URL shortener:</b> ID generation (base62 of a counter vs random + collision check), a read-heavy cache, analytics written asynchronously.</li>
+<li><b>Rate limiter:</b> token bucket vs sliding window; per-user keys in Redis; atomicity with Lua; what happens when Redis is down (fail open or closed?).</li>
+<li><b>Chat:</b> WebSocket gateways, pub/sub between gateways, message storage by conversation, delivery and read receipts, offline push.</li>
+<li><b>News feed:</b> fan-out on write (precomputed timelines) vs fan-out on read; the celebrity problem forces a hybrid.</li>
+<li><b>Food/grocery delivery (FreshOn):</b> orders, stock reservation, rider assignment, live tracking, surge handling.</li>
+</ul>
+<p>For each one: state the requirements and numbers, draw the diagram, walk the flows, list the failure modes, and <b>name the trade-offs you chose and what would make you choose differently</b>. That last step is what interviewers and real design reviews are looking for.</p>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>185.1 <span class="levels">think</span> Design a rate limiter for the public API in 30 minutes: algorithm, storage, behaviour when Redis is down, and headers returned.</summary><div><p>Token bucket per API key in Redis via a Lua script. When Redis is down, fail open for trusted internal traffic and fail closed for anonymous traffic. Return <code>429</code> with <code>Retry-After</code> and <code>RateLimit-*</code> headers.</p></div></details>
+</div>
+`;export{e as default};

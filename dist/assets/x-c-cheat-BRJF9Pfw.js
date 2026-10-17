@@ -1,0 +1,53 @@
+const n=`<p class="goal">C on one screen.</p>
+<div class="cheat">
+<div><h4>Program &amp; types</h4><pre data-lang="c"><code class="language-c">#include &lt;stdio.h&gt;
+#include &lt;stdint.h&gt;
+int main(int argc, char **argv) { printf("hi %s\\n", argv[0]); return 0; }
+char short int long long long float double
+int32_t uint8_t int64_t size_t bool (stdbool.h)
+sizeof(int)  (double)n  // cast
+const int MAX = 50;  #define MAX 50  enum { RED, GREEN };</code></pre></div>
+<div><h4>printf / scanf formats</h4><pre data-lang="c"><code class="language-c">%d int   %ld long   %lld long long   %u unsigned
+%zu size_t   %f %.2f double   %e   %c char   %s string
+%p pointer   %x hex   %5d width   %-10s left   %05d zero-pad
+printf("%s: %zu bytes\\n", name, n);
+scanf("%d", &amp;x);   // prefer fgets + strtol for input</code></pre></div>
+<div><h4>Control flow</h4><pre data-lang="c"><code class="language-c">if (a) {} else if (b) {} else {}
+x = c ? a : b;
+switch (n) { case 1: …; break; default: … }   // break!
+for (int i = 0; i &lt; n; i++) {}
+while (c) {}  do {} while (c);
+break; continue; goto cleanup;</code></pre></div>
+<div><h4>Pointers</h4><pre data-lang="c"><code class="language-c">int x = 5; int *p = &amp;x; *p = 7;   // address-of, dereference
+int a[3]; int *q = a;   // array decays to &amp;a[0]
+q[1] == *(q + 1)
+const int *p  // can't modify *p
+int *const p  // can't reassign p
+void (*fn)(int) = handler; fn(3);
+NULL  // null pointer</code></pre></div>
+<div><h4>Memory</h4><pre data-lang="c"><code class="language-c">int *a = malloc(n * sizeof *a);   if (!a) {…}
+int *z = calloc(n, sizeof *z);   // zeroed
+int *b = realloc(a, 2 * n * sizeof *a); if (!b) {…} a = b;
+free(a); a = NULL;
+memcpy(dst, src, n); memset(p, 0, n); memmove</code></pre></div>
+<div><h4>Strings</h4><pre data-lang="c"><code class="language-c">char s[] = "hi";          // {'h','i','\\0'}
+strlen(s) strcmp(a,b)==0 strncmp strchr strstr
+snprintf(buf, sizeof buf, "%s-%d", a, n);  // safe
+strtol(s, &amp;end, 10)   // check end/errno
+NEVER: gets, strcpy/strcat into unknown sizes</code></pre></div>
+<div><h4>Structs</h4><pre data-lang="c"><code class="language-c">typedef struct { char sku[16]; int qty; } Item;
+Item it = { .sku = "milk", .qty = 2 };
+Item *p = &amp;it; p-&gt;qty++;   // (*p).qty
+typedef struct Node { int v; struct Node *next; } Node;
+union { int i; float f; } u;</code></pre></div>
+<div><h4>Files</h4><pre data-lang="c"><code class="language-c">FILE *f = fopen("a.txt", "r");  if (!f) { perror("a.txt"); return 1; }
+char line[256]; while (fgets(line, sizeof line, f)) {…}
+fprintf(out, "%d\\n", n); fread/fwrite(buf, 1, n, f);
+fclose(f);  fprintf(stderr, "err: %s\\n", strerror(errno));</code></pre></div>
+<div><h4>Build &amp; debug</h4><pre data-lang="shell"><code class="language-bash">gcc -std=c17 -Wall -Wextra -Wpedantic -g -O0 -o app main.c util.c
+gcc … -fsanitize=address,undefined   # catch memory bugs &amp; UB
+valgrind --leak-check=full ./app
+gdb ./app  (run, bt, frame N, p var, watch x, next, step)
+make; man 3 printf</code></pre></div>
+</div>
+`;export{n as default};

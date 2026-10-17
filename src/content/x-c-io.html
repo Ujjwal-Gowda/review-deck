@@ -1,0 +1,42 @@
+<p class="goal">Reading and writing files in C, with the standard library's buffered <code>FILE*</code> API and the lower-level POSIX calls underneath.</p>
+<h3>stdio: buffered and portable</h3>
+<pre data-lang="c"><code class="language-c">FILE *in = fopen("stock.csv", "r");            /* modes: "r", "w" (truncate), "a" (append), add "b" for binary */
+if (!in) { fprintf(stderr, "stock.csv: %s\n", strerror(errno)); return 1; }
+
+char line[256];
+int lineno = 0;
+while (fgets(line, sizeof line, in)) {           /* reads up to the newline, NUL-terminates */
+    lineno++;
+    line[strcspn(line, "\n")] = '\0';             /* strip the newline */
+    char sku[32]; int qty;
+    if (sscanf(line, "%31[^,],%d", sku, &amp;qty) != 2) {   /* width limit prevents overflow */
+        fprintf(stderr, "line %d: bad format\n", lineno); continue;
+    }
+    /* use sku, qty */
+}
+if (ferror(in)) perror("read");
+fclose(in);
+
+FILE *out = fopen("report.txt", "w");
+fprintf(out, "%-10s %5d\n", "milk", 12);
+if (fclose(out) != 0) perror("close");            /* write errors can surface at close */</code></pre>
+<h3>Binary I/O</h3>
+<pre data-lang="c"><code class="language-c">FILE *f = fopen("items.bin", "wb");
+size_t written = fwrite(items, sizeof items[0], n, f);    /* returns the count written */
+fclose(f);
+f = fopen("items.bin", "rb");
+size_t got = fread(buf, sizeof buf[0], cap, f);
+/* raw structs are NOT portable across compilers or architectures (padding, endianness): prefer text or a defined format */</code></pre>
+<h3>POSIX file descriptors</h3>
+<pre data-lang="c"><code class="language-c">#include &lt;fcntl.h&gt;
+#include &lt;unistd.h&gt;
+int fd = open("log.txt", O_WRONLY | O_CREAT | O_APPEND, 0644);
+if (fd &lt; 0) { perror("open"); return 1; }
+const char msg[] = "order placed\n";
+ssize_t w = write(fd, msg, sizeof msg - 1);        /* may write FEWER bytes than asked: loop in real code */
+fsync(fd);                                        /* force it to disk (durability) */
+close(fd);</code></pre>
+<p>stdio (<code>FILE*</code>) buffers for you and is portable; use it by default. File descriptors are the raw OS interface: they're needed for sockets, pipes and non-blocking I/O, and they're what <code>strace</code> shows (<a class="xref" data-old="x-io">I/O Models</a>). stdin, stdout and stderr are descriptors 0, 1 and 2.</p>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>0.1 <span class="levels">basic</span> Write <code>mycat</code>: copy each file named on the command line (or stdin if there are none) to stdout using a 64 KB buffer with <code>fread</code>/<code>fwrite</code>, reporting errors per file and returning 1 if any failed. Compare its speed with <code>cat</code> on a large file.</summary><div><p>Loop <code>while ((n = fread(buf, 1, sizeof buf, f)) &gt; 0) if (fwrite(buf, 1, n, stdout) != n) { perror("write"); … }</code>. Keep going after a missing file, but remember the failure for the exit code. With a big buffer you&#39;ll be close to cat&#39;s speed.</p></div></details>
+</div>

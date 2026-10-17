@@ -1,0 +1,32 @@
+const e=`<p class="goal">Using an ORM productively without losing sight of the SQL it generates.</p>
+<pre data-lang="typescript"><code class="language-typescript">// Prisma: schema-first, generated client
+const orders = await prisma.order.findMany({
+  where: { storeId: 7, status: "paid" },
+  include: { items: true, customer: { select: { name: true } } },   // ONE query plan, no N+1
+  orderBy: { createdAt: "desc" }, take: 20,
+});
+await prisma.$transaction(async tx =&gt; {
+  await tx.stock.update({ where: { sku: "milk" }, data: { qty: { decrement: 2 } } });
+  await tx.orderItem.create({ data: { orderId: 42, sku: "milk", qty: 2 } });
+});
+const rows = await prisma.$queryRaw\`SELECT sku, sum(qty) FROM order_items GROUP BY sku\`;   // escape hatch (parameterised)
+
+// Drizzle: SQL-shaped, typed, thin
+const rows2 = await db.select().from(orders).where(and(eq(orders.storeId, 7), eq(orders.status, "paid"))).limit(20);</code></pre>
+<h3>The N+1 problem</h3>
+<pre data-lang="typescript"><code class="language-typescript">const orders = await prisma.order.findMany();                  // 1 query
+for (const o of orders) o.customer = await prisma.customer.findUnique({ where: { id: o.customerId } });  // +N queries ✗
+// fix: include/join, or batch: WHERE id IN (…) and map the results in memory</code></pre>
+<p>Turn on query logging in development (<code>new PrismaClient({ log: ["query"] })</code>, <code>SQLALCHEMY_ECHO</code>) and watch for repeated queries.</p>
+<table>
+<tr><th>Approach</th><th>Examples</th><th>Trade-off</th></tr>
+<tr><td>Full ORM</td><td>Prisma, TypeORM, SQLAlchemy ORM, Django ORM, GORM</td><td>fast CRUD, migrations included; can hide slow queries, and complex SQL gets awkward</td></tr>
+<tr><td>Query builder</td><td>Drizzle, Kysely, SQLAlchemy Core, sqlc (Go, generates code from SQL)</td><td>SQL-shaped and typed; you think in SQL</td></tr>
+<tr><td>Raw SQL + a driver</td><td>pg, psycopg, pgx, sqlx (Rust, compile-time checked)</td><td>full control; you write the mapping</td></tr>
+</table>
+<p><b>Connection pooling:</b> ORMs keep a pool per process. In serverless, each invocation can open new connections and exhaust Postgres, so use a pooler (PgBouncer, Prisma Accelerate, Neon's pooler).</p>
+<div class="callout seclens"><b class="t">Security lens · ORMs</b><p>ORMs parameterise by default, but raw-query escape hatches and dynamic <code>orderBy</code> fields built from user input reintroduce injection. Allow-list sortable fields.</p></div>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>100.1 <span class="levels">basic</span> Turn on query logging in an ORM project and find an N+1. Fix it with an include or join and count the queries before and after.</summary><div><p>Before: 1 + N queries (one per row). After: 1–2 queries. The logs make it obvious, so check them for every new list endpoint.</p></div></details>
+</div>
+`;export{e as default};

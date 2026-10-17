@@ -1,0 +1,27 @@
+<p class="goal">Finding out how a system behaves under load before your users do.</p>
+<pre data-lang="javascript"><code class="language-javascript">// k6 script: k6 run load.js
+import http from "k6/http"; import { check, sleep } from "k6";
+export const options = {
+  stages: [{ duration: "1m", target: 50 }, { duration: "3m", target: 50 }, { duration: "1m", target: 0 }],  // ramp, hold, down
+  thresholds: { http_req_duration: ["p(95)&lt;300"], http_req_failed: ["rate&lt;0.01"] },                   // pass/fail criteria
+};
+export default function () {
+  const r = http.get("https://staging.api/orders?limit=20");
+  check(r, { "200": x =&gt; x.status === 200 });
+  sleep(1);                                                          // think time between actions
+}</code></pre>
+<h3>Reading the results</h3>
+<ul>
+<li><b>Percentiles, not averages:</b> p50 is the typical user; p95/p99 are the unlucky ones. An average of 80 ms can hide a p99 of 4 s.</li>
+<li><b>Throughput</b> (requests per second) rises with load until it saturates. After that, latency climbs steeply: that knee is your capacity.</li>
+<li><b>Little's law:</b> concurrent requests = throughput × latency. At 200 req/s and 0.5 s latency, 100 requests are in flight, so you need a pool that big.</li>
+</ul>
+<table><tr><th>Test type</th><th>Question</th></tr>
+<tr><td>Load</td><td>does it meet targets at the expected peak?</td></tr>
+<tr><td>Stress</td><td>where does it break, and how (gracefully?)</td></tr>
+<tr><td>Spike</td><td>survives a sudden 10× burst (a festival sale)?</td></tr>
+<tr><td>Soak</td><td>stays stable for hours (memory leaks, connection exhaustion)?</td></tr></table>
+<p>Test against staging with production-like data volumes, from a machine that isn't the bottleneck itself, and watch the server's metrics (CPU, DB, pools) during the run. Other tools: Locust (Python), Gatling, vegeta, <code>oha</code>.</p>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>110.1 <span class="levels">basic</span> Load-test a local API with k6 at 10, 50 and 100 virtual users. Plot p95 latency against throughput and find the knee.</summary><div><p>Throughput rises, then flattens, while p95 shoots up: that point is capacity. Note the server CPU, database and pool usage at that moment to find the bottleneck.</p></div></details>
+</div>

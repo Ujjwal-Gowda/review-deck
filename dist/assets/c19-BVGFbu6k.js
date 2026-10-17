@@ -1,0 +1,32 @@
+const e=`<p class="goal">Four philosophies of failure, and how to design for it.</p>
+<pre data-lang="go"><code class="language-go">f, err := os.Open("stock.csv")          // Go: errors are ordinary return values
+if err != nil {
+    return fmt.Errorf("loading stock: %w", err)   // wrap with context, pass it up
+}
+defer f.Close()</code></pre>
+<pre data-lang="rust"><code class="language-rust">fn load(path: &amp;str) -&gt; Result&lt;String, std::io::Error&gt; {
+    let text = std::fs::read_to_string(path)?;   // '?' = if Err, return it right away
+    Ok(text.trim().to_string())
+}
+match load("stock.csv") {
+    Ok(t) =&gt; println!("{t}"),
+    Err(e) =&gt; eprintln!("failed: {e}"),
+}</code></pre>
+<div class="callout key"><b class="t">Trade-offs</b>
+<table>
+<tr><th>Strategy</th><th>Pros</th><th>Cons</th></tr>
+<tr><td><b>Exceptions</b> (Python, Java, JS, C#)</td><td>The happy path reads cleanly; errors propagate automatically</td><td>Invisible control flow: any call might throw, and the signature doesn't say so; easy to forget to handle</td></tr>
+<tr><td><b>Error values</b> (Go)</td><td>Explicit, visible, simple</td><td>Verbose (<code>if err != nil</code> everywhere); easy to ignore an error by accident</td></tr>
+<tr><td><b>Result/Option types</b> (Rust, Haskell, Swift)</td><td>Explicit <i>and</i> enforced by the compiler; <code>?</code> keeps it concise</td><td>Type plumbing; a learning curve</td></tr>
+<tr><td><b>Return codes + errno</b> (C)</td><td>Zero overhead</td><td>Trivially ignored; no context</td></tr>
+</table></div>
+<h3>Design principles (in any language)</h3>
+<ul>
+<li><b>Recoverable vs unrecoverable.</b> A missing file or bad user input is expected: handle it. A broken invariant is a bug: crash loudly (<code>panic!</code>, <code>assert</code>). Don't try to "recover" from bugs.</li>
+<li><b>Fail fast:</b> validate at the boundary (API input, config load) so bad data never gets deep inside.</li>
+<li><b>Add context as errors propagate:</b> "loading stock: open stock.csv: permission denied" beats "permission denied".</li>
+<li><b>Handle an error once:</b> either handle it or pass it up, not log-and-rethrow at every layer.</li>
+<li><b>Clean up on every path:</b> <code>with</code>, <code>defer</code>, <code>finally</code>, RAII/Drop.</li>
+<li><b>In distributed systems:</b> retries with <b>exponential backoff + jitter</b>, <b>timeouts</b> on every network call, <b>idempotency</b> (repeating a request is safe; vital for payments), and <b>circuit breakers</b>.</li>
+</ul>
+`;export{e as default};

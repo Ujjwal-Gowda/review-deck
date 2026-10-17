@@ -1,0 +1,40 @@
+<p class="goal">Binary search is more than "find x in a sorted list". It's a way to answer any yes/no question whose answer flips only once.</p>
+<h3>Linear vs binary</h3>
+<p>Linear search checks every item: O(n), and works on anything. Binary search halves a <b>sorted</b> range each step: O(log n). A million items take about 20 steps.</p>
+<div class="diagram">find 9 in [1,2,3,5,8,9,12,15]
+lo=0 hi=8 → mid=4 (8)  8 &lt; 9  → lo=5
+lo=5 hi=8 → mid=6 (12) 12 &gt; 9 → hi=6
+lo=5 hi=6 → mid=5 (9)  found at index 5</div>
+<h3>The template that doesn't have off-by-one bugs</h3>
+<pre data-lang="python"><code class="language-python">def lower_bound(a, target):
+    """First index i with a[i] &gt;= target (len(a) if there's none)."""
+    lo, hi = 0, len(a)              # the answer is always in [lo, hi]
+    while lo &lt; hi:
+        mid = (lo + hi) // 2
+        if a[mid] &lt; target:
+            lo = mid + 1            # the answer is to the right of mid
+        else:
+            hi = mid                # mid might be the answer; keep it
+    return lo
+# contains(a, t):   i = lower_bound(a, t); return i &lt; len(a) and a[i] == t
+# upper_bound: first index with a[i] &gt; target (change &lt; to &lt;=).   count of t = upper − lower.</code></pre>
+<p>Python's <code>bisect.bisect_left</code> is exactly this. Go has <code>sort.Search</code> / <code>slices.BinarySearch</code>; Rust has <code>slice.binary_search</code> / <code>partition_point</code>; C has <code>bsearch</code>.</p>
+<h3>Binary search on the answer</h3>
+<p>If "is capacity c enough?" is false for small c and true from some point on, binary-search the smallest c that works:</p>
+<pre data-lang="python"><code class="language-python">def min_van_capacity(orders_kg, vans):
+    def fits(cap):                               # can `vans` vans carry the orders IN ORDER with this capacity?
+        used, load = 1, 0
+        for w in orders_kg:
+            if load + w &gt; cap: used, load = used + 1, 0
+            load += w
+        return used &lt;= vans
+    lo, hi = max(orders_kg), sum(orders_kg)      # the answer lies between these
+    while lo &lt; hi:
+        mid = (lo + hi) // 2
+        if fits(mid): hi = mid
+        else: lo = mid + 1
+    return lo</code></pre>
+<p>The same pattern answers: the minimum speed to finish in time, the largest square that fits, the first bad commit (<code>git bisect</code>), and the lowest price at which demand drops. Look for a <b>monotonic yes/no question</b>.</p>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>0.1 <span class="levels">basic</span> Given a sorted list of order timestamps, count how many fall between 10:00 and 11:00 in O(log n) using lower and upper bounds.</summary><div><p><code>bisect_right(ts, t11) - bisect_left(ts, t10)</code>. Two binary searches, no scanning.</p></div></details>
+</div>

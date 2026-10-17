@@ -1,0 +1,26 @@
+<p class="goal">Describing cloud infrastructure as code: reviewable, repeatable and reversible.</p>
+<pre data-lang="plaintext"><code class="language-plaintext"># main.tf
+terraform {
+  required_providers { aws = { source = "hashicorp/aws", version = "~&gt; 5.0" } }
+  backend "s3" { bucket = "freshon-tfstate", key = "prod/terraform.tfstate", region = "ap-south-1", use_lockfile = true }
+}
+provider "aws" { region = var.region }
+variable "region" { default = "ap-south-1" }
+
+resource "aws_s3_bucket" "invoices" { bucket = "freshon-invoices-prod" }
+resource "aws_s3_bucket_public_access_block" "invoices" {
+  bucket = aws_s3_bucket.invoices.id                     # a reference creates a dependency (the graph)
+  block_public_acls = true; block_public_policy = true; ignore_public_acls = true; restrict_public_buckets = true
+}
+module "vpc" { source = "terraform-aws-modules/vpc/aws"; version = "~&gt; 5.0"; cidr = "10.0.0.0/16" }
+output "bucket" { value = aws_s3_bucket.invoices.bucket }</code></pre>
+<pre data-lang="shell"><code class="language-bash">terraform init       # download providers, configure the state backend
+terraform plan       # DIFF: what would change (+ create, ~ update, - destroy). Read it every time.
+terraform apply      # make it so
+terraform destroy    # tear it all down (careful)</code></pre>
+<h3>State</h3>
+<p>Terraform records what it created in a <b>state file</b>, mapping config to real resource IDs. Keep it in a <b>remote backend</b> (S3, Terraform Cloud) with <b>locking</b>, so two applies can't collide. It contains secrets, so restrict access. <b>Drift</b> (someone clicked in the console) shows up in the next plan. <code>terraform import</code> adopts existing resources.</p>
+<p>Alternatives: OpenTofu (the open-source fork), Pulumi (real programming languages), AWS CDK, CloudFormation, Crossplane (Kubernetes-native).</p>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>147.1 <span class="levels">basic</span> Write Terraform that creates a private bucket with public access blocked. Run plan, apply, change a tag, plan again, then destroy.</summary><div><p>The second plan shows a single in-place change (~) for the tag. That's declarative diffing. Keep state remote once more than one person applies.</p></div></details>
+</div>

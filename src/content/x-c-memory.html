@@ -1,0 +1,54 @@
+<p class="goal">Allocating memory at runtime, and the discipline that keeps C programs free of leaks and crashes.</p>
+<h3>The four functions</h3>
+<table>
+<tr><th>Call</th><th>Does</th><th>Returns</th></tr>
+<tr><td><code>malloc(bytes)</code></td><td>allocates uninitialised memory</td><td>a pointer, or <b>NULL</b> on failure</td></tr>
+<tr><td><code>calloc(n, size)</code></td><td>allocates n × size bytes, zeroed</td><td>a pointer or NULL</td></tr>
+<tr><td><code>realloc(p, bytes)</code></td><td>resizes (may move the block)</td><td>the new pointer or NULL, in which case the old block is <b>still valid</b></td></tr>
+<tr><td><code>free(p)</code></td><td>releases it</td><td>nothing; <code>free(NULL)</code> is safe</td></tr>
+</table>
+<pre data-lang="c"><code class="language-c">int *nums = malloc(n * sizeof *nums);            /* sizeof *ptr: stays correct if the type changes */
+if (nums == NULL) { perror("malloc"); return -1; }
+
+int *bigger = realloc(nums, 2 * n * sizeof *nums);
+if (bigger == NULL) { free(nums); return -1; }   /* NEVER nums = realloc(nums, …): on failure you'd leak nums */
+nums = bigger;
+
+free(nums);
+nums = NULL;                                      /* avoids accidental use-after-free / double free */</code></pre>
+<h3>Ownership: decide and document who frees</h3>
+<pre data-lang="c"><code class="language-c">/* Returns a newly allocated string. The CALLER must free() it. */
+char *order_label(const Order *o);
+
+/* Borrows s; doesn't keep it after returning. */
+void log_label(const char *s);
+
+/* Takes ownership of items; frees them in cart_free(). */
+Cart *cart_new(Item *items, size_t n);</code></pre>
+<h3>The goto-cleanup pattern</h3>
+<pre data-lang="c"><code class="language-c">int process(const char *path) {
+    int rc = -1;
+    FILE *f = NULL; char *buf = NULL;
+    f = fopen(path, "r");            if (!f) goto out;
+    buf = malloc(4096);              if (!buf) goto out;
+    if (!fgets(buf, 4096, f))        goto out;
+    /* … work … */
+    rc = 0;
+out:                                  /* one exit path frees everything that was acquired */
+    free(buf);
+    if (f) fclose(f);
+    return rc;
+}</code></pre>
+<h3>Bug catalogue and tools</h3>
+<table>
+<tr><th>Bug</th><th>Symptom</th><th>Catch it with</th></tr>
+<tr><td>leak (never freed)</td><td>memory grows until the process is killed</td><td><code>valgrind --leak-check=full</code>, ASan's LeakSanitizer</td></tr>
+<tr><td>use after free</td><td>random corruption, a security hole</td><td>ASan</td></tr>
+<tr><td>double free</td><td>crash inside malloc</td><td>ASan</td></tr>
+<tr><td>buffer overflow</td><td>corrupts neighbouring data</td><td>ASan, <code>-D_FORTIFY_SOURCE=2</code></td></tr>
+<tr><td>uninitialised read</td><td>works on your machine only</td><td>valgrind, MSan (clang), <code>-Wall</code></td></tr>
+</table>
+<p>For many small objects with the same lifetime, an <b>arena</b> (one big block handed out piece by piece and freed all at once) is simpler and faster than individual frees. It's a common pattern in parsers and game engines.</p>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>0.1 <span class="levels">basic</span> Implement a growable <code>IntVec</code> (push, get, free) with capacity doubling, then deliberately introduce a leak, a use-after-free and an overflow, and see how ASan reports each. (It&#39;s also the <code>vec_push</code> drill.)</summary><div><p>Build with <code>-g -fsanitize=address</code>. A leak shows as "detected memory leaks" with the allocation&#39;s stack trace; use-after-free and overflow show the bad access, the allocation and the free locations. Reading these reports is a core C skill.</p></div></details>
+</div>

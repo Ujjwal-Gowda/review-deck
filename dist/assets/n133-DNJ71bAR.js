@@ -1,0 +1,15 @@
+const e=`<p class="goal">Serving content from servers close to users, and taking load off your origin.</p>
+<div class="diagram">user in Bengaluru → nearest edge PoP (Chennai) ──hit──► cached response in ~10 ms
+                                           └─miss─► origin (your server / S3 in Mumbai) → cached at the edge for next time</div>
+<ul>
+<li><b>What to cache:</b> static assets with hashed filenames (<code>Cache-Control: public, max-age=31536000, immutable</code>), images, public pages (short TTL). Never cache per-user responses publicly (<code>Cache-Control: private</code>).</li>
+<li><b>Cache key:</b> by default the URL. Extra query params, cookies or headers in the key fragment the cache, so strip what doesn't matter.</li>
+<li><b>Invalidation/purge:</b> changing filenames (hashes) beats purging. Purge by URL or tag for HTML.</li>
+<li><code>stale-while-revalidate</code>: serve slightly stale content instantly while refreshing in the background.</li>
+<li><b>Edge features:</b> TLS termination, HTTP/3, compression, image resizing, WAF/DDoS protection, and edge functions (Cloudflare Workers, Netlify Edge).</li>
+</ul>
+<p>Netlify, Vercel and Cloudflare Pages put your static sites (like the FreshOn demos) behind a CDN automatically; that's why they load fast worldwide. Check hits and misses with the <code>x-cache</code>, <code>cf-cache-status</code> or <code>age</code> headers (<code>curl -I</code>).</p>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>133.1 <span class="levels">basic</span> Check the cache headers on the FreshOn demo JS assets and HTML. Which are cached long-term, and why is that safe?</summary><div><p>Hashed asset filenames can be cached for a year (the name changes when the content changes). The HTML should revalidate (short or no max-age) so new deploys are picked up.</p></div></details>
+</div>
+`;export{e as default};
