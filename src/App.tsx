@@ -26,6 +26,7 @@ import { PredictWidget } from "./components/PredictWidget";
 import { KnowledgeCheck } from "./components/KnowledgeCheck";
 import { ReviewDeck } from "./components/ReviewDeck";
 import { NotesDrawer } from "./components/NotesDrawer";
+import { ChapterDigest } from "./components/ChapterDigest";
 import { PREDICT_CHALLENGES, KNOWLEDGE_QUIZZES } from "./data/learningWidgets";
 
 Object.entries({ python, c, javascript, typescript, go, rust, bash, sql, http, yaml, plaintext, xml, css, json, ini })
@@ -85,6 +86,7 @@ export function App() {
   const [zen, setZen] = usePersisted("ef-zen-mode", false);
   const [fontSize, setFontSize] = usePersisted<FontSize>("ef-font-size", "normal");
   const [fontFamily, setFontFamily] = usePersisted<FontFamily>("ef-font-family", "sans");
+  const [bulletMode, setBulletMode] = usePersisted("ef-bullet-mode", false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const doneSet = useMemo(() => new Set(done), [done]);
@@ -115,6 +117,7 @@ export function App() {
       if (typing(e) || e.ctrlKey || e.metaKey || e.altKey) return;
       if (e.key === "[") setCollapsed(c => !c);
       else if (e.key === "z" || e.key === "Z") setZen(z => !z);
+      else if (e.key === "b" || e.key === "B") setBulletMode(b => !b);
       else if (e.key === "/") { e.preventDefault(); document.getElementById("find")?.focus(); }
       else if (current && (e.key === "ArrowRight" || e.key === "ArrowLeft")) {
         const to = byId.get(current.id + (e.key === "ArrowRight" ? 1 : -1));
@@ -128,7 +131,18 @@ export function App() {
   let view;
   if (isGlossary(current) || route === "glossary" || route.startsWith("glossary?")) view = <GlossaryView />;
   else if (route === "review") view = <ReviewDeck />;
-  else if (current) view = <ChapterView key={current.id} ch={current} done={doneSet.has(current.id)} onDone={() => toggleDone(current.id)} topics={topics} setTopics={setTopics} />;
+  else if (current) view = (
+    <ChapterView
+      key={current.id}
+      ch={current}
+      done={doneSet.has(current.id)}
+      onDone={() => toggleDone(current.id)}
+      topics={topics}
+      setTopics={setTopics}
+      bulletMode={bulletMode}
+      onToggleBulletMode={() => setBulletMode(b => !b)}
+    />
+  );
   else if (searchQ !== null) view = <SearchView q={searchQ} />;
   else view = <Home doneSet={doneSet} last={last} />;
 
@@ -166,6 +180,15 @@ export function App() {
           aria-label="Toggle Zen mode"
         >
           📖
+        </button>
+
+        <button
+          className={`iconbtn${bulletMode ? " active" : ""}`}
+          onClick={() => setBulletMode(b => !b)}
+          title={bulletMode ? "Exit Bullet-Points Mode (B)" : "Enter Bullet-Points & Scannable Mode (B)"}
+          aria-label="Toggle bullet-points mode"
+        >
+          •≡
         </button>
 
         <button
@@ -214,6 +237,8 @@ export function App() {
         onToggleTheme={() => setTheme(nextTheme[theme])}
         onToggleZen={() => setZen(z => !z)}
         isZen={zen}
+        onToggleBulletMode={() => setBulletMode(b => !b)}
+        isBulletMode={bulletMode}
       />
     </div>
   );
@@ -339,9 +364,10 @@ function Sidebar({ current, doneSet, open, onNavigate }: { current?: number; don
   );
 }
 
-function ChapterView({ ch, done, onDone, topics, setTopics }: {
+function ChapterView({ ch, done, onDone, topics, setTopics, bulletMode, onToggleBulletMode }: {
   ch: Chapter; done: boolean; onDone: () => void;
   topics: Record<string, boolean>; setTopics: (f: (t: Record<string, boolean>) => Record<string, boolean>) => void;
+  bulletMode: boolean; onToggleBulletMode: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [body, setBody] = useState<string | null>(null);
@@ -352,8 +378,8 @@ function ChapterView({ ch, done, onDone, topics, setTopics }: {
   const si = stageOf(part.title), meta = PART_META[part.title];
   const isFirst = part.chapters[0].id === ch.id, isLast = part.chapters.at(-1)!.id === ch.id;
 
-  const challenge = PREDICT_CHALLENGES[ch.id];
-  const quizzes = KNOWLEDGE_QUIZZES[ch.id];
+  const challenge = PREDICT_CHALLENGES[ch.id] ?? (ch.content.map(k => PREDICT_CHALLENGES[k]).find(Boolean) as any);
+  const quizzes = KNOWLEDGE_QUIZZES[ch.id] ?? (ch.content.map(k => KNOWLEDGE_QUIZZES[k]).find(Boolean) as any);
 
   useEffect(() => {
     let live = true;
@@ -401,7 +427,7 @@ function ChapterView({ ch, done, onDone, topics, setTopics }: {
   const words = body ? body.replace(/<[^>]+>/g, " ").split(/\s+/).length : 0;
 
   return (
-    <div className={`reader${heads.length > 1 ? "" : " solo"}`} style={{ ["--h" as string]: hueOf(ch) }}>
+    <div className={`reader${heads.length > 1 ? "" : " solo"}${bulletMode ? " bullet-mode" : ""}`} style={{ ["--h" as string]: hueOf(ch) }}>
       <article>
         <Art stage={si} hue={hueOf(ch)} seed={ch.id + 1} className="banner" height={150} />
         <div className="crumbs">
@@ -413,27 +439,27 @@ function ChapterView({ ch, done, onDone, topics, setTopics }: {
           <span className={`badge lv-${ch.level}`}>{LEVEL_NAME[ch.level]}</span>
           {words > 0 && <span className="muted">~{Math.max(1, Math.round(words / 200))} min read</span>}
           <span className="muted">{learned}/{ch.topics.length} topics checked off</span>
+          <button
+            type="button"
+            className={`badge bullet-badge-toggle ${bulletMode ? "active" : ""}`}
+            onClick={onToggleBulletMode}
+            title="Toggle Scannable Bullet Points Mode"
+          >
+            {bulletMode ? "● Bullet Mode Active" : "○ Bullet Mode"}
+          </button>
         </div>
 
         <NotesDrawer chapterId={ch.id} chapterTitle={ch.title} />
 
-        <details className="topics">
-          <summary>Topics in this chapter ({learned}/{ch.topics.length})</summary>
-          <div className="topic-grid">
-            {ch.topics.map(t => {
-              const k = `${ch.id}:${t}`;
-              return (
-                <label key={t}>
-                  <input
-                    type="checkbox"
-                    checked={!!topics[k]}
-                    onChange={() => setTopics(s => ({ ...s, [k]: !s[k] }))}
-                  /> {t}
-                </label>
-              );
-            })}
-          </div>
-        </details>
+        <ChapterDigest
+          chapterId={ch.id}
+          chapterTitle={ch.title}
+          topics={ch.topics}
+          checkedTopics={topics}
+          onToggleTopic={(k) => setTopics(s => ({ ...s, [k]: !s[k] }))}
+          isBulletMode={bulletMode}
+          onToggleBulletMode={onToggleBulletMode}
+        />
 
         {isFirst && meta && (
           <div className="partintro">

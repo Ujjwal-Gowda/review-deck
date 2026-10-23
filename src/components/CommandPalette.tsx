@@ -10,6 +10,8 @@ interface Props {
   onToggleTheme: () => void;
   onToggleZen: () => void;
   isZen: boolean;
+  onToggleBulletMode?: () => void;
+  isBulletMode?: boolean;
 }
 
 interface PaletteItem {
@@ -21,7 +23,7 @@ interface PaletteItem {
   action: () => void;
 }
 
-export function CommandPalette({ isOpen, onClose, onToggleTheme, onToggleZen, isZen }: Props) {
+export function CommandPalette({ isOpen, onClose, onToggleTheme, onToggleZen, isZen, onToggleBulletMode, isBulletMode }: Props) {
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -43,6 +45,14 @@ export function CommandPalette({ isOpen, onClose, onToggleTheme, onToggleZen, is
         subtitle: "Return to the main curriculum ladder",
         badge: "Nav",
         action: () => { location.hash = "#/"; onClose(); }
+      },
+      {
+        id: "action-bullet-mode",
+        category: "Action",
+        title: isBulletMode ? "Exit Bullet-Points Mode" : "Enable Bullet-Points & Scannable Mode",
+        subtitle: "Structure content into bite-sized bullet points and high-contrast chips (Shortcut: B)",
+        badge: "View",
+        action: () => { onToggleBulletMode?.(); onClose(); }
       },
       {
         id: "action-review",

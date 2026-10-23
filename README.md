@@ -15,6 +15,10 @@ npm run build    # typecheck & bundle
 - **Spaced Repetition Review Deck (`#/review`)**: Flashcards for active recall on completed chapters based on 1-day, 7-day, and 30-day forgetting curves.
 
 ### Interactive Features
+- **Executive Bullet-Points Digest**: Embedded on all 349 chapters, providing instant scannability with core mental models, key principles, traps to avoid, and an interactive topic checklist.
+- **Scannable "Bullet-Points Mode" (`B` / `•≡`)**: Toggle to convert narrative paragraphs across any chapter into scannable micro-cards with bold concept chips.
+- **One-Click Markdown Bullets Export**: Copy complete chapter takeaways formatted as clean Markdown bullet points directly to clipboard.
+- **Stage-Themed Bullet Typography**: Custom geometric halo bullets and numbered pill badges harmonized with the active stage's generative color theme.
 - **Command Palette (`⌘K` / `Ctrl+K`)**: Instant search and navigation across all 349 chapters, 15 stages, tracks, glossary terms, and UI actions.
 - **Zen / Focus Mode (`Z`)**: Distraction-free reading layout with maximized typography.
 - **Typography & Font Controls**: Switch between modern sans-serif (`Inter`) and literary serif (`Source Serif 4`), plus size scaling (Normal, Large, Extra Large).

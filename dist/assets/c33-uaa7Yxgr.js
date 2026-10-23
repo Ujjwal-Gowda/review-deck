@@ -1,0 +1,164 @@
+const t=`<p class="goal">Mastering Python, JavaScript, TypeScript, and Go side by side from absolute first principles.</p>
+
+<h3>1. Cross-Language Quick Reference</h3>
+<table>
+<tr><th>Concept</th><th>Python</th><th>JavaScript (ESM)</th><th>TypeScript</th><th>Go</th></tr>
+<tr><td>Run / Test</td><td><code>python3 a.py</code></td><td><code>node a.mjs</code></td><td><code>npx tsx a.ts</code></td><td><code>go run .</code></td></tr>
+<tr><td>Variable</td><td><code>x = 5</code></td><td><code>const x = 5; let y = 1;</code></td><td><code>const x: number = 5;</code></td><td><code>x := 5</code> / <code>var x int</code></td></tr>
+<tr><td>Function</td><td><code>def f(a: int) -&gt; int:</code></td><td><code>function f(a) {}</code></td><td><code>function f(a: number): number {}</code></td><td><code>func f(a int) int {}</code></td></tr>
+<tr><td>Multiple returns</td><td>tuple <code>return a, b</code></td><td>array/object <code>return [a, b]</code></td><td>array/object (typed)</td><td><code>return a, b</code> (native)</td></tr>
+<tr><td>Array / list</td><td><code>list</code>: <code>[1, 2]</code></td><td>Array: <code>[1, 2]</code></td><td><code>number[]</code>: <code>[1, 2]</code></td><td>Slice: <code>[]int{1, 2}</code></td></tr>
+<tr><td>Hash Map</td><td><code>dict</code>: <code>{"k": v}</code></td><td>Object: <code>{k: v}</code>, <code>Map</code></td><td><code>Record&lt;K,V&gt;</code> / <code>Map&lt;K,V&gt;</code></td><td><code>map[string]int{"k": 1}</code></td></tr>
+<tr><td>Custom Type</td><td><code>class</code> / <code>@dataclass</code></td><td><code>class</code> / object prototype</td><td><code>interface</code> / <code>type</code></td><td><code>struct</code></td></tr>
+<tr><td>Absence of value</td><td><code>None</code></td><td><code>null</code> and <code>undefined</code></td><td><code>null</code> and <code>undefined</code></td><td><code>nil</code> (plus zero-values)</td></tr>
+<tr><td>Errors</td><td><code>try ... except</code></td><td><code>try ... catch</code></td><td><code>try ... catch</code> (typed catch)</td><td>Explicit <code>val, err := fn()</code></td></tr>
+<tr><td>Polymorphism</td><td>Duck typing, ABC, Protocol</td><td>Prototypes, duck typing</td><td>Structural interfaces</td><td>Implicit interfaces</td></tr>
+<tr><td>Concurrency</td><td><code>asyncio</code>; GIL threads; procs</td><td>Event loop, Promises, Web Workers</td><td>Event loop, Promises (static types)</td><td>Goroutines + Channels (CSP)</td></tr>
+<tr><td>Package Manager</td><td><b>uv</b>, pip (<code>pyproject.toml</code>)</td><td>npm, pnpm (<code>package.json</code>)</td><td>npm, pnpm, <code>tsconfig.json</code></td><td><code>go mod</code> (<code>go.mod</code>)</td></tr>
+</table>
+
+<h3>2. The Mental Model: How Each Language Sees Data &amp; Memory</h3>
+<div class="diagram">  PYTHON: Everything is a Heap Object
+  x = 42   ──► [PyObject header | refcount=1 | type=&amp;PyLong_Type | ob_digit=42]
+  (Variables are references/names bound to heap objects)
+
+  JAVASCRIPT / TYPESCRIPT: V8 Heap &amp; Primitives
+  let x = 42   ──► In V8: Small integers (Smi) encoded inline in pointer bits;
+  let o = {}   ──► Objects allocated on V8 Heap with Hidden Classes (Shape)
+
+  GO: Direct Memory &amp; Value Semantics
+  var x int = 42 ──► Exact 8 bytes placed directly on the Goroutine STACK.
+  var s MyStruct ──► Contiguous fields on stack; escapes to heap only if pointer outlives frame</div>
+
+<h3>3. Variables, Types, and Immutability in Detail</h3>
+<h4>Python</h4>
+<pre data-lang="python"><code class="language-python"># Dynamically typed: types are attached to runtime values, not the variable name
+x = 42         # x points to an int object
+x = "hello"    # perfectly legal at runtime, but discouraged in typed code
+
+# Optional static type hints checked by pyright or mypy
+count: int = 10
+items: list[str] = ["apple", "banana"]</code></pre>
+
+<h4>JavaScript vs TypeScript</h4>
+<pre data-lang="typescript"><code class="language-typescript">// JavaScript: dynamic and weakly typed
+const pi = 3.14159;  // cannot be reassigned
+let counter = 0;     // reassignable
+// counter = "done"; // Valid JS, but TypeScript compiler rejects this:
+
+// TypeScript: static, erased type system
+let typedCounter: number = 0;
+// typedCounter = "done"; // Error: Type 'string' is not assignable to type 'number'
+
+// TypeScript Interfaces and Discriminated Unions
+interface User {
+  id: number;
+  name: string;
+  role: "admin" | "member"; // Union of string literals
+}</code></pre>
+
+<h4>Go</h4>
+<pre data-lang="go"><code class="language-go">// Statically and strongly typed. Zero-initialized by default!
+var count int            // defaults to 0 (no uninitialized garbage memory)
+var name string          // defaults to ""
+var active bool          // defaults to false
+
+// Short variable declaration (type inferred inside functions):
+total := 100.5           // float64 inferred
+const MaxRetries = 3     // untyped constant until used</code></pre>
+
+<h3>4. Functions, Scope, and Closures</h3>
+<p>All four languages treat functions as <b>first-class citizens</b> (they can be stored in variables, passed into other functions as arguments, and returned from functions):</p>
+<pre data-lang="python"><code class="language-python"># Python closure: remembers outer variables
+def make_counter(start: int = 0):
+    val = start
+    def step() -> int:
+        nonlocal val     # required in Python to modify outer scope
+        val += 1
+        return val
+    return step
+
+c = make_counter(10)
+print(c()) # 11
+print(c()) # 12</code></pre>
+
+<pre data-lang="typescript"><code class="language-typescript">// TypeScript closure & arrow function
+function makeCounter(start: number = 0): () => number {
+  let val = start;
+  return () => ++val; // outer variable 'val' captured by reference
+}
+
+const count = makeCounter(10);
+console.log(count()); // 11
+console.log(count()); // 12</code></pre>
+
+<pre data-lang="go"><code class="language-go">// Go closure: outer variable escapes to heap automatically
+func makeCounter(start int) func() int {
+    val := start
+    return func() int {
+        val++
+        return val
+    }
+}
+
+// In main():
+count := makeCounter(10)
+fmt.Println(count()) // 11
+fmt.Println(count()) // 12</code></pre>
+
+<h3>5. Error Handling: Exceptions vs Explicit Return Values</h3>
+<h4>Python &amp; JavaScript/TypeScript: Exception Trapping</h4>
+<pre data-lang="python"><code class="language-python">try:
+    with open("config.json") as f:
+        data = json.load(f)
+except FileNotFoundError as err:
+    print(f"File missing: {err}")
+except json.JSONDecodeError as err:
+    print(f"Invalid JSON: {err}")
+finally:
+    print("Always executed for cleanup")</code></pre>
+
+<h4>Go: Explicit Error Values (No Exceptions)</h4>
+<pre data-lang="go"><code class="language-go">// In Go, functions return (Result, error). Errors are ordinary values!
+func LoadConfig(path string) (*Config, error) {
+    bytes, err := os.ReadFile(path)
+    if err != nil {
+        return nil, fmt.Errorf("reading config failed: %w", err)
+    }
+    var cfg Config
+    if err := json.Unmarshal(bytes, &cfg); err != nil {
+        return nil, fmt.Errorf("parsing config failed: %w", err)
+    }
+    return &cfg, nil
+}
+
+// Caller checks explicitly:
+cfg, err := LoadConfig("config.json")
+if err != nil {
+    log.Fatalf("Fatal: %v", err)
+}</code></pre>
+
+<h3>6. Concurrency: Event Loops vs Goroutines</h3>
+<div class="diagram">  JavaScript / TypeScript (Single Thread + Event Loop)
+  [Call Stack] ──► [WebAPIs / Libuv] ──► [Microtask Queue] (Promises) ──► [Macrotask Queue] (Timers)
+
+  Go (M:N Preemptive Scheduler)
+  Goroutine 1 ──┐
+  Goroutine 2 ──┼──► [Logical Processor P] ──► [OS Thread M] ──► [CPU Core]
+  Goroutine 3 ──┘       (Runs thousands of concurrent goroutines with 2KB stack)</div>
+
+<ul>
+  <li><b>Python:</b> Has a Global Interpreter Lock (GIL) in CPython. For I/O concurrency, use <code>asyncio</code> (cooperative single-threaded event loop). For multi-core CPU parallelism, use <code>multiprocessing</code>.</li>
+  <li><b>JavaScript / TypeScript:</b> Runs on a single OS thread with an asynchronous Event Loop. Long CPU computations block the UI or server; I/O is completely non-blocking via Promises and <code>async/await</code>.</li>
+  <li><b>Go:</b> Uses lightweight <b>Goroutines</b> (costing only ~2KB of initial stack memory vs 2MB for an OS thread). Multiplexes millions of goroutines across all CPU cores with channels for safe synchronization (CSP).</li>
+</ul>
+
+<div class="callout key"><b class="t">Language Selection Matrix</b>
+<table>
+<tr><th>Language</th><th>When To Choose It</th><th>When To Avoid It</th></tr>
+<tr><td><b>Python</b></td><td>Data science, AI/LLMs, automation scripts, rapid backend prototypes (FastAPI)</td><td>Extremely high-throughput low-latency microservices, native browser UIs</td></tr>
+<tr><td><b>JavaScript</b></td><td>Universal runtime; web browsers, basic Node.js scripts</td><td>Large mission-critical enterprise codebases without TypeScript</td></tr>
+<tr><td><b>TypeScript</b></td><td>Modern web frontends (React/Next.js), full-stack Node.js/Bun servers</td><td>Low-level OS kernels, memory-constrained microcontrollers</td></tr>
+<tr><td><b>Go</b></td><td>High-performance cloud services, distributed systems, Docker/K8s tooling, CLIs</td><td>Complex domain object graphs, GUI frontends</td></tr>
+</table></div>
+`;export{t as default};

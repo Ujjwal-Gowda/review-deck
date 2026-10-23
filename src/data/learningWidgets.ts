@@ -15,7 +15,7 @@ export interface KnowledgeQuiz {
   explanation: string;
 }
 
-export const PREDICT_CHALLENGES: Record<number, PredictChallenge> = {
+export const PREDICT_CHALLENGES: Record<string | number, PredictChallenge> = {
 
   // Ch 350: Text Generation in Apps
   350: {
@@ -175,9 +175,241 @@ export const PREDICT_CHALLENGES: Record<number, PredictChallenge> = {
     correct: 1,
     explanation: "'p' holds the memory address of 'x'. Dereferencing '*p = 20' writes the value 20 directly into the memory location of 'x'. Thus 'x' is now 20.",
   },
+  // Ch 99: Rosetta Table & Shared Language Semantics
+  99: {
+    lang: "python",
+    code: `a = [1, 2]\nb = a\nb.append(3)\nprint(len(a))`,
+    question: "What does this code print?",
+    options: ["2", "3", "Error", "None"],
+    correct: 1,
+    explanation: "In Python and JavaScript, variables holding objects/lists store references. 'b = a' does not copy the list; both 'a' and 'b' point to the exact same list on the heap. Mutating via 'b' affects 'a'.",
+  },
+  // Ch 100: Toolchains & Application Startup
+  100: {
+    lang: "bash",
+    code: `$ python3 script.py\n# What is the FIRST step performed by the OS before Python code executes?`,
+    question: "What happens at the operating system level when starting an application?",
+    options: [
+      "The OS parses Python syntax and detects IndentationErrors",
+      "The OS executes execve, allocates a virtual address space, and maps the interpreter binary into memory",
+      "The OS immediately runs the main() function",
+      "The OS compiles Python bytecode into machine instructions",
+    ],
+    correct: 1,
+    explanation: "The OS kernel knows nothing about Python syntax; it creates a process via fork/execve, sets up virtual memory segments (text, data, heap, stack), attaches standard file descriptors (stdin/stdout/stderr), and then hands control to the CPython interpreter entrypoint.",
+  },
+  // Ch 112: TypeScript Mental Model
+  112: {
+    lang: "typescript",
+    code: `interface Point2D { x: number; y: number; }\nconst p3 = { x: 1, y: 2, z: 3 };\nconst p2: Point2D = p3;\nconsole.log(p2.x + p2.y);`,
+    question: "Why does TypeScript allow assigning p3 to p2?",
+    options: [
+      "Structural typing: p3 has all required fields (x and y) of Point2D with matching types",
+      "TypeScript implicitly casts p3 by stripping property z at runtime",
+      "The code fails to compile because z is not defined in Point2D",
+      "p3 inherits from Point2D using a hidden prototype link",
+    ],
+    correct: 0,
+    explanation: "TypeScript uses a structural type system (duck typing checked at compile-time). Because 'p3' satisfies the shape requirements of Point2D (it has 'x: number' and 'y: number'), the assignment is completely valid.",
+  },
+  // Ch 121: Python Overview & Mental Model
+  121: {
+    lang: "python",
+    code: `funcs = [lambda: i for i in range(3)]\nprint([f() for f in funcs])`,
+    question: "What does this Python code output?",
+    options: ["[0, 1, 2]", "[2, 2, 2]", "[3, 3, 3]", "TypeError"],
+    correct: 1,
+    explanation: "Python closures use late binding: closures look up the variable 'i' in the outer scope when called, not when defined. When the loop finishes, 'i' is 2. Thus all three lambdas return 2.",
+  },
+  // Ch 131: Go Overview & Mental Model
+  131: {
+    lang: "go",
+    code: `func divide(a, b int) (int, error) {\n    if b == 0 {\n        return 0, errors.New("cannot divide by zero")\n    }\n    return a / b, nil\n}`,
+    question: "Why does Go favor multiple return values (T, error) over try/catch exceptions?",
+    options: [
+      "To make error states an explicit part of the type signature and prevent hidden control flow jumps",
+      "Because Go's compiler cannot generate stack unwinding tables",
+      "Go does not allow returning pointers",
+      "Multiple returns execute 10x faster than conditionals",
+    ],
+    correct: 0,
+    explanation: "Go avoids exceptions because hidden non-local jumps make understanding failure paths difficult. Returning (result, error) forces every caller to explicitly inspect and handle or propagate errors.",
+  },
+  // Ch 150: JavaScript Runtime & Event Loop
+  150: {
+    lang: "javascript",
+    code: `console.log("A");\nsetTimeout(() => console.log("B"), 0);\nPromise.resolve().then(() => console.log("C"));\nconsole.log("D");`,
+    question: "What is the exact execution output in the JavaScript console?",
+    options: ["A, B, C, D", "A, D, C, B", "A, C, D, B", "A, D, B, C"],
+    correct: 1,
+    explanation: "Synchronous code runs first ('A', 'D'). Then the engine drains the microtask queue (Promise callback prints 'C'). Finally, the event loop picks the macrotask timer from the task queue (prints 'B'). Result: A, D, C, B.",
+  },
+  "c33": {
+    lang: "python",
+    code: `a = [1, 2]\nb = a\nb.append(3)\nprint(len(a))`,
+    question: "What does this code print?",
+    options: ["2", "3", "Error", "None"],
+    correct: 1,
+    explanation: "In Python and JavaScript, variables holding objects/lists store references. 'b = a' does not copy the list; both 'a' and 'b' point to the exact same list on the heap. Mutating via 'b' affects 'a'.",
+  },
+  "x-lang-toolchains": {
+    lang: "bash",
+    code: `$ python3 script.py\n# What is the FIRST step performed by the OS before Python code executes?`,
+    question: "What happens at the operating system level when starting an application?",
+    options: [
+      "The OS parses Python syntax and detects IndentationErrors",
+      "The OS executes execve, allocates a virtual address space, and maps the interpreter binary into memory",
+      "The OS immediately runs the main() function",
+      "The OS compiles Python bytecode into machine instructions",
+    ],
+    correct: 1,
+    explanation: "The OS kernel knows nothing about Python syntax; it creates a process via fork/execve, sets up virtual memory segments (text, data, heap, stack), attaches standard file descriptors (stdin/stdout/stderr), and then hands control to the CPython interpreter entrypoint.",
+  },
+  "c35": {
+    lang: "typescript",
+    code: `interface Point2D { x: number; y: number; }\nconst p3 = { x: 1, y: 2, z: 3 };\nconst p2: Point2D = p3;\nconsole.log(p2.x + p2.y);`,
+    question: "Why does TypeScript allow assigning p3 to p2?",
+    options: [
+      "Structural typing: p3 has all required fields (x and y) of Point2D with matching types",
+      "TypeScript implicitly casts p3 by stripping property z at runtime",
+      "The code fails to compile because z is not defined in Point2D",
+      "p3 inherits from Point2D using a hidden prototype link",
+    ],
+    correct: 0,
+    explanation: "TypeScript uses a structural type system (duck typing checked at compile-time). Because 'p3' satisfies the shape requirements of Point2D (it has 'x: number' and 'y: number'), the assignment is completely valid.",
+  },
+  "c34": {
+    lang: "python",
+    code: `funcs = [lambda: i for i in range(3)]\nprint([f() for f in funcs])`,
+    question: "What does this Python code output?",
+    options: ["[0, 1, 2]", "[2, 2, 2]", "[3, 3, 3]", "TypeError"],
+    correct: 1,
+    explanation: "Python closures use late binding: closures look up the variable 'i' in the outer scope when called, not when defined. When the loop finishes, 'i' is 2. Thus all three lambdas return 2.",
+  },
+  "c36": {
+    lang: "go",
+    code: `func divide(a, b int) (int, error) {\n    if b == 0 {\n        return 0, errors.New("cannot divide by zero")\n    }\n    return a / b, nil\n}`,
+    question: "Why does Go favor multiple return values (T, error) over try/catch exceptions?",
+    options: [
+      "To make error states an explicit part of the type signature and prevent hidden control flow jumps",
+      "Because Go's compiler cannot generate stack unwinding tables",
+      "Go does not allow returning pointers",
+      "Multiple returns execute 10x faster than conditionals",
+    ],
+    correct: 0,
+    explanation: "Go avoids exceptions because hidden non-local jumps make understanding failure paths difficult. Returning (result, error) forces every caller to explicitly inspect and handle or propagate errors.",
+  },
+  "n68": {
+    lang: "javascript",
+    code: `console.log("A");\nsetTimeout(() => console.log("B"), 0);\nPromise.resolve().then(() => console.log("C"));\nconsole.log("D");`,
+    question: "What is the exact execution output in the JavaScript console?",
+    options: ["A, B, C, D", "A, D, C, B", "A, C, D, B", "A, D, B, C"],
+    correct: 1,
+    explanation: "Synchronous code runs first ('A', 'D'). Then the engine drains the microtask queue (Promise callback prints 'C'). Finally, the event loop picks the macrotask timer from the task queue (prints 'B'). Result: A, D, C, B.",
+  },
 };
 
-export const KNOWLEDGE_QUIZZES: Record<number, KnowledgeQuiz[]> = {
+export const KNOWLEDGE_QUIZZES: Record<string | number, KnowledgeQuiz[]> = {
+
+  // Ch 99: Rosetta Table & Shared Language Semantics
+  99: [
+    {
+      question: "Which statement accurately describes how memory and variables are managed across Python, JavaScript, and Go?",
+      options: [
+        "Go allocates everything on the heap by default; Python allocates everything on the stack",
+        "Python and JavaScript store object variables as heap references; Go favors stack-allocated value types and escapes to heap only when pointers outlive stack frames",
+        "JavaScript does not have a garbage collector",
+        "Python integers can overflow a 64-bit boundary and wrap around to negative numbers",
+      ],
+      correct: 1,
+      explanation: "Python and JS use heap objects and garbage collection. In Go, variables and structs default to stack allocation with value semantics, only moving to the heap if compiler escape analysis detects a reference escaping the function frame.",
+    },
+    {
+      question: "What is the primary difference in error handling philosophy between Go and Python/TypeScript?",
+      options: [
+        "Go has no way of detecting runtime failures",
+        "Python/TypeScript favor try/catch exception unwinding, while Go treats errors as explicit return values that must be inspected by callers",
+        "TypeScript exceptions are validated at compile time",
+        "Go automatically restarts functions that fail",
+      ],
+      correct: 1,
+      explanation: "Go intentionally omits try/catch/throw in favor of functions returning (T, error). This forces explicit handling at call sites and prevents unexpected non-local control jumps.",
+    },
+  ],
+  "c33": [
+    {
+      question: "Which statement accurately describes how memory and variables are managed across Python, JavaScript, and Go?",
+      options: [
+        "Go allocates everything on the heap by default; Python allocates everything on the stack",
+        "Python and JavaScript store object variables as heap references; Go favors stack-allocated value types and escapes to heap only when pointers outlive stack frames",
+        "JavaScript does not have a garbage collector",
+        "Python integers can overflow a 64-bit boundary and wrap around to negative numbers",
+      ],
+      correct: 1,
+      explanation: "Python and JS use heap objects and garbage collection. In Go, variables and structs default to stack allocation with value semantics, only moving to the heap if compiler escape analysis detects a reference escaping the function frame.",
+    },
+    {
+      question: "What is the primary difference in error handling philosophy between Go and Python/TypeScript?",
+      options: [
+        "Go has no way of detecting runtime failures",
+        "Python/TypeScript favor try/catch exception unwinding, while Go treats errors as explicit return values that must be inspected by callers",
+        "TypeScript exceptions are validated at compile time",
+        "Go automatically restarts functions that fail",
+      ],
+      correct: 1,
+      explanation: "Go intentionally omits try/catch/throw in favor of functions returning (T, error). This forces explicit handling at call sites and prevents unexpected non-local control jumps.",
+    },
+  ],
+
+  // Ch 100: Toolchains & Application Startup
+  100: [
+    {
+      question: "What does CPython do between reading source text from disk and executing the evaluation loop?",
+      options: [
+        "It compiles the code to a native Linux ELF binary",
+        "It tokenizes the text, constructs an Abstract Syntax Tree (AST), and compiles the AST into bytecode instructions",
+        "It sends the script to a remote V8 JIT engine",
+        "It executes string substitution on variable names",
+      ],
+      correct: 1,
+      explanation: "CPython is a bytecode interpreter. It parses source text into an AST, compiles that AST into Python bytecode (code objects), and then runs the bytecode sequentially in ceval.c.",
+    },
+    {
+      question: "Why does a Go binary start in ~1 millisecond while a Node.js process takes ~40-60 milliseconds?",
+      options: [
+        "Node.js runs in an emulated 32-bit sandbox",
+        "Go compiles directly to a native machine executable; Node must start the V8 virtual machine, allocate heap heaps, and initialize the libuv event loop",
+        "Go scripts do not use CPU caches",
+        "Node.js requires an active internet connection to start",
+      ],
+      correct: 1,
+      explanation: "Go compiles ahead-of-time (AOT) to native CPU instructions. Node.js must initialize the entire V8 JavaScript engine, allocate memory pools, and load libuv before executing user code.",
+    },
+  ],
+  "x-lang-toolchains": [
+    {
+      question: "What does CPython do between reading source text from disk and executing the evaluation loop?",
+      options: [
+        "It compiles the code to a native Linux ELF binary",
+        "It tokenizes the text, constructs an Abstract Syntax Tree (AST), and compiles the AST into bytecode instructions",
+        "It sends the script to a remote V8 JIT engine",
+        "It executes string substitution on variable names",
+      ],
+      correct: 1,
+      explanation: "CPython is a bytecode interpreter. It parses source text into an AST, compiles that AST into Python bytecode (code objects), and then runs the bytecode sequentially in ceval.c.",
+    },
+    {
+      question: "Why does a Go binary start in ~1 millisecond while a Node.js process takes ~40-60 milliseconds?",
+      options: [
+        "Node.js runs in an emulated 32-bit sandbox",
+        "Go compiles directly to a native machine executable; Node must start the V8 virtual machine, allocate heap heaps, and initialize the libuv event loop",
+        "Go scripts do not use CPU caches",
+        "Node.js requires an active internet connection to start",
+      ],
+      correct: 1,
+      explanation: "Go compiles ahead-of-time (AOT) to native CPU instructions. Node.js must initialize the entire V8 JavaScript engine, allocate memory pools, and load libuv before executing user code.",
+    },
+  ],
 
   // Ch 349: AI Integration Overview
   349: [
@@ -309,7 +541,29 @@ export const KNOWLEDGE_QUIZZES: Record<number, KnowledgeQuiz[]> = {
       ],
       correct: 1,
       explanation: "RAM relies on electric charge that dissipates almost immediately without power refresh cycles, whereas NAND flash in SSDs traps electrons physically in insulating oxide layers.",
-    }
+    },
+    {
+      question: "What happens when an application like Python or Node starts up compared to Go?",
+      options: [
+        "Go scripts run inside an external browser sandbox",
+        "Python and Node boot a virtual machine/interpreter (CPython VM / V8 engine) and parse/compile code at runtime, while Go executes directly as precompiled native machine code with an embedded lightweight runtime",
+        "Python compiles directly to machine code in 0.1ms",
+        "Node.js runs faster than native Go binaries because it has no memory management",
+      ],
+      correct: 1,
+      explanation: "Go compiles ahead-of-time (AOT) to native machine instructions with an embedded runtime (scheduler and GC). Python loads CPython to compile AST into bytecode and run ceval.c. Node loads V8 to JIT-compile JavaScript on the fly.",
+    },
+    {
+      question: "Which of the following describes the variable & typing model across Python, JS, TS, and Go?",
+      options: [
+        "Python variables are fixed memory addresses; Go variables are dynamic pointers",
+        "In Python and JS, types belong to values (objects on the heap); TypeScript adds compile-time types that are erased before runtime; Go has static types checked at compile-time with guaranteed zero values",
+        "TypeScript types exist at runtime and validate incoming JSON payloads automatically",
+        "Go allows uninitialized variables with undefined garbage values like C",
+      ],
+      correct: 1,
+      explanation: "Python and JS are dynamically typed (values have types; variables are references). TypeScript's type annotations are erased at build time. Go enforces static types at compile time and initializes all variables to safe zero values (0, '', false, nil).",
+    },
   ],
   // Ch 2: Binary & Numbers
   2: [

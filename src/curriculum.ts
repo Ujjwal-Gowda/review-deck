@@ -20,7 +20,52 @@ Strings & Encoding|C|c07|immutability;Unicode;code points;UTF-8/UTF-16;graphemes
 Files & Serialization|C|c08|stdin;argv;files;paths;CSV;JSON;YAML/TOML;binary formats;buffering
 Errors & Exceptions|C|c09,c19|syntax/runtime/logic errors;tracebacks;exceptions;error values;Result types;fail fast;retries;idempotency
 Debugging|C|n16|scientific method;bisection;print debugging;debuggers (pdb/gdb/dlv/VS Code);logging;rubber duck;git bisect
-# III|Linux
+# III|Languages: Shared Concepts
+Rosetta Table: Five Languages Side by Side|C|c33|concept-by-concept translation;when to use which
+Toolchains & Running Code|C|x-lang-toolchains|interpreters vs compilers;REPLs;project setup;build/run/test commands;formatters & linters
+Variables, Types & Mutability Across Languages|C|x-lang-vars|declaration;inference;mutability;constants;primitive types;conversion;null
+Control Flow Across Languages|C|x-lang-control|if/else;switch/match;loops;iteration;break/continue;expressions vs statements
+Functions & Closures Across Languages|C|x-lang-functions|parameters;defaults;variadics;multiple returns;closures;first-class functions
+Collections Across Languages|C|x-lang-collections|arrays/lists/slices/Vec;maps;sets;iteration;map/filter;copying
+Strings & Text Across Languages|C|x-lang-strings|encodings;indexing;slicing;formatting;builders;parsing
+Data Modelling Across Languages|C|x-lang-types|structs;classes;methods;interfaces/traits;enums;polymorphism
+Error Handling Across Languages|C|x-lang-errors|exceptions;error values;Result;panics;cleanup (finally/defer/RAII)
+Modules & Project Layout Across Languages|C|x-lang-modules|files/packages/crates;visibility;imports;dependency manifests;layouts
+Memory & Value Semantics Across Languages|C|x-lang-memory|copy vs share;references;GC/refcount/ownership/manual;mutation visibility
+Concurrency Across Languages|C|x-lang-concurrency|threads;async/await;goroutines/channels;locks;parallelism
+Files, I/O & the Standard Library Across Languages|P|x-lang-io|reading/writing files;stdin/stdout;JSON;HTTP clients;time;CLI args
+# IV|Python
+Python Overview & Mental Model|C|c34|Rosetta table;object model;idioms;typed Python;traps;uv
+Python Cheat Sheet|R|x-py-cheat|syntax at a glance;common operations;stdlib quick reference;idioms
+Python Basics: Syntax, Types & Operators|C|x-py-basics|indentation;names;int/float/str/bool/None;operators;truthiness;input/print
+Python Control Flow & Functions|C|x-py-flow|if/match;for/while/else;range/enumerate/zip;def;args/kwargs;lambda;scope
+Python Collections & Comprehensions|C|x-py-collections|list;tuple;dict;set;slicing;comprehensions;collections module;sorting
+Python Classes & the Data Model|C|x-py-oop|classes;dataclasses;properties;dunder methods;inheritance;protocols
+Python Errors, Files & Context Managers|C|x-py-errors-io|try/except/else/finally;custom exceptions;with;pathlib;json/csv
+Python Iterators, Generators & Decorators|P|x-py-iter|iteration protocol;generators;itertools;decorators;functools
+Python Typing, Modules & Packaging|P|x-py-packaging|type hints;mypy/pyright;modules;packages;uv;pyproject;pytest
+Python Concurrency: asyncio, Threads & Processes|P|x-py-concurrency|GIL;threading;multiprocessing;asyncio;concurrent.futures
+# V|TypeScript
+TypeScript Overview & Mental Model|C|c35|erased types;structural typing;unions;generics;async;traps
+TypeScript Cheat Sheet|R|x-ts-cheat|syntax at a glance;types;array/object methods;async;node APIs
+JS/TS Basics: Values, Types & Operators|C|x-ts-basics|let/const;primitives;number quirks;equality;truthiness;type annotations
+TypeScript Control Flow & Functions|C|x-ts-flow|if/switch;for-of/for-in;arrow functions;defaults;rest/spread;closures;this
+Arrays, Objects, Maps & Sets|C|x-ts-collections|array methods;destructuring;objects;Map/Set;immutability;sorting
+Interfaces, Classes & Type Modelling|C|x-ts-types|interfaces vs types;unions;classes;access modifiers;narrowing;enums alternatives
+Errors, Modules & Node I/O|P|x-ts-errors-io|throw/try/catch;error types;ESM imports;fs/promises;path;process
+Promises & Async in Depth|C|x-ts-async|promises;async/await;parallelism;cancellation;streams;event loop
+TypeScript Tooling: tsconfig, npm, Build & Test|P|x-ts-tooling|tsconfig;npm/pnpm;scripts;tsx/tsc;vitest;eslint/prettier
+# VI|Go
+Go Overview & Mental Model|C|c36|zero values;slices;interfaces;errors;goroutines;traps
+Go Cheat Sheet|R|x-go-cheat|syntax at a glance;slices/maps;errors;goroutines;go commands
+Go Basics: Packages, Variables & Types|C|x-go-basics|package main;var/:=;zero values;types;constants/iota;conversions;fmt
+Go Control Flow & Functions|C|x-go-flow|if with init;switch;for (the only loop);range;functions;multiple returns;closures;defer
+Go Arrays, Slices, Maps & Strings|C|x-go-collections|arrays;slices (len/cap/append);maps;strings & runes;slices/maps packages
+Go Structs, Methods & Interfaces|C|x-go-types|structs;methods;pointer vs value receivers;embedding;interfaces;type switches
+Go Errors, Defer & Panic|C|x-go-errors|error values;wrapping %w;errors.Is/As;custom errors;defer;panic/recover
+Go Goroutines, Channels & Context|C|x-go-concurrency|goroutines;channels;select;WaitGroup;Mutex;context;worker pools
+Go Modules, Testing & Tooling|P|x-go-tooling|go mod;project layout;go test;table tests;benchmarks;go vet;gofmt
+# VII|Linux
 Shell|C|c17|navigation;files;grep/sed/awk/sort/uniq/cut/xargs/find;pipes;redirection;env;scripting
 Processes|C|n53|ps/top/htop;kill/signals;jobs/fg/bg;nohup;nice
 Filesystems|C|n54|FHS (/etc /var /proc /sys);inodes;links;mounts;disk usage
@@ -29,7 +74,7 @@ Services|P|n56|systemd;systemctl;journalctl;unit files
 SSH|P|n57|keys;ssh-keygen;authorized_keys;known_hosts;scp/rsync;port forwarding
 Networking Tools|P|n58|curl;ping;traceroute;dig;ss;tcpdump
 Package Management|R|n59|apt/dpkg;repositories;dependencies
-# IV|Git & Collaboration
+# VIII|Git & Collaboration
 Git Fundamentals|C|n43|working tree;staging;commit;HEAD;status/diff/log;restore/rm/mv
 Branching|C|n44|branch;switch;fast-forward;three-way merge;detached HEAD
 Merge & Rebase|C|n45|merge conflicts;rebase;interactive rebase;cherry-pick;revert vs reset;reflog;bisect;stash;worktrees
@@ -39,13 +84,13 @@ Pull Requests|P|n48|small PRs;descriptions;draft PRs;CODEOWNERS;CI checks
 Code Review|P|n49|what to look for;giving/receiving feedback;review checklists
 Open Source|P|n50|fork→branch→PR flow;CONTRIBUTING;LICENSE;maintainer etiquette
 GitHub Actions|P|n51|workflows;jobs;steps;runners;matrix;caching;secrets;environments;artifacts
-# V|Computer Science
+# IX|Computer Science
 Big-O|C|n20|time vs space;amortised;best/average/worst;lower bounds;time-space trade-offs;measuring
 Recursion|C|n21|base case;recursive leap of faith;call stack;memoisation;tail calls;recursion → iteration
 Memory & Pointers|C|c10|stack vs heap;pointers;value vs reference semantics;aliasing;shallow vs deep copy;GC;refcounting;ownership/borrowing;leaks
 Data Structures|C|c12|arrays vs linked lists;stack;queue;deque;hash tables;BST;heaps;graphs;tries;union-find;B-trees;Bloom filters;LRU cache
 Algorithms|C|c11|searching;sorting;divide and conquer;greedy;dynamic programming;two pointers;sliding window;backtracking
-# VI|Data Structures & Algorithms
+# X|Data Structures & Algorithms
 How to Think About Data Structures|C|x-dsa-intro|abstract data types;operations & costs;memory pictures;choosing by operations
 Arrays & Dynamic Arrays|C|x-dsa-arrays|contiguous memory;indexing;insert/delete cost;resizing;amortised append
 Linked Lists|C|x-dsa-linked|nodes & pointers;singly/doubly/circular;insert/delete;reverse;cycle detection;merge;when to use
@@ -68,7 +113,7 @@ Dynamic Programming Step by Step|C|x-dsa-dp|overlapping subproblems;memoisation;
 Greedy Algorithms|P|x-dsa-greedy|greedy choice;interval scheduling;coins;Huffman;when greedy fails
 Bit Manipulation|R|x-dsa-bits|bitwise ops;masks;flags;tricks;bitsets
 Choosing the Right Data Structure|C|x-dsa-choose|operation → structure table;language equivalents;decision guide
-# VII|Software Engineering
+# XI|Software Engineering
 Clean Code|C|c21|KISS;YAGNI;DRY;naming;cohesion/coupling;SOLID;patterns;smells;refactoring
 SOLID|C|n34|SRP;open/closed;Liskov;interface segregation;dependency inversion
 Object-Oriented Programming|C|c13|classes;encapsulation;invariants;inheritance;polymorphism;interfaces;composition over inheritance;Liskov
@@ -83,14 +128,14 @@ Packages|C|c15|pip/uv;npm/pnpm;go mod;cargo;make/CMake;lockfiles;semver;transiti
 Configuration|P|n40|env vars;config files;12-factor;secrets;feature flags
 Documentation|P|n41|README;API docs;architecture docs;runbooks;changelog;comments that explain why
 ADRs|R|n42|context;decision;alternatives;consequences
-# VIII|Systems & OS Internals
+# XII|Systems & OS Internals
 Source Code → Compiler → Machine|C|c22|lexer;parser;AST;IR;optimiser;linker;JIT;AOT;transpiler;WebAssembly;memory hierarchy;cache locality;profiling
 Linking, Loading & Libraries|C|x-linking|object files;symbols;static vs dynamic linking;ELF;ld.so;ldd;ABI;FFI
 Operating System Basics|C|c23|kernel vs user space;system calls;virtual memory;swap;scheduler;file descriptors;signals;fork/exec;containers vs VMs
 I/O Models|C|x-io|blocking vs non-blocking;select/poll/epoll;io_uring;event loops;async runtimes;thread-per-request
 Concurrency|C|c20|processes/threads/goroutines/async;races;locks;deadlock;channels;actors;event loop;GIL
 Parallelism|R|n27|multicore;data parallelism;Amdahl's law;SIMD;GPU;work stealing
-# IX|C
+# XIII|C
 C Overview & Mental Model|C|c38|pointers;manual memory;UB;sanitizers;build pipeline
 C Cheat Sheet|R|x-c-cheat|syntax at a glance;printf formats;pointers;memory;string.h;gcc flags
 C Basics: Types, Operators & Control Flow|C|x-c-basics|int sizes;char;float;operators;if/switch/loops;printf/scanf
@@ -101,7 +146,7 @@ C Strings & Text|C|x-c-strings|NUL-terminated;string.h;safe copying;snprintf;par
 C Structs, Unions & Enums|C|x-c-structs|struct layout;typedef;opaque types;unions;enums;bit fields
 C Files & I/O|P|x-c-io|FILE*;fopen/fread/fwrite;fgets;errno;POSIX open/read/write
 C Preprocessor & Undefined Behaviour|C|x-c-preproc|#include/#define/#ifdef;macros pitfalls;UB catalogue;sanitizers;warnings
-# X|Rust
+# XIV|Rust
 Rust Overview & Mental Model|C|c37|ownership;borrowing;enums;traits;Result;lifetimes;traps
 Rust Cheat Sheet|R|x-rs-cheat|syntax at a glance;ownership;Option/Result;iterators;cargo commands
 Rust Basics: Variables, Types & Expressions|C|x-rs-basics|let/mut;shadowing;scalar types;tuples/arrays;expressions;functions;control flow
@@ -112,51 +157,6 @@ Rust Traits & Generics|C|x-rs-traits|traits;default methods;derive;generics & bo
 Rust Error Handling|C|x-rs-errors|Result;?;custom errors;From;thiserror/anyhow;panic vs Result
 Rust Concurrency & Async|P|x-rs-concurrency|threads;move closures;channels;Arc/Mutex;Send/Sync;rayon;tokio
 Rust Cargo, Modules & Testing|P|x-rs-tooling|cargo;crates;modules/visibility;tests;docs;clippy;features
-# XI|Languages: Shared Concepts
-Rosetta Table: Five Languages Side by Side|C|c33|concept-by-concept translation;when to use which
-Toolchains & Running Code|C|x-lang-toolchains|interpreters vs compilers;REPLs;project setup;build/run/test commands;formatters & linters
-Variables, Types & Mutability Across Languages|C|x-lang-vars|declaration;inference;mutability;constants;primitive types;conversion;null
-Control Flow Across Languages|C|x-lang-control|if/else;switch/match;loops;iteration;break/continue;expressions vs statements
-Functions & Closures Across Languages|C|x-lang-functions|parameters;defaults;variadics;multiple returns;closures;first-class functions
-Collections Across Languages|C|x-lang-collections|arrays/lists/slices/Vec;maps;sets;iteration;map/filter;copying
-Strings & Text Across Languages|C|x-lang-strings|encodings;indexing;slicing;formatting;builders;parsing
-Data Modelling Across Languages|C|x-lang-types|structs;classes;methods;interfaces/traits;enums;polymorphism
-Error Handling Across Languages|C|x-lang-errors|exceptions;error values;Result;panics;cleanup (finally/defer/RAII)
-Modules & Project Layout Across Languages|C|x-lang-modules|files/packages/crates;visibility;imports;dependency manifests;layouts
-Memory & Value Semantics Across Languages|C|x-lang-memory|copy vs share;references;GC/refcount/ownership/manual;mutation visibility
-Concurrency Across Languages|C|x-lang-concurrency|threads;async/await;goroutines/channels;locks;parallelism
-Files, I/O & the Standard Library Across Languages|P|x-lang-io|reading/writing files;stdin/stdout;JSON;HTTP clients;time;CLI args
-# XII|TypeScript
-TypeScript Overview & Mental Model|C|c35|erased types;structural typing;unions;generics;async;traps
-TypeScript Cheat Sheet|R|x-ts-cheat|syntax at a glance;types;array/object methods;async;node APIs
-JS/TS Basics: Values, Types & Operators|C|x-ts-basics|let/const;primitives;number quirks;equality;truthiness;type annotations
-TypeScript Control Flow & Functions|C|x-ts-flow|if/switch;for-of/for-in;arrow functions;defaults;rest/spread;closures;this
-Arrays, Objects, Maps & Sets|C|x-ts-collections|array methods;destructuring;objects;Map/Set;immutability;sorting
-Interfaces, Classes & Type Modelling|C|x-ts-types|interfaces vs types;unions;classes;access modifiers;narrowing;enums alternatives
-Errors, Modules & Node I/O|P|x-ts-errors-io|throw/try/catch;error types;ESM imports;fs/promises;path;process
-Promises & Async in Depth|C|x-ts-async|promises;async/await;parallelism;cancellation;streams;event loop
-TypeScript Tooling: tsconfig, npm, Build & Test|P|x-ts-tooling|tsconfig;npm/pnpm;scripts;tsx/tsc;vitest;eslint/prettier
-# XIII|Python
-Python Overview & Mental Model|C|c34|Rosetta table;object model;idioms;typed Python;traps;uv
-Python Cheat Sheet|R|x-py-cheat|syntax at a glance;common operations;stdlib quick reference;idioms
-Python Basics: Syntax, Types & Operators|C|x-py-basics|indentation;names;int/float/str/bool/None;operators;truthiness;input/print
-Python Control Flow & Functions|C|x-py-flow|if/match;for/while/else;range/enumerate/zip;def;args/kwargs;lambda;scope
-Python Collections & Comprehensions|C|x-py-collections|list;tuple;dict;set;slicing;comprehensions;collections module;sorting
-Python Classes & the Data Model|C|x-py-oop|classes;dataclasses;properties;dunder methods;inheritance;protocols
-Python Errors, Files & Context Managers|C|x-py-errors-io|try/except/else/finally;custom exceptions;with;pathlib;json/csv
-Python Iterators, Generators & Decorators|P|x-py-iter|iteration protocol;generators;itertools;decorators;functools
-Python Typing, Modules & Packaging|P|x-py-packaging|type hints;mypy/pyright;modules;packages;uv;pyproject;pytest
-Python Concurrency: asyncio, Threads & Processes|P|x-py-concurrency|GIL;threading;multiprocessing;asyncio;concurrent.futures
-# XIV|Go
-Go Overview & Mental Model|C|c36|zero values;slices;interfaces;errors;goroutines;traps
-Go Cheat Sheet|R|x-go-cheat|syntax at a glance;slices/maps;errors;goroutines;go commands
-Go Basics: Packages, Variables & Types|C|x-go-basics|package main;var/:=;zero values;types;constants/iota;conversions;fmt
-Go Control Flow & Functions|C|x-go-flow|if with init;switch;for (the only loop);range;functions;multiple returns;closures;defer
-Go Arrays, Slices, Maps & Strings|C|x-go-collections|arrays;slices (len/cap/append);maps;strings & runes;slices/maps packages
-Go Structs, Methods & Interfaces|C|x-go-types|structs;methods;pointer vs value receivers;embedding;interfaces;type switches
-Go Errors, Defer & Panic|C|x-go-errors|error values;wrapping %w;errors.Is/As;custom errors;defer;panic/recover
-Go Goroutines, Channels & Context|C|x-go-concurrency|goroutines;channels;select;WaitGroup;Mutex;context;worker pools
-Go Modules, Testing & Tooling|P|x-go-tooling|go mod;project layout;go test;table tests;benchmarks;go vet;gofmt
 # XV|Networking & the Web
 How the Internet Works|C|c24|layers;IP;TCP/UDP;ports;DNS;TLS;HTTP;REST/GraphQL/gRPC/WebSocket
 DNS|C|n61|records (A/AAAA/CNAME/MX/TXT);resolvers;TTL;caching;dig
@@ -431,6 +431,7 @@ Dashboards and Analytics|P|saas-analytics|per-tenant usage dashboards;admin over
 Admin Panel Engineering|P|saas-admin|internal admin UI;impersonation;bulk operations;audit logs;feature flags per tenant;manual billing adjustments
 SaaS API Design|C|saas-api|API keys;SDK design;versioning;webhooks for customers;rate limiting per API key;OpenAPI docs
 Launch and Growth Engineering|R|saas-launch|landing page A/B tests;waitlist;referral system;product-led growth loops;NPS collection;churn prediction signals
+
 `;
 
 export type Level = "C" | "P" | "R";

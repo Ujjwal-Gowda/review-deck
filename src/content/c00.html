@@ -1,54 +1,59 @@
 <p class="goal">Why the skill fades, and the rules that rebuild it.</p>
 
-<h3>Why it feels like you're losing it</h3>
-<p>Programming skill is not knowledge of syntax. It is three things:</p>
-<ol>
-  <li><b>A mental model of the machine</b>: what happens to memory when this line runs.</li>
-  <li><b>Decomposition</b>: turning a vague goal into small, precise steps.</li>
-  <li><b>Debugging</b>: noticing the gap between what you expected and what happened, and closing it.</li>
-</ol>
-<p>All three are built by <i>struggle</i>, the uncomfortable minutes where you don't yet know the answer. Psychologists call this "desirable difficulty": effortful retrieval is what writes things into long-term memory. When AI produces the code, you skip exactly the part that builds the skill. You still <i>recognise</i> good code (recognition is easy), but you can no longer <i>produce</i> it (recall is hard). That gap is the feeling you described.</p>
+<h3>1. Why It Feels Like You're Losing It</h3>
+<p>Programming skill is not knowledge of syntax. It is built upon three pillars:</p>
+<ul>
+  <li><b>Mental Model of the Machine:</b> A precise understanding of what happens to memory, registers, and the call stack when a specific line runs.</li>
+  <li><b>Problem Decomposition:</b> The ability to dissect a vague or complex requirement into small, testable, deterministic units.</li>
+  <li><b>Debugging &amp; Gap Analysis:</b> Noticing the exact gap between expected and actual behavior, formulating a hypothesis, and closing it.</li>
+</ul>
 
-<h3>The rules for this guide</h3>
-<div class="callout key"><b class="t">The seven rules</b>
-<ol>
-<li><b>No AI for the exercises.</b> Use AI afterwards to <i>review</i> your solution, never before to produce it.</li>
-<li><b>Type every example; don't copy-paste.</b> Your fingers learn syntax. Then change something and predict the result before running.</li>
-<li><b>Predict, then run.</b> Before running any code, say out loud (or write) what it will print. A wrong prediction is the most valuable thing that can happen, because it shows exactly where your model is broken.</li>
-<li><b>The 20-minute rule.</b> Stuck? Struggle for 20 minutes: re-read, print things, draw memory. Then look at docs. Then the solution. Then close the solution and re-write it from memory the next day.</li>
-<li><b>Read the official docs.</b> <code>python3 -c "help(str.split)"</code>, <code>man 3 printf</code>, <code>go doc strings.Split</code>, docs.python.org, MDN, doc.rust-lang.org. Reading docs is a core skill that AI has let atrophy.</li>
-<li><b>Draw memory.</b> Boxes and arrows on paper: variables, what they point to, the call stack. Every senior engineer does this in their head. Start by doing it on paper.</li>
-<li><b>Spaced repetition.</b> Re-do old exercises from scratch after 1 day, 1 week and 1 month. If you can't, you didn't learn it; you recognised it.</li>
-</ol></div>
+<p>All three pillars are strengthened exclusively through <b>deliberate struggle</b>—the uncomfortable minutes where you do not yet know the answer:</p>
+<ul>
+  <li><b>Desirable Difficulty:</b> Cognitive science shows that effortful retrieval is the mechanism that encodes neural connections into long-term memory.</li>
+  <li><b>Recognition vs Recall:</b> When AI writes code, you exercise <i>recognition</i> (which is easy and passive). But engineering requires <i>recall</i> and generation (which is hard and active).</li>
+  <li><b>The AI Competence Trap:</b> Mistaking the ability to understand generated code for the ability to invent and architect it yourself from a blank screen.</li>
+</ul>
 
-<div class="callout key"><b class="t">Rule 8: never learn a tool without building something that breaks</b>
-<p>Don't learn Docker by reading "what is Docker". Build a Node API, then add Postgres, then hit "works on my machine", then containerise it, hit a networking problem, learn Docker networking, lose your data, learn volumes, and finally reach for Compose. Each tool in this curriculum is introduced as the answer to a problem you've just run into.</p></div>
-<h3>How to use AI <i>correctly</i> from now on</h3>
+<h3>2. The Eight Rules for This Curriculum</h3>
+<div class="callout key"><b class="t">The Foundational Rules</b>
+<ul>
+  <li><b>Rule 1: No AI for initial exercise attempts.</b> Always attempt solutions yourself. Use AI only as an aggressive reviewer after you pass tests or struggle.</li>
+  <li><b>Rule 2: Type every code example manually.</b> Never copy-paste. Muscle memory and kinesthetic typing internalize syntax quirks and idioms.</li>
+  <li><b>Rule 3: Predict before you run.</b> State out loud (or in your notes) the exact output or error before executing code. A wrong prediction is pure gold because it pinpoints where your mental model is flawed.</li>
+  <li><b>Rule 4: The 20-minute rule.</b> When stuck, struggle deliberately for 20 minutes: re-read, print state, draw memory boxes, check documentation. Only then consult a hint.</li>
+  <li><b>Rule 5: Master the official documentation.</b> Consult <code>python3 -c "help(str.split)"</code>, <code>man 3 printf</code>, <code>go doc strings.Split</code>, and MDN directly. Navigating primary documentation is a superpower.</li>
+  <li><b>Rule 6: Draw memory diagrams on paper.</b> Sketch boxes, pointers, and stack frames. Every senior engineer does this in their mind; you must train it on paper first.</li>
+  <li><b>Rule 7: Spaced repetition for permanent mastery.</b> Re-solve old problems after 1 day, 7 days, and 30 days without looking at past answers. If you cannot solve it, you merely recognized it, not mastered it.</li>
+  <li><b>Rule 8: Never learn a tool without building something that breaks.</b> Don't read abstract descriptions. Build a service, break it under load, hit a real constraint, and learn the tool as the natural solution.</li>
+</ul>
+</div>
+
+<h3>3. How to Use AI Correctly as a Learning Multiplier</h3>
 <table>
-<tr><th>Instead of…</th><th>Do…</th></tr>
-<tr><td>"Write a function that does X"</td><td>Write it yourself, then: "Review this. Don't rewrite it; list bugs and edge cases I missed."</td></tr>
-<tr><td>"Fix this error"</td><td>Read the traceback yourself first and form a hypothesis. Then: "My hypothesis is Y. Am I right? Explain, don't fix."</td></tr>
-<tr><td>"Explain this code"</td><td>Explain it yourself first in writing, then ask AI to grade your explanation.</td></tr>
-<tr><td>Accepting generated code you can't explain</td><td>Never merge a line you couldn't have written. If you can't explain it, that's today's lesson.</td></tr>
+<tr><th>Ineffective Prompting (Atrophy)</th><th>High-Leverage Pedagogical Prompting (Mastery)</th></tr>
+<tr><td>"Write a function that does X"</td><td>"Here is my working implementation for X. Act as a Staff Engineer. Don't rewrite it; critique edge cases, algorithmic complexity, and failure modes I missed."</td></tr>
+<tr><td>"Fix this error for me"</td><td>"Here is the traceback. My current hypothesis is Y because of Z. Am I analyzing the root cause correctly? Guide my investigation without giving the fix."</td></tr>
+<tr><td>"Explain this code snippet"</td><td>"Here is my explanation of what this code does. Grade my explanation out of 10 and point out any misconceptions in my mental model."</td></tr>
+<tr><td>Accepting generated code you couldn't defend</td><td>Never commit or merge a line of code you cannot defend in a live technical review.</td></tr>
 </table>
 
-<h3>The 15 stages of this curriculum</h3>
+<h3>4. The 15 Stages of This Natural Progression</h3>
 <table>
 <tr><th>Stage</th><th>Theme</th><th>What you will master</th></tr>
 <tr><td><b>0</b></td><td>Learn how to learn</td><td>Deliberate practice, spaced repetition, predicting before running, and using AI as a reviewer rather than author.</td></tr>
 <tr><td><b>1</b></td><td>How a computer works</td><td>CPU execution cycle, binary, hexadecimal, two's complement, IEEE-754 floats, and memory address layout.</td></tr>
 <tr><td><b>2</b></td><td>Core programming</td><td>Universal language primitives: variables, types, control flow, functions, scope, collections, text, files, errors, and debugging.</td></tr>
-<tr><td><b>3</b></td><td>The developer's workbench</td><td>The Linux terminal, navigation, pipes, permissions, processes, Git branches, interactive rebase, and code reviews.</td></tr>
-<tr><td><b>4</b></td><td>Computer science & foundations</td><td>Stack vs heap, pointers, Big-O asymptotic analysis, recursion, and core data structures and algorithm patterns.</td></tr>
-<tr><td><b>5</b></td><td>Software engineering & architecture</td><td>Clean code, SOLID principles, OOP & composition, functional programming, design patterns, and dependency injection.</td></tr>
-<tr><td><b>6</b></td><td>Systems & low-level programming</td><td>Compilers, ASTs, linkers, ELF binaries, OS kernels, virtual memory, non-blocking I/O (epoll/io_uring), C, and Rust.</td></tr>
-<tr><td><b>7</b></td><td>The modern polyglot</td><td>Cross-language Rosetta comparisons, mastering Go, TypeScript, and Python in depth.</td></tr>
+<tr><td><b>3</b></td><td>The modern polyglot</td><td>Cross-language Rosetta comparisons, mastering Python, TypeScript, and Go in depth early on.</td></tr>
+<tr><td><b>4</b></td><td>The developer's workbench</td><td>The Linux terminal, navigation, pipes, permissions, processes, Git branches, interactive rebase, and code reviews.</td></tr>
+<tr><td><b>5</b></td><td>Computer science &amp; foundations</td><td>Stack vs heap, pointers, Big-O asymptotic analysis, recursion, and core data structures and algorithm patterns.</td></tr>
+<tr><td><b>6</b></td><td>Software engineering &amp; architecture</td><td>Clean code, SOLID principles, OOP &amp; composition, functional programming, design patterns, and dependency injection.</td></tr>
+<tr><td><b>7</b></td><td>Systems &amp; low-level programming</td><td>Compilers, ASTs, linkers, ELF binaries, OS kernels, virtual memory, non-blocking I/O (epoll/io_uring), C, and Rust.</td></tr>
 <tr><td><b>8</b></td><td>How networks work</td><td>Packet routing, TCP/IP, subnets, DNS resolution, HTTP/1/2/3, TLS encryption, and browser engines.</td></tr>
-<tr><td><b>9</b></td><td>How applications work</td><td>Frontend (React/Next.js), Backend HTTP services, SQL & PostgreSQL, transactions, Redis, and full-stack testing.</td></tr>
+<tr><td><b>9</b></td><td>How applications work</td><td>Frontend (React/Next.js), Backend HTTP services, SQL &amp; PostgreSQL, transactions, Redis, and full-stack testing.</td></tr>
 <tr><td><b>10</b></td><td>How software ships</td><td>Docker containers, multi-stage images, automated CI/CD pipelines, Cloud infrastructure, Kubernetes, and Terraform.</td></tr>
 <tr><td><b>11</b></td><td>How production systems run</td><td>Production readiness reviews, health checks, rate limiting, OpenTelemetry, metrics, alerting, SLOs, and web security.</td></tr>
 <tr><td><b>12</b></td><td>How distributed systems work</td><td>CAP theorem, replication, sharding, distributed consensus (Raft), resilience patterns, and high-scale system design.</td></tr>
 <tr><td><b>13</b></td><td>How AI systems work</td><td>Machine learning math, Transformers, tokenization, local LLMs, VRAM budgets, RAG vector search, AI agents, and MCP.</td></tr>
 <tr><td><b>14</b></td><td>Build and practise</td><td>A 12-tier progressive capstone ladder from CLI to distributed AI platform, senior code reviews, and mock design interviews.</td></tr>
 </table>
-

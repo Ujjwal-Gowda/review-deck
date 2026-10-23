@@ -1,0 +1,497 @@
+const e=`<p class="goal">From text file to electrons: what "running code" really means, how an application boots up, and mastering Python, JavaScript, TypeScript, and Go in depth from day one.</p>
+
+<h3>1. The Machine: Hardware &amp; CPU Cycle</h3>
+<p>A computer is, at its core, a <b>CPU</b> that repeatedly does one thing: <i>fetch</i> an instruction from memory, <i>decode</i> it, <i>execute</i> it, and move on to the next. Instructions are tiny: "add these two numbers", "copy this value from memory address 1000 into a register", "if the last result was zero, jump to instruction 57". Billions per second.</p>
+<div class="diagram">  ┌──────────────── CPU ────────────────┐          ┌──────── RAM (memory) ────────┐
+  │  registers: tiny, ultra-fast slots  │  ◄────►  │ addr 0000: instruction/data  │
+  │  ALU: does arithmetic &amp; logic       │   bus    │ addr 0001: …                 │
+  │  control unit: fetch → decode → run │          │ … billions of numbered bytes │
+  └─────────────────────────────────────┘          └──────────────────────────────┘
+                     ▲                                            ▲
+                     └── disk / network / keyboard / screen (I/O) ┘  (much slower)</div>
+<p><b>Memory (RAM)</b> is a giant array of bytes, each with a numeric <b>address</b>. Everything (your numbers, your text, the program itself) is bytes at addresses. <b>Disk</b> keeps data after power-off but is thousands of times slower than RAM. That speed gap drives many design decisions you'll see later.</p>
+
+<h3>2. What Does an Application Even Do When It Starts?</h3>
+<p>When you type a command in your terminal like <code>python3 link.py</code> or <code>npm run dev</code> or <code>go run main.go</code>, what actually happens under the hood before a single line of your logic prints to the screen?</p>
+
+<div class="diagram">  [Terminal Shell: bash / zsh]
+         │ 1. fork() + execve("/usr/bin/python3", ["python3", "link.py"])
+         ▼
+  [OS Kernel: Process Setup]
+  ├── Maps private Virtual Memory pages (Code, Data, Heap, Stack)
+  ├── Attaches Standard I/O Streams: stdin (fd 0), stdout (fd 1), stderr (fd 2)
+  └── Transfers CPU control to CPython's entry point
+         │
+         ▼
+  [CPython Runtime Initialization: Py_Initialize()]
+  ├── Inits internal types (int, str, dict) &amp; builtins (print, len, open)
+  ├── Sets sys.path (where imports look for modules) &amp; initializes GIL
+  └── Allocates the Main Thread State
+         │
+         ▼
+  [Source Compilation Phase]
+  ├── Reads "link.py" file bytes from disk into memory
+  ├── Tokenizer: text ──► Token Stream
+  ├── Parser: Token Stream ──► Abstract Syntax Tree (AST)
+  └── Bytecode Compiler: AST ──► Code Object (opcodes: LOAD_NAME, CALL, etc.)
+         │
+         ▼
+  [The Evaluation Loop: ceval.c]
+  └── Executes bytecode instructions on the stack sequentially until exit(0)</div>
+
+<h4>Tracing a Real Script: How <code>link.py</code> Boots in this App</h4>
+<p>In this repository, look at the helper script <code>link.py</code>:</p>
+<pre data-lang="python"><code class="language-python"># link.py
+import os, re
+p = 'src/curriculum.ts'; s = open(p).read()
+a = s.index('const RAW = \`') + len('const RAW = \`'); b = s.index('\`;', a)
+out, n = [], 0
+for line in s[a:b].split('\\n'):
+    if line and not line.startswith('#'):
+        title, lvl, content, topics = line.split('|', 3)
+        key = f'n{n:02d}'
+        if not content and os.path.exists(f'src/content/{key}.html'):
+            line = f'{title}|{lvl}|{key}|{topics}'
+        n += 1
+    out.append(line)
+open(p, 'w').write(s[:a] + '\\n'.join(out) + s[b:])</code></pre>
+
+<p>When Python executes this:</p>
+<ol>
+  <li><b><code>import os, re</code>:</b> The VM pauses the main script to check <code>sys.modules</code>. If not already imported, it locates <code>os.py</code> in Python's standard library, parses it, executes its code object, and binds the name <code>os</code> in your script's global namespace dict (<code>globals()</code>).</li>
+  <li><b><code>p = 'src/curriculum.ts'; s = open(p).read()</code>:</b> Python creates a string object on the heap for <code>'src/curriculum.ts'</code>. The <code>open()</code> builtin triggers an OS system call (<code>openat</code>). The kernel returns a file descriptor integer. <code>.read()</code> makes a <code>read</code> syscall copying raw bytes from disk through OS buffer caches into a Python Unicode string object on the heap.</li>
+  <li><b>String Searching &amp; Slicing:</b> Python searches the heap byte array for the substring <code>'const RAW = \`'</code> and finds its offset. Python strings are immutable: slicing <code>s[a:b]</code> creates a new string on the heap containing just the curriculum table.</li>
+  <li><b>Loop Iteration:</b> <code>.split('\\n')</code> builds a Python <code>list</code> of string references. The VM pushes stack frames, extracts fields with <code>.split('|', 3)</code>, checks if the HTML file exists on disk via <code>os.path.exists</code>, and appends to the <code>out</code> list.</li>
+  <li><b>Saving &amp; Termination:</b> <code>open(p, 'w').write(...)</code> opens the file with write permissions, flushes the new string buffer back to disk via the kernel, collects remaining heap garbage, releases file descriptors, and exits with code <code>0</code>.</li>
+</ol>
+
+<h4>How Startup Differs Across Languages</h4>
+<table>
+<tr><th>Language</th><th>Startup Mechanism</th><th>Typical Startup Latency</th><th>Where Memory Lives</th></tr>
+<tr><td><b>Python</b></td><td>CPython interpreter boots, compiles source AST to bytecode, executes in VM loop (<code>ceval.c</code>)</td><td>~20–30 ms</td><td>Almost everything is a boxed <code>PyObject</code> on the heap; variables are pointers to objects.</td></tr>
+<tr><td><b>JavaScript / Node</b></td><td>Node initializes V8 engine &amp; libuv event loop. V8 compiles JS via Ignition bytecode + TurboFan JIT</td><td>~40–60 ms</td><td>V8 heap for objects; small numbers (Smi) encoded directly in pointer bits.</td></tr>
+<tr><td><b>TypeScript</b></td><td>Static types exist only in your editor; transpiled to plain JS before execution (e.g. via <code>tsx</code> or Vite)</td><td>~40–70 ms (with on-the-fly transpilation)</td><td>Same as JavaScript runtime once types are erased.</td></tr>
+<tr><td><b>Go</b></td><td>Precompiled directly into native machine instructions (ELF/Mach-O). Runs <code>runtime.rt0_go</code>, boots M:N scheduler &amp; GC, then calls <code>main.main</code></td><td><b>~1–2 ms</b> (instant)</td><td>Values and structs default to the Goroutine stack; escape analysis moves pointers to heap only when necessary.</td></tr>
+</table>
+
+<hr/>
+
+<h3>3. Language 1: Python In-Depth</h3>
+<p>Python is an expressive, dynamically typed language where readability and developer speed come first.</p>
+
+<h4>Syntax &amp; Indentation Rules</h4>
+<p>Python uses <b>indentation</b> (typically 4 spaces, never tabs) instead of curly braces <code>{}</code> to define blocks of code:</p>
+<pre data-lang="python"><code class="language-python"># 1. Variables and Dynamic Typing
+# You do not specify types when declaring variables. Types belong to the value, not the name.
+age = 25              # int (unbounded size in Python 3!)
+price = 19.99         # float (64-bit IEEE 754)
+greeting = "Hello"    # str (immutable unicode)
+is_active = True      # bool (True or False, capitalized!)
+empty_val = None      # None represents absence of value (like null in other languages)
+
+# Optional Type Annotations (checked by tools like pyright or mypy, ignored at runtime):
+username: str = "alex"
+score: int = 100</code></pre>
+
+<h4>Collections &amp; Data Structures</h4>
+<pre data-lang="python"><code class="language-python"># List: Ordered, mutable sequence (like an array)
+fruits = ["apple", "banana", "cherry"]
+fruits.append("date")
+first = fruits[0]      # "apple"
+subset = fruits[1:3]   # ["banana", "cherry"] (half-open range [1, 3))
+
+# Dictionary: Hash map of key-value pairs (fast O(1) lookup)
+user = {
+    "id": 1,
+    "name": "Alice",
+    "role": "admin"
+}
+user["email"] = "alice@example.com"
+name = user.get("name", "Unknown")  # Safe lookup with default fallback
+
+# Tuple: Ordered, IMMUTABLE sequence (cannot be changed after creation)
+point = (10, 20)
+# point[0] = 5  # TypeError: 'tuple' object does not support item assignment
+
+# Set: Unordered collection of UNIQUE elements
+unique_tags = {"python", "go", "python"}  # {"python", "go"}</code></pre>
+
+<h4>Control Flow &amp; Loops</h4>
+<pre data-lang="python"><code class="language-python"># Conditionals
+if age >= 18:
+    print("Adult")
+elif age >= 13:
+    print("Teenager")
+else:
+    print("Child")
+
+# For loop with range
+for i in range(3):  # 0, 1, 2
+    print(f"Index {i}")
+
+# For loop iterating directly over items
+for item in fruits:
+    print(item)
+
+# Enumerate: Get both index and item simultaneously
+for idx, fruit in enumerate(fruits):
+    print(f"{idx}: {fruit}")
+
+# List Comprehension: Idiomatic, concise list transformation
+doubled = [x * 2 for x in [1, 2, 3, 4] if x % 2 == 0]  # [4, 8]</code></pre>
+
+<h4>Functions, Closures, and Error Handling</h4>
+<pre data-lang="python"><code class="language-python"># Functions with defaults and type hints
+def calculate_tax(amount: float, rate: float = 0.05) -> float:
+    """Compute tax on a given amount."""
+    if amount < 0:
+        raise ValueError("Amount cannot be negative")
+    return amount * rate
+
+# Error Handling (try / except / finally)
+try:
+    total = calculate_tax(-50.0)
+except ValueError as err:
+    print(f"Handled expected error: {err}")
+finally:
+    print("Execution complete (runs no matter what)")</code></pre>
+
+<hr/>
+
+<h3>4. Language 2: JavaScript (ESM) In-Depth</h3>
+<p>JavaScript is the native language of every web browser and a dominant backend language via Node.js.</p>
+
+<h4>Variables: <code>const</code> vs <code>let</code> (Never use <code>var</code>)</h4>
+<pre data-lang="javascript"><code class="language-javascript">// const: Cannot be reassigned (use by default)
+const maxAttempts = 3;
+// maxAttempts = 5; // TypeError: Assignment to constant variable
+
+// let: Reassignable variable (scoped to the surrounding { } block)
+let currentScore = 0;
+currentScore += 10;
+
+// Primitive types: number (double float), string, boolean, null, undefined, bigint, symbol
+const pi = 3.14159;
+const userGreeting = \`Current score is \${currentScore}\`; // Template literal (backticks)
+const isOnline = true;
+const missing = null;       // Intentional absence of value
+let unassigned;             // undefined: variable declared but has no value yet</code></pre>
+
+<h4>Objects and Arrays</h4>
+<pre data-lang="javascript"><code class="language-javascript">// Objects: Collections of key-value pairs
+const person = {
+  id: 42,
+  name: "Bob",
+  greet() {
+    return \`Hi, I am \${this.name}\`;
+  }
+};
+
+// Arrays & High-Order Array Methods
+const numbers = [1, 2, 3, 4, 5];
+numbers.push(6);
+
+// map: transform every element
+const doubled = numbers.map(n => n * 2);
+
+// filter: keep elements matching condition
+const evens = numbers.filter(n => n % 2 === 0);
+
+// reduce: accumulate items into a single result
+const sum = numbers.reduce((acc, curr) => acc + curr, 0);</code></pre>
+
+<h4>Functions and Arrow Functions</h4>
+<pre data-lang="javascript"><code class="language-javascript">// Traditional function declaration
+function add(a, b = 0) {
+  return a + b;
+}
+
+// Arrow function (concise, captures surrounding 'this')
+const multiply = (a, b) => a * b;
+
+// Async / Await & Promises (Non-blocking I/O)
+async function fetchUser(userId) {
+  try {
+    const response = await fetch(\`https://api.example.com/users/\${userId}\`);
+    if (!response.ok) throw new Error(\`HTTP Error: \${response.status}\`);
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error("Failed to fetch user:", error.message);
+    return null;
+  }
+}</code></pre>
+
+<hr/>
+
+<h3>5. Language 3: TypeScript In-Depth</h3>
+<p>TypeScript is <b>JavaScript with syntax for types</b>. Every valid JavaScript program is valid TypeScript. The TypeScript compiler (<code>tsc</code>) verifies types at build-time and erases them completely, outputting pure JavaScript.</p>
+
+<h4>Type Annotations and Interfaces</h4>
+<pre data-lang="typescript"><code class="language-typescript">// Basic Type Annotations
+const appName: string = "Foundations";
+let activeUsers: number = 1420;
+const isProduction: boolean = false;
+
+// Interfaces: Define the exact shape an object must satisfy
+interface Product {
+  id: string;
+  title: string;
+  price: number;
+  tags?: string[]; // Optional property (can be undefined)
+  readonly createdAt: Date; // Cannot be modified after instantiation
+}
+
+const book: Product = {
+  id: "prod_01",
+  title: "Engineering Foundations",
+  price: 29.99,
+  createdAt: new Date()
+};</code></pre>
+
+<h4>Union Types and Type Narrowing</h4>
+<pre data-lang="typescript"><code class="language-typescript">// Union Types: A value can be one of several types
+type ResultStatus = "idle" | "loading" | "success" | "error";
+
+interface ApiResponse {
+  status: ResultStatus;
+  data?: string;
+  error?: string;
+}
+
+// Type Narrowing with typeof / guard clauses
+function formatValue(val: string | number): string {
+  if (typeof val === "number") {
+    return val.toFixed(2); // TypeScript knows val is number here!
+  }
+  return val.trim().toUpperCase(); // TypeScript knows val is string here!
+}</code></pre>
+
+<h4>Generics: Writing Reusable, Type-Safe Code</h4>
+<pre data-lang="typescript"><code class="language-typescript">// A generic function that works with any type T while preserving its type
+function wrapInArray<T>(item: T): T[] {
+  return [item];
+}
+
+const numArray = wrapInArray(42);       // Inferred as number[]
+const strArray = wrapInArray("hello");  // Inferred as string[]</code></pre>
+
+<hr/>
+
+<h3>6. Language 4: Go In-Depth</h3>
+<p>Go (Golang) is a statically typed, compiled language created by Google for scalable backend systems, cloud platforms, and developer tooling. It prioritizes simplicity, fast compilation, and lightweight concurrency.</p>
+
+<h4>Program Structure, Variables &amp; Zero Values</h4>
+<pre data-lang="go"><code class="language-go">package main
+
+import (
+    "fmt"
+    "errors"
+)
+
+func main() {
+    // 1. Explicit variable declaration
+    var port int = 8080
+
+    // 2. Short declaration operator ':=' (inferred inside functions)
+    host := "localhost"
+    isActive := true
+
+    // 3. ZERO VALUES: In Go, variables are NEVER uninitialized!
+    var count int        // 0
+    var message string   // ""
+    var isDone bool      // false
+    var ptr *int         // nil
+
+    fmt.Printf("Server starting on %s:%d (active: %t, count: %d)\\n", host, port, isActive, count)
+}</code></pre>
+
+<h4>Slices and Maps</h4>
+<pre data-lang="go"><code class="language-go">// Slices: Dynamically-sized views into underlying arrays
+nums := []int{10, 20, 30}
+nums = append(nums, 40) // append allocates more capacity if needed
+
+fmt.Println("Length:", len(nums)) // 4
+
+// Maps: Hash tables (key-value)
+userRoles := make(map[string]string)
+userRoles["alice"] = "admin"
+userRoles["bob"] = "viewer"
+
+// Reading with the "comma-ok" idiom:
+role, exists := userRoles["charlie"]
+if !exists {
+    fmt.Println("User not found in map")
+} else {
+    fmt.Println("Role:", role)
+}</code></pre>
+
+<h4>Structs, Methods &amp; Explicit Errors (No Exceptions)</h4>
+<pre data-lang="go"><code class="language-go">// Struct: Defining custom data models
+type Account struct {
+    Owner   string
+    Balance float64
+}
+
+// Method attached to Account struct
+func (a *Account) Deposit(amount float64) error {
+    if amount <= 0 {
+        return errors.New("deposit amount must be positive")
+    }
+    a.Balance += amount
+    return nil // nil indicates no error
+}
+
+// Calling functions with multiple return values
+func Divide(a, b float64) (float64, error) {
+    if b == 0 {
+        return 0, errors.New("cannot divide by zero")
+    }
+    return a / b, nil
+}</code></pre>
+
+<h4>Concurrency: Goroutines &amp; Channels</h4>
+<pre data-lang="go"><code class="language-go">// Concurrency is built into Go's core keywords:
+func fetchScore(userId int, ch chan int) {
+    // runs concurrently
+    ch <- userId * 10 // send result into channel
+}
+
+func testConcurrency() {
+    ch := make(chan int)
+    go fetchScore(5, ch) // 'go' launches a concurrent Goroutine (~2KB memory)
+    result := <-ch       // wait to receive from channel
+    fmt.Println("Received:", result)
+}</code></pre>
+
+<hr/>
+
+<h3>7. The Rosetta Example: One Real Task in All 4 Languages</h3>
+<p>To feel comfortable writing each language, compare how each solves the identical task: <b>Given a list of numbers, filter out odd numbers, double the even numbers, compute the total sum, and handle potential errors safely</b>.</p>
+
+<div class="carousel">
+<h4>Python</h4>
+<pre data-lang="python"><code class="language-python">def process_numbers(numbers: list[int]) -> int:
+    if not numbers:
+        raise ValueError("List cannot be empty")
+    evens = [n * 2 for n in numbers if n % 2 == 0]
+    return sum(evens)
+
+try:
+    result = process_numbers([1, 2, 3, 4, 5, 6])
+    print(f"Total: {result}") # Total: 24 (4 + 8 + 12)
+except ValueError as e:
+    print(f"Error: {e}")</code></pre>
+<!-- slide -->
+<h4>JavaScript</h4>
+<pre data-lang="javascript"><code class="language-javascript">function processNumbers(numbers) {
+  if (!numbers || numbers.length === 0) {
+    throw new Error("List cannot be empty");
+  }
+  return numbers
+    .filter(n => n % 2 === 0)
+    .map(n => n * 2)
+    .reduce((sum, n) => sum + n, 0);
+}
+
+try {
+  const result = processNumbers([1, 2, 3, 4, 5, 6]);
+  console.log(\`Total: \${result}\`); // Total: 24
+} catch (err) {
+  console.error(\`Error: \${err.message}\`);
+}</code></pre>
+<!-- slide -->
+<h4>TypeScript</h4>
+<pre data-lang="typescript"><code class="language-typescript">function processNumbers(numbers: number[]): number {
+  if (numbers.length === 0) {
+    throw new Error("List cannot be empty");
+  }
+  return numbers
+    .filter((n: number): boolean => n % 2 === 0)
+    .map((n: number): number => n * 2)
+    .reduce((sum: number, n: number): number => sum + n, 0);
+}
+
+try {
+  const result: number = processNumbers([1, 2, 3, 4, 5, 6]);
+  console.log(\`Total: \${result}\`); // Total: 24
+} catch (err) {
+  const msg = err instanceof Error ? err.message : String(err);
+  console.error(\`Error: \${msg}\`);
+}</code></pre>
+<!-- slide -->
+<h4>Go</h4>
+<pre data-lang="go"><code class="language-go">package main
+
+import (
+    "errors"
+    "fmt"
+)
+
+func ProcessNumbers(numbers []int) (int, error) {
+    if len(numbers) == 0 {
+        return 0, errors.New("list cannot be empty")
+    }
+    total := 0
+    for _, n := range numbers {
+        if n%2 == 0 {
+            total += n * 2
+        }
+    }
+    return total, nil
+}
+
+func main() {
+    result, err := ProcessNumbers([]int{1, 2, 3, 4, 5, 6})
+    if err != nil {
+        fmt.Println("Error:", err)
+        return
+    }
+    fmt.Printf("Total: %d\\n", result) // Total: 24
+}</code></pre>
+</div>
+
+<hr/>
+
+<h3>8. Programs as Processes &amp; Standard Streams</h3>
+<p>When you run any program, the operating system creates a <b>process</b>: a running instance with its own private virtual memory space, a program counter (which instruction executes next), open file descriptors, and three standard streams:</p>
+<ul>
+<li><b>stdin</b> (standard input, fd 0): where input comes from (keyboard, or a pipe)</li>
+<li><b>stdout</b> (standard output, fd 1): normal output</li>
+<li><b>stderr</b> (standard error, fd 2): error messages, kept separate so they aren't mixed into data</li>
+</ul>
+<pre data-lang="shell"><code class="language-bash">python3 hello.py > out.txt        # stdout goes to a file
+python3 broken.py 2> errors.txt   # stderr goes to a file
+echo "5" | python3 double.py      # stdout of echo becomes stdin of python</code></pre>
+
+<div class="exercises"><h3>Hands-on Practice Across Languages</h3>
+<details class="ex"><summary>1.1 <span class="levels">basic</span> Build and run hello world in Python, JS, TS, and Go in your terminal.</summary><div>
+<pre data-lang="shell"><code class="language-bash">python3 -c 'print("Hello from Python")'
+node -e 'console.log("Hello from JavaScript")'
+npx tsx -e 'const msg: string = "Hello from TypeScript"; console.log(msg)'
+go run -e 'package main; import "fmt"; func main() { fmt.Println("Hello from Go") }'</code></pre>
+</div></details>
+<details class="ex"><summary>1.2 <span class="levels">basic</span> Write a Python program that prints to stderr. Prove it by redirecting stdout to /dev/null and still seeing the message.</summary><div>
+<pre data-lang="python"><code class="language-python">import sys
+print("normal")
+print("problem!", file=sys.stderr)</code></pre>
+<p><code>python3 e.py > /dev/null</code> still shows "problem!" because only stdout was discarded.</p></div></details>
+<details class="ex"><summary>1.3 <span class="levels">think</span> Look at the bytecode Python makes for a function. What do you notice?</summary><div>
+<pre data-lang="python"><code class="language-python">import dis
+def add(a, b):
+    return a + b
+dis.dis(add)</code></pre>
+<p>You'll see instructions like <code>LOAD_FAST a</code>, <code>LOAD_FAST b</code>, <code>BINARY_OP +</code>, <code>RETURN_VALUE</code>. It's a stack machine: push two values, add them, return the top. This is the bytecode layer the CPython VM loop executes.</p></div></details>
+<details class="ex"><summary>1.4 <span class="levels">intermediate</span> In Go, create a slice, append 5 items to it, and print its length and capacity at each step using <code>len(s)</code> and <code>cap(s)</code>.</summary><div>
+<pre data-lang="go"><code class="language-go">package main
+import "fmt"
+func main() {
+    var s []int
+    for i := 1; i <= 5; i++ {
+        s = append(s, i)
+        fmt.Printf("Item %d: len=%d cap=%d\\n", i, len(s), cap(s))
+    }
+}</code></pre>
+<p>Notice how capacity doubles (0 &rarr; 1 &rarr; 2 &rarr; 4 &rarr; 8) to maintain $O(1)$ amortized append performance!</p></div></details>
+</div>
+`;export{e as default};

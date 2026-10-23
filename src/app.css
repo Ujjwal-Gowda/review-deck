@@ -407,3 +407,345 @@ details.ex[open] { border-color: hsl(var(--h) 40% calc(var(--abg) - 12%)); }
 .notes-saved { font-size: 12px; font-weight: 700; color: var(--done); }
 .notes-textarea { width: 100%; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); padding: 10px 12px; font-family: var(--f-ui, Inter, sans-serif); font-size: 14.5px; line-height: 1.5; resize: vertical; box-sizing: border-box; }
 .notes-textarea:focus { outline: none; border-color: var(--accent); }
+
+/* ── Universal Bullet Points Typography & Scannability Overhaul ── */
+.content ul {
+  list-style: none;
+  padding-left: 0;
+  margin: 16px 0 22px;
+}
+.content ul > li {
+  position: relative;
+  padding-left: 28px;
+  margin-bottom: 12px;
+  line-height: 1.65;
+}
+.content ul > li::before {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: 10px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: hsl(var(--h, 215) var(--sat, 60%) var(--al1, 45%));
+  box-shadow: 0 0 0 3px hsl(var(--h, 215) 50% calc(var(--abg, 90%) - 5%));
+}
+.content ul > li > ul {
+  margin: 8px 0 8px;
+}
+.content ul > li > ul > li {
+  margin-bottom: 8px;
+}
+.content ul > li > ul > li::before {
+  border-radius: 2px;
+  width: 6px;
+  height: 6px;
+  background: var(--muted);
+  box-shadow: none;
+}
+.content ol {
+  list-style: none;
+  counter-reset: custom-ol;
+  padding-left: 0;
+  margin: 16px 0 22px;
+}
+.content ol > li {
+  counter-increment: custom-ol;
+  position: relative;
+  padding-left: 36px;
+  margin-bottom: 14px;
+  line-height: 1.65;
+}
+.content ol > li::before {
+  content: counter(custom-ol);
+  position: absolute;
+  left: 0;
+  top: 2px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: hsl(var(--h, 215) 60% calc(var(--abg, 90%) - 4%));
+  color: hsl(var(--h, 215) var(--sat, 60%) var(--al1, 45%));
+  font: 700 12px var(--f-ui, Inter, sans-serif);
+  display: grid;
+  place-items: center;
+  border: 1px solid hsl(var(--h, 215) 40% calc(var(--abg, 90%) - 10%));
+}
+.content li > strong:first-child,
+.content li > b:first-child {
+  color: var(--ink);
+  font-weight: 700;
+  display: inline;
+}
+
+/* Callout lists */
+.callout ul > li::before {
+  background: currentColor;
+  box-shadow: 0 0 0 2px rgba(0,0,0,0.06);
+}
+.callout ol > li::before {
+  background: var(--panel);
+  color: currentColor;
+  border-color: currentColor;
+}
+
+/* ── Chapter Executive Digest Card ── */
+.chapter-digest-card {
+  margin: 22px 0 32px;
+  border: 1.5px solid hsl(var(--h, 215) 35% calc(var(--abg, 90%) - 9%));
+  border-radius: 16px;
+  background: hsl(var(--h, 215) 50% calc(var(--abg, 90%) - 1.5%));
+  box-shadow: 0 4px 18px rgba(0,0,0,.03);
+  overflow: hidden;
+  transition: border-color .15s ease;
+}
+.digest-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  gap: 12px;
+  background: hsl(var(--h, 215) 45% calc(var(--abg, 90%) - 3%));
+  border-bottom: 1px solid hsl(var(--h, 215) 30% calc(var(--abg, 90%) - 8%));
+}
+.digest-title-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  user-select: none;
+  flex: 1;
+  min-width: 240px;
+}
+.digest-icon {
+  font-size: 24px;
+}
+.digest-title-text h3 {
+  margin: 0;
+  font-size: 19px;
+  font-family: var(--f-display, Georgia, serif);
+  font-weight: 600;
+  color: var(--ink);
+}
+.digest-meta {
+  font-size: 13px;
+  color: var(--muted);
+  display: block;
+  margin-top: 2px;
+}
+.digest-chevron {
+  font-size: 16px;
+  color: var(--muted);
+  display: inline-block;
+  transition: transform .2s ease;
+  margin-left: 4px;
+}
+.digest-chevron.open {
+  transform: rotate(90deg);
+}
+.digest-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.digest-action-btn {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all .15s ease;
+  font-family: var(--f-ui, Inter, sans-serif);
+}
+.digest-action-btn:hover {
+  border-color: hsl(var(--h, 215) var(--sat, 60%) var(--al1, 45%));
+  color: hsl(var(--h, 215) var(--sat, 60%) var(--al1, 45%));
+}
+.digest-action-btn.mode-btn.active {
+  background: hsl(var(--h, 215) var(--sat, 60%) var(--al1, 45%));
+  color: #fff;
+  border-color: transparent;
+}
+.btn-bullet-icon {
+  font-size: 10px;
+}
+.digest-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  animation: fadeIn .18s ease;
+}
+.digest-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+}
+.digest-section {
+  padding: 16px 18px;
+  border-radius: 12px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+}
+.digest-section-title {
+  margin: 0 0 12px;
+  font-size: 13.5px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  font-weight: 700;
+  color: hsl(var(--h, 215) var(--sat, 60%) var(--al1, 45%));
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--f-ui, Inter, sans-serif);
+}
+.bullet-takeaways {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.bullet-takeaways li {
+  position: relative;
+  padding-left: 20px;
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: var(--ink);
+}
+.bullet-takeaways li::before {
+  content: "•";
+  position: absolute;
+  left: 2px;
+  top: 0;
+  color: hsl(var(--h, 215) var(--sat, 60%) var(--al1, 45%));
+  font-size: 18px;
+  line-height: 1.2;
+}
+.digest-traps {
+  border-color: var(--warn-line);
+  background: var(--warn);
+}
+.trap-title {
+  color: var(--warn-line) !important;
+}
+.traps-list li::before {
+  color: var(--warn-line);
+}
+.digest-topics-checklist {
+  padding: 14px 18px;
+}
+.digest-topic-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.digest-topic-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all .15s ease;
+  user-select: none;
+}
+.digest-topic-pill input[type="checkbox"] {
+  display: none;
+}
+.pill-checkbox {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  border: 1.5px solid var(--muted);
+  display: inline-grid;
+  place-items: center;
+  transition: all .15s;
+}
+.digest-topic-pill.checked {
+  background: hsl(var(--h, 215) 60% calc(var(--abg, 90%) - 4%));
+  border-color: hsl(var(--h, 215) 45% calc(var(--abg, 90%) - 12%));
+  color: hsl(var(--h, 215) var(--sat, 60%) var(--al1, 45%));
+  font-weight: 600;
+}
+.digest-topic-pill.checked .pill-checkbox {
+  background: hsl(var(--h, 215) var(--sat, 60%) var(--al1, 45%));
+  border-color: hsl(var(--h, 215) var(--sat, 60%) var(--al1, 45%));
+}
+.digest-topic-pill.checked .pill-checkbox::after {
+  content: "✓";
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* ── Bullet Points / Scannable Reader Mode ── */
+.bullet-badge-toggle {
+  background: var(--code-bg);
+  color: var(--muted);
+  border: 1px solid var(--line);
+  cursor: pointer;
+  transition: all .15s;
+}
+.bullet-badge-toggle:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.bullet-badge-toggle.active {
+  background: hsl(var(--h, 215) var(--sat, 60%) var(--al1, 45%));
+  color: #fff;
+  border-color: transparent;
+}
+
+.reader.bullet-mode .content p:not(.goal) {
+  position: relative;
+  padding: 12px 18px 12px 34px;
+  margin: 12px 0;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(0,0,0,.02);
+  transition: all .15s ease;
+  font-size: 17.5px;
+}
+.reader.bullet-mode .content p:not(.goal):hover {
+  border-color: hsl(var(--h, 215) var(--sat, 60%) var(--al1, 45%));
+  transform: translateX(3px);
+  box-shadow: 0 4px 12px rgba(0,0,0,.05);
+}
+.reader.bullet-mode .content p:not(.goal)::before {
+  content: "•";
+  position: absolute;
+  left: 14px;
+  top: 10px;
+  font-size: 24px;
+  line-height: 1;
+  color: hsl(var(--h, 215) var(--sat, 60%) var(--al1, 45%));
+  font-weight: 900;
+}
+.reader.bullet-mode .content b,
+.reader.bullet-mode .content strong {
+  background: hsl(var(--h, 215) 55% calc(var(--abg, 90%) - 2.5%));
+  padding: 2px 6px;
+  border-radius: 6px;
+  color: hsl(var(--h, 215) var(--sat, 60%) calc(var(--al1, 45%) - 4%));
+}
+.reader.bullet-mode .content h3 {
+  border-bottom: 2px solid hsl(var(--h, 215) 40% calc(var(--abg, 90%) - 10%));
+  padding-bottom: 6px;
+}

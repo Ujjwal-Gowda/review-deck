@@ -1,30 +1,100 @@
-<p class="goal">How each language turns source into a running program, and the everyday commands you'll use for each.</p>
+<p class="goal">How an application actually starts from the operating system up, how each language turns source into a running program, and the everyday commands and toolchains you'll use.</p>
+
+<h3>1. Anatomy of an Application Startup: What Happens When Code Runs</h3>
+<p>When you type a command like <code>python3 link.py</code>, <code>npm run dev</code>, or <code>go run .</code> in your terminal, your computer doesn't magically "read" code. A precise cascade of operating system and runtime events takes place.</p>
+
+<div class="diagram">  [Terminal Shell]
+         │ (fork &amp; execve syscalls)
+         ▼
+  [OS Kernel Process Creation]
+  ├── Allocates Virtual Address Space (Code / Data / Heap / Stack)
+  ├── Attaches Standard I/O Streams: stdin (fd 0), stdout (fd 1), stderr (fd 2)
+  └── Passes Environment Variables &amp; CLI Arguments (argv)
+         │
+         ├──► Python: Loads CPython executable ──► Inits VM ──► Compiles AST to Bytecode ──► ceval.c Loop
+         ├──► Node/JS: Loads V8 Engine ──────────► Inits Libuv Event Loop ──► JIT Compiles ──► Starts Call Stack
+         ├──► TypeScript: Transpiled to JS ──────► Handled by Node/V8 runtime (or bundlers like Vite)
+         └──► Go: Native ELF/Mach-O Binary ──────► runtime.rt0_go ──► M:N Scheduler &amp; GC ──► main.main</div>
+
+<h4>Step-by-Step: The Python Application Startup Lifecycle</h4>
+<p>Let's trace what happens when you run a Python script like <code>python3 link.py</code> in this repository:</p>
+<ol>
+  <li><b>Process Creation:</b> The shell executes <code>execve("/usr/bin/python3", ["python3", "link.py"], envp)</code>. The OS kernel creates a new process, allocates private virtual memory pages, and maps the CPython executable into memory.</li>
+  <li><b>CPython Initialization:</b> CPython's <code>Py_Initialize()</code> sets up the runtime. It loads the built-in modules (<code>sys</code>, <code>builtins</code> like <code>len()</code>, <code>print()</code>), sets up <code>sys.path</code> for importing other files, and allocates the main thread state.</li>
+  <li><b>Tokenizing &amp; AST Generation:</b> Python reads the characters of <code>link.py</code> from disk. The tokenizer converts the text into a stream of tokens, and the parser builds an <b>Abstract Syntax Tree (AST)</b> representing the program's structural grammar.</li>
+  <li><b>Bytecode Compilation:</b> Python compiles the AST into a Python <b>code object</b> containing bytecode instructions (e.g. <code>LOAD_CONST</code>, <code>STORE_NAME</code>, <code>CALL_FUNCTION</code>). If imported as a module, it caches this on disk in <code>__pycache__/*.pyc</code>.</li>
+  <li><b>The Evaluation Loop (<code>ceval.c</code>):</b> CPython's virtual machine enters its central loop. It maintains a <b>Call Stack</b> of frame objects. In <code>link.py</code>, it executes lines sequentially:
+    <ul>
+      <li><code>import os, re</code>: locates the modules, loads their code objects, and binds them to the current namespace.</li>
+      <li><code>p = 'src/curriculum.ts'; s = open(p).read()</code>: makes an OS syscall (<code>openat</code>, <code>read</code>) to load the file contents into a Python <code>str</code> object on the heap.</li>
+      <li><code>for line in ...:</code>: creates an iterator and evaluates loop body bytecode instructions until exhausted.</li>
+    </ul>
+  </li>
+  <li><b>Process Exit:</b> When execution reaches the end of the file or calls <code>sys.exit(0)</code>, Python runs finalizers, collects garbage, closes open file descriptors, and returns exit code <code>0</code> to the operating system.</li>
+</ol>
+
+<h4>Step-by-Step: The JavaScript &amp; TypeScript Startup Lifecycle</h4>
+<p>In web and full-stack development (like this Vite + React + TypeScript site):</p>
+<ol>
+  <li><b>Vite Development Server (Node.js):</b> When you run <code>npm run dev</code>, Node.js boots Google's <b>V8 engine</b> and the <b>libuv</b> event loop. Vite opens a TCP socket on <code>http://localhost:5173</code> and listens for incoming browser HTTP requests.</li>
+  <li><b>On-Demand Transpilation:</b> Unlike traditional bundlers that compile every file before starting, Vite serves source code over native ES modules. When your browser requests <code>src/main.tsx</code>, Vite uses <code>esbuild</code> (written in Go) to strip TypeScript types and convert JSX into standard JavaScript in under 2 milliseconds.</li>
+  <li><b>Browser Execution:</b> The browser's V8 engine receives the JavaScript. It creates the <b>Global Execution Context</b>, executes top-level JavaScript, boots the React 19 root (<code>createRoot(document.getElementById('root')!)</code>), renders DOM nodes, and waits for user events via the browser Event Loop.</li>
+</ol>
+
+<h4>Step-by-Step: The Go Application Startup Lifecycle</h4>
+<p>Unlike Python and JavaScript, Go produces a <b>statically linked native machine binary</b> with no interpreter:</p>
+<ol>
+  <li><b>Direct Execution:</b> The OS kernel reads the ELF/Mach-O headers, maps memory, and jumps directly to the entry symbol (<code>_rt0_amd64_linux</code> or similar). No external runtime needs to be installed on the machine.</li>
+  <li><b>Runtime Bootstrap (<code>runtime.rt0_go</code>):</b> Before your <code>main()</code> function ever runs, Go's embedded runtime initializes:
+    <ul>
+      <li>Detects the number of CPU cores and initializes the <b>M:N scheduler</b> (mapping $M$ OS threads to $N$ goroutines via logical processors $P$).</li>
+      <li>Initializes memory allocators (mcache, mcentral, mheap) and the concurrent Garbage Collector.</li>
+      <li>Runs all package <code>init()</code> functions in topological dependency order.</li>
+    </ul>
+  </li>
+  <li><b>Launching <code>main.main</code>:</b> The runtime creates the primary Goroutine and schedules it on an OS thread to run your <code>func main()</code>.</li>
+</ol>
+
+<h3>2. Toolchains &amp; Execution Models Side by Side</h3>
 <table>
-<tr><th></th><th>Python</th><th>TypeScript</th><th>Go</th><th>Rust</th><th>C</th></tr>
-<tr><td>Execution model</td><td>bytecode on the CPython VM</td><td>compiled to JS (types erased), run by V8 (JIT)</td><td>compiled to a static native binary</td><td>compiled to native code via LLVM</td><td>compiled to native code</td></tr>
+<tr><th></th><th>Python</th><th>JavaScript / TypeScript</th><th>Go</th><th>Rust</th><th>C</th></tr>
+<tr><td>Execution model</td><td>bytecode on the CPython VM</td><td>compiled to JS (types erased), run by V8 (JIT + Event Loop)</td><td>compiled to a static native binary (embedded runtime)</td><td>compiled to native code via LLVM</td><td>compiled directly to native machine code</td></tr>
 <tr><td>Try code quickly</td><td><code>python3</code> (REPL)</td><td><code>node</code>, or <code>npx tsx file.ts</code></td><td><code>go run .</code></td><td><code>cargo run</code></td><td><code>gcc a.c &amp;&amp; ./a.out</code></td></tr>
 <tr><td>New project</td><td><code>uv init app</code></td><td><code>npm init -y</code> + <code>npm i -D typescript tsx</code></td><td><code>go mod init example.com/app</code></td><td><code>cargo new app</code></td><td>a folder + <code>Makefile</code></td></tr>
 <tr><td>Add a dependency</td><td><code>uv add httpx</code></td><td><code>npm i zod</code></td><td><code>go get github.com/x/y</code></td><td><code>cargo add serde</code></td><td>system package + <code>-lname</code></td></tr>
-<tr><td>Build for release</td><td>(not compiled) <code>uv build</code> for a wheel</td><td><code>tsc</code> or a bundler</td><td><code>go build -o app</code></td><td><code>cargo build --release</code></td><td><code>gcc -O2 -o app *.c</code></td></tr>
+<tr><td>Build for release</td><td>(not compiled) <code>uv build</code> for a wheel</td><td><code>tsc</code> or a bundler (Vite / Rollup)</td><td><code>go build -o app</code></td><td><code>cargo build --release</code></td><td><code>gcc -O2 -o app *.c</code></td></tr>
 <tr><td>Test</td><td><code>pytest</code></td><td><code>vitest</code> / <code>node --test</code></td><td><code>go test ./...</code></td><td><code>cargo test</code></td><td>your own runner / Unity</td></tr>
 <tr><td>Format</td><td><code>ruff format</code></td><td><code>prettier -w .</code></td><td><code>gofmt -w .</code></td><td><code>cargo fmt</code></td><td><code>clang-format -i</code></td></tr>
 <tr><td>Lint / check</td><td><code>ruff check</code>, <code>pyright</code></td><td><code>eslint</code>, <code>tsc --noEmit</code></td><td><code>go vet</code>, staticcheck</td><td><code>cargo clippy</code></td><td><code>-Wall -Wextra</code>, sanitizers</td></tr>
 <tr><td>Debugger</td><td>pdb / debugpy</td><td>Chrome DevTools (<code>--inspect</code>)</td><td>Delve</td><td>rust-gdb / CodeLLDB</td><td>gdb</td></tr>
 <tr><td>Docs for a symbol</td><td><code>help(str.split)</code></td><td>editor hover, MDN</td><td><code>go doc strings.Split</code></td><td><code>cargo doc --open</code></td><td><code>man 3 printf</code></td></tr>
 </table>
-<h3>What "compiled" changes day to day</h3>
+
+<h3>3. What "Compiled vs Interpreted" Changes Day to Day</h3>
 <ul>
-<li><b>Errors arrive earlier:</b> Go, Rust and C (and TS's type checker) reject many mistakes before the program runs. In Python, most mistakes only appear when the line executes, so tests matter even more.</li>
-<li><b>Deployment:</b> a Go or Rust binary is one file you copy to a server. Python and Node need their runtime and dependencies installed (or a container).</li>
-<li><b>Edit–run loop:</b> interpreted languages start instantly; Rust compiles slowly (incremental builds help); Go compiles very fast.</li>
-<li><b>Startup and speed:</b> native binaries start in milliseconds and run CPU-heavy code 10–100× faster than CPython.</li>
+<li><b>Errors arrive earlier:</b> Go, Rust, C (and TypeScript's type checker) reject type mismatches, missing parameters, and typos before the program ever runs. In Python and standard JavaScript, errors only emerge when that exact line of code executes at runtime.</li>
+<li><b>Deployment simplicity:</b> A Go or Rust binary is a single self-contained file you copy to a bare Linux server. Python and Node require the interpreter, runtime environment, and <code>node_modules</code> or virtual environment installed on target machines.</li>
+<li><b>Edit–run latency:</b> Python and Node start interpreting instantly; Go compiles so fast it feels like a script (<code>go run .</code>); Rust compiles more slowly due to deep LLVM optimizations.</li>
+<li><b>Startup overhead:</b> Native binaries (Go, C) initialize in 1–2 milliseconds. Python takes ~20–30 ms. Node.js takes ~40–60 ms. For serverless functions (cold starts) and CLI tools, this is significant.</li>
 </ul>
-<h3>A minimal project in each</h3>
-<pre data-lang="shell"><code class="language-bash">uv init wc-py &amp;&amp; cd wc-py &amp;&amp; uv run main.py
+
+<h3>4. Minimal Project Scaffolding in Each Language</h3>
+<pre data-lang="shell"><code class="language-bash"># Python with uv
+uv init wc-py &amp;&amp; cd wc-py &amp;&amp; uv run main.py
+
+# TypeScript with Node
 mkdir wc-ts &amp;&amp; cd wc-ts &amp;&amp; npm init -y &amp;&amp; npm i -D typescript tsx @types/node &amp;&amp; npx tsc --init &amp;&amp; npx tsx main.ts
+
+# Go
 mkdir wc-go &amp;&amp; cd wc-go &amp;&amp; go mod init wc &amp;&amp; go run .
+
+# Rust
 cargo new wc-rs &amp;&amp; cd wc-rs &amp;&amp; cargo run
+
+# C
 mkdir wc-c &amp;&amp; cd wc-c &amp;&amp; printf 'wc: main.c\n\tgcc -std=c17 -Wall -Wextra -g -o wc main.c\n' &gt; Makefile &amp;&amp; make</code></pre>
+
 <div class="exercises"><h3>Practice</h3>
-<details class="ex"><summary>0.1 <span class="levels">basic</span> Create the five minimal projects above, each printing "hello from &lt;language&gt;". Time <code>hyperfine</code> on each hello-world binary or script.</summary><div><p>Native binaries (C, Rust, Go) start in about 1 ms; Node in about 40 ms; Python in about 20 ms. Startup matters for CLIs run thousands of times, and barely matters for long-running servers.</p></div></details>
+<details class="ex"><summary>100.1 <span class="levels">basic</span> Create the minimal projects above, each printing "hello from &lt;language&gt;". Time <code>hyperfine</code> on each hello-world binary or script.</summary><div><p>Native binaries (C, Rust, Go) start in about 1 ms; Node in about 40 ms; Python in about 20 ms. Startup matters for CLIs run thousands of times, and barely matters for long-running servers.</p></div></details>
+<details class="ex"><summary>100.2 <span class="levels">intermediate</span> Inspect the bytecode of a Python function using the standard library <code>dis</code> module: <code>import dis; dis.dis(lambda x: x + 1)</code>.</summary><div><p>You will see opcodes like <code>LOAD_FAST 0 (x)</code>, <code>LOAD_CONST 1 (1)</code>, and <code>BINARY_OP 0 (+)</code>. This is the exact bytecode the CPython virtual machine loop executes.</p></div></details>
 </div>
