@@ -21,14 +21,14 @@
 │   │ ptr: 0x1000  │    len: 5    │    cap: 5    │ ──► Heap Buffer: ['h','e','l','l','o']│
 │   └──────────────┴──────────────┴──────────────┘                                       │
 │                                                                                        │
-│   let s2 = s1; // ⚠️ MOVE! (Shallow bitwise copy of stack header, s1 is INVALIDATED!)   │
+│   let s2 = s1; // [WARN] MOVE! (Shallow bitwise copy of stack header, s1 is INVALIDATED!)   │
 │                                                                                        │
 │   s1 (INVALID)   ┌──────────────┬──────────────┬──────────────┐                        │
 │                  │ ptr: 0x1000  │    len: 5    │    cap: 5    │ ──► Heap Buffer        │
 │                  └──────────────┴──────────────┴──────────────┘                        │
 │                  s2 (NEW OWNER)                                                        │
 │                                                                                        │
-│   ★ When s2 exits scope, free(0x1000) is called ONCE. Double-free is IMPOSSIBLE!       │
+│   * When s2 exits scope, free(0x1000) is called ONCE. Double-free is IMPOSSIBLE!       │
 └────────────────────────────────────────────────────────────────────────────────────────┘
 </div>
 
@@ -39,7 +39,7 @@
 let s2 = s1; // Ownership MOVED to s2.
 
 // println!("{s1}"); 
-// ❌ COMPILE ERROR [E0382]: borrow of moved value: `s1`
+// [FAIL] COMPILE ERROR [E0382]: borrow of moved value: `s1`
 // Rust prevents you from touching s1, guaranteeing zero dangling references!
 
 // Types that live entirely on the stack implement the `Copy` trait:
@@ -63,7 +63,7 @@ let y = x; // Bitwise stack copy! Both x and y are valid.</code></pre>
 let first = &v[0]; // Immutable borrow of v's heap array
 
 v.push(4); 
-// ❌ COMPILE ERROR [E0502]: cannot borrow `v` as mutable because it is also borrowed as immutable
+// [FAIL] COMPILE ERROR [E0502]: cannot borrow `v` as mutable because it is also borrowed as immutable
 // Why? Because push() might reallocate the backing array to a new heap address!
 // If this compiled, `first` would point to deallocated garbage memory (Use-After-Free)!
 
@@ -77,7 +77,7 @@ println!("First element is: {first}");</code></pre>
 let r1 = &data;
 println!("Read: {r1}"); // r1's lifetime ENDS here!
 
-// ✅ VALID: No conflict, because r1 is never used again!
+// [OK] VALID: No conflict, because r1 is never used again!
 let r2 = &mut data;
 r2.push_str(" modified");
 println!("Updated: {r2}");</code></pre>
@@ -96,7 +96,7 @@ fn main() {
     {
         let string2 = String::from("xyz");
         // result = longest(&string1, &string2);
-        // ❌ COMPILE ERROR [E0597]: `string2` does not live long enough!
+        // [FAIL] COMPILE ERROR [E0597]: `string2` does not live long enough!
         // result would survive outside the block, but string2 is dropped at the brace!
     }
 }</code></pre>

@@ -1,0 +1,137 @@
+<div class="chapter-objectives">
+  <p class="goal">How to break down problems, trace execution on paper, diagnose runtime errors, and write deterministic tests before writing code.</p>
+  <ul class="objectives-list">
+    <li><strong>Deconstruct:</strong> Dissect fuzzy business requirements into explicit inputs, expected outputs, and hard boundary constraints.</li>
+    <li><strong>Trace:</strong> Track variable bindings and state changes on paper using structured execution trace tables.</li>
+    <li><strong>Debug:</strong> Apply the scientific method and binary bisection to isolate bugs instead of guess-and-check.</li>
+  </ul>
+</div>
+
+<h3>1. Why This Concept Exists: The Engineering Bottleneck</h3>
+<p>Most novice and intermediate programmers struggle not with programming language syntax, but with <b>problem translation</b>. When presented with a prompt like <i>"calculate the rolling 7-day average of active users"</i>, the untrained mind attempts to write code immediately. This leads to thrashing, off-by-one errors, tangled control flow, and copy-pasting from search engines or AI.</p>
+<p>Senior engineers rarely begin by typing code. They follow an explicit translation pipeline:</p>
+
+<div class="diagram">  [Unstructured Problem]
+            │
+            ▼ 1. Formalize Contract: Inputs, Outputs, Invariants &amp; Constraints
+  [Precise Specification]
+            │
+            ▼ 2. Algorithmic Decomposition: Pseudocode &amp; Step Breakdown
+  [Structured Steps]
+            │
+            ▼ 3. Manual State Trace: Dry-run with edge cases on paper
+  [Verified Trace Table]
+            │
+            ▼ 4. Implementation: Express in JavaScript / TypeScript / Python / Go
+  [Production Code + Unit Tests]</div>
+
+<h3>2. The Input-Output-Constraint Contract (IOC)</h3>
+<p>Before writing a single line of implementation in any language, write the three-part IOC specification:</p>
+<ul>
+  <li><b>Inputs:</b> What are the exact types, structures, and domains of the incoming arguments? Can an input be empty, null, negative, or arbitrarily large?</li>
+  <li><b>Outputs:</b> What is the exact return type and structure? What should be returned when no matching data exists (e.g. <code>null</code>, empty array, or explicit error/exception)?</li>
+  <li><b>Constraints:</b> What are the time and space complexity budgets? Are there memory or mutability restrictions (e.g. must not mutate the input array)?</li>
+</ul>
+
+<div class="callout note"><b class="t">Case Study: First Non-Repeating Character</b>
+<p><b>Prompt:</b> "Find the first character in a string that does not repeat."</p>
+<ul>
+  <li><b>Inputs:</b> String <code>s</code> (e.g. <code>"swiss"</code>). <i>Questions to ask:</i> Is it ASCII or Unicode? Is it case-sensitive? Can it be empty?</li>
+  <li><b>Outputs:</b> Character (e.g. <code>"w"</code>) or sentinel/null/error if all characters repeat (e.g. <code>"aabb"</code>).</li>
+  <li><b>Constraints:</b> Target $O(N)$ time complexity where $N$ is string length. $O(1)$ auxiliary memory (bounded by alphabet size, 256 bytes for ASCII).</li>
+</ul>
+</div>
+
+<h3>3. Writing Pseudocode: Bridging Logic and Syntax</h3>
+<p>Pseudocode is human language structured like code. It ignores semicolon syntax and focuses purely on sequencing, conditions, and data transformations:</p>
+
+<pre><code class="language-plaintext">Algorithm: FirstNonRepeatingChar(text)
+  1. If text is empty, return None
+  2. Initialize an empty frequency map: counts = {}
+  3. First Pass (Populate counts):
+     For each character c in text:
+       If c in counts, increment counts[c] by 1
+       Else set counts[c] = 1
+  4. Second Pass (Find first with count == 1):
+     For each character c in text:
+       If counts[c] == 1, return c
+  5. If loop completes with no match, return None</code></pre>
+
+<h3>4. Manual State Tracing: The Trace Table</h3>
+<p>Before you run code, you must be able to simulate the CPU execution loop in your mind. A <b>Trace Table</b> lists every variable and tracks its value after every statement:</p>
+
+<table>
+<tr><th>Step</th><th>Statement</th><th>Loop Index (<code>i</code>)</th><th>Current Char (<code>c</code>)</th><th>Map State (<code>counts</code>)</th><th>Notes</th></tr>
+<tr><td>0</td><td>Initialization</td><td>-</td><td>-</td><td><code>{}</code></td><td>Initial empty state</td></tr>
+<tr><td>1</td><td>Pass 1, iter 0</td><td>0</td><td><code>'a'</code></td><td><code>{'a': 1}</code></td><td>New character inserted</td></tr>
+<tr><td>2</td><td>Pass 1, iter 1</td><td>1</td><td><code>'b'</code></td><td><code>{'a': 1, 'b': 1}</code></td><td>New character inserted</td></tr>
+<tr><td>3</td><td>Pass 1, iter 2</td><td>2</td><td><code>'a'</code></td><td><code>{'a': 2, 'b': 1}</code></td><td>Duplicate incremented</td></tr>
+<tr><td>4</td><td>Pass 2, iter 0</td><td>0</td><td><code>'a'</code></td><td><code>counts['a'] == 2</code></td><td>Condition false; continue</td></tr>
+<tr><td>5</td><td>Pass 2, iter 1</td><td>1</td><td><code>'b'</code></td><td><code>counts['b'] == 1</code></td><td>Condition true; <b>Return 'b'</b></td></tr>
+</table>
+
+<h3>5. Reading Errors: Anatomy of a Crash</h3>
+<p>Novice programmers fear error messages; experienced engineers treat error messages as high-precision navigational coordinates:</p>
+
+<div class="diagram">  TypeError: Cannot read properties of undefined (reading 'length')
+      at calculateTotal (/app/src/billing.js:42:25)
+      at processOrder (/app/src/orders.js:18:12)
+      at /app/src/server.js:84:7</div>
+
+<ul>
+  <li><b>Error Category:</b> <code>TypeError</code> tells you an operation was attempted on a value whose type does not support it.</li>
+  <li><b>Diagnostic Message:</b> <code>reading 'length'</code> on <code>undefined</code> means the object immediately to the left of <code>.length</code> evaluated to <code>undefined</code>.</li>
+  <li><b>Top Stack Frame:</b> <code>/app/src/billing.js:42:25</code> gives the exact file, line number (42), and column (25) where the CPU attempted the invalid dereference.</li>
+  <li><b>Call Chain:</b> Read bottom-up to trace how execution arrived at line 42 (from <code>server.js:84</code> &rarr; <code>orders.js:18</code> &rarr; <code>billing.js:42</code>).</li>
+</ul>
+
+<h3>6. Systematic Debugging: The Scientific Method</h3>
+<p>Never debug by randomly changing lines of code hoping the error goes away ("shotgun debugging"). Follow the 4-step scientific protocol:</p>
+<ol>
+  <li><b>Reproduce Deterministically:</b> Write down the minimal input that consistently triggers the failure. If you cannot reproduce it, you cannot prove you fixed it.</li>
+  <li><b>Formulate a Falsifiable Hypothesis:</b> State: <i>"I believe the function crashes on line 42 because <code>order.items</code> is null when a newly registered user submits a cart."</i></li>
+  <li><b>Test the Hypothesis via Bisection:</b> Place an assertion or breakpoint at the exact midpoint of execution. Does the invalid state exist before or after? Cut the search space by half each iteration.</li>
+  <li><b>Implement the Minimal Invariant Fix:</b> Protect the boundary or correct the logic. Verify that the test passes AND that existing tests remain green.</li>
+</ol>
+
+<h3>7. Testing: The Verification Pyramid</h3>
+<p>Every problem solved must be verified against four categories of test cases:</p>
+<ul>
+  <li><b>The Happy Path:</b> Standard, expected input that fulfills the core requirement (e.g. <code>"swiss" &rarr; "w"</code>).</li>
+  <li><b>Empty &amp; Zero Boundaries:</b> Empty string (<code>""</code>), zero (<code>0</code>), empty array (<code>[]</code>), or single element (<code>"x"</code>).</li>
+  <li><b>Homogeneous Edge Cases:</b> All elements identical (e.g. <code>"aaaa" &rarr; None</code>).</li>
+  <li><b>Extreme Bounds:</b> Very large collections (verifying memory bounds) or special characters (Unicode, emojis, spaces).</li>
+</ul>
+
+<div class="exercises"><h3>Practice Drills</h3>
+<details class="ex"><summary>0.1 <span class="levels">basic</span> Convert requirements to an IOC contract: "Given a list of timestamps, return the maximum gap between any two consecutive events."</summary><div>
+<p><strong>IOC Specification:</strong></p>
+<ul>
+  <li><strong>Inputs:</strong> Array of UNIX timestamps (integers/numbers). E.g. <code>[10, 25, 12, 40]</code>. Note: List may be unsorted!</li>
+  <li><strong>Outputs:</strong> Integer representing maximum difference, or <code>0</code> / error if list has fewer than 2 timestamps.</li>
+  <li><strong>Constraints:</strong> Must handle unsorted inputs efficiently. Sorting takes $O(N \log N)$ time, $O(1)$ extra space.</li>
+</ul>
+</div></details>
+
+<details class="ex"><summary>0.2 <span class="levels">think</span> Trace this code manually on paper before executing: what does it print?</summary><div>
+<pre data-lang="python"><code class="language-python">def mystery(nums):
+    res = 0
+    for i in range(len(nums)):
+        if nums[i] % 2 == 0:
+            res += nums[i]
+        else:
+            res -= nums[i]
+    return res
+
+print(mystery([1, 2, 3, 4, 5]))</code></pre>
+<p><strong>Trace Table:</strong></p>
+<ul>
+  <li>i=0: num=1 (odd) &rarr; res = 0 - 1 = -1</li>
+  <li>i=1: num=2 (even) &rarr; res = -1 + 2 = 1</li>
+  <li>i=2: num=3 (odd) &rarr; res = 1 - 3 = -2</li>
+  <li>i=3: num=4 (even) &rarr; res = -2 + 4 = 2</li>
+  <li>i=4: num=5 (odd) &rarr; res = 2 - 5 = -3</li>
+</ul>
+<p><strong>Output:</strong> <code>-3</code></p>
+</div></details>
+</div>

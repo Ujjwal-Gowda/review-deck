@@ -9,7 +9,7 @@
 │                                                                                        │
 │   CPUs read memory in 8-byte word boundaries. Unaligned struct fields waste RAM!       │
 │                                                                                        │
-│   ❌ Unoptimized Struct (24 bytes):                                                    │
+│   [FAIL] Unoptimized Struct (24 bytes):                                                    │
 │   type BadOrder struct {                                                               │
 │       A bool    // 1 byte + 7 bytes PADDING!                                           │
 │       B int64   // 8 bytes                                                             │
@@ -17,7 +17,7 @@
 │   }                                                                                    │
 │   [ A (1B) | Pad (7B) ][ B (8B) ][ C (1B) | Pad (7B) ] ──► Total: 24 bytes!            │
 │                                                                                        │
-│   ✅ Optimized Struct (16 bytes - 33% RAM Savings across 10M rows):                   │
+│   [OK] Optimized Struct (16 bytes - 33% RAM Savings across 10M rows):                   │
 │   type GoodOrder struct {                                                              │
 │       B int64   // 8 bytes                                                             │
 │       A bool    // 1 byte                                                              │
@@ -25,7 +25,7 @@
 │   }                                                                                    │
 │   [ B (8B) ][ A (1B) | C (1B) | Pad (6B) ] ──► Total: 16 bytes!                        │
 │                                                                                        │
-│   ★ Rule: Order struct fields from largest byte-size to smallest!                      │
+│   * Rule: Order struct fields from largest byte-size to smallest!                      │
 └────────────────────────────────────────────────────────────────────────────────────────┘
 </div>
 
@@ -97,18 +97,18 @@ func (e *CustomErr) Error() string { return "boom" }
 
 func fail() error {
     var err *CustomErr = nil // Concrete pointer is nil
-    return err               // ❌ RETURNS an iface with tab=*CustomErr and data=nil!
+    return err               // [FAIL] RETURNS an iface with tab=*CustomErr and data=nil!
 }
 
 func main() {
     err := fail()
     if err != nil {
-        // 🔥 THIS RUNS! Even though err is logically nil!
+        // [BUG] THIS RUNS! Even though err is logically nil!
         // Because iface.tab is NOT nil!
         fmt.Println("Error is not nil!", err)
     }
 }
-// ✅ THE FIX: Always return raw unadorned `nil` for error returns:
+// [OK] THE FIX: Always return raw unadorned `nil` for error returns:
 func safe() error {
     // return nil, NOT a typed pointer!
     return nil
@@ -156,7 +156,7 @@ type PostgresStore struct{}
 func (p *PostgresStore) Get(id string) ([]byte, error) { return nil, nil }
 func (p *PostgresStore) Save(id string, data []byte) error { return nil }
 
-// ✅ COMPILE-TIME ASSERTION:
+// [OK] COMPILE-TIME ASSERTION:
 // If PostgresStore misses any method or has a signature mismatch,
 // the Go compiler halts the build here with a clear error!
 var _ Store = (*PostgresStore)(nil)</code></pre>

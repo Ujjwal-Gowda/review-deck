@@ -1,0 +1,230 @@
+const e=`<div class="chapter-objectives">
+  <p class="goal">The JavaScript execution engine beneath TypeScript, React, and Node.js: call stack, event loop, prototypes, closures, and asynchronous semantics.</p>
+  <ul class="objectives-list">
+    <li><strong>Trace:</strong> Predict the exact execution sequence of synchronous code, microtasks, and macrotasks in the V8 event loop.</li>
+    <li><strong>Demystify <code>this</code>:</strong> Apply the four binding rules and explain why arrow functions capture lexical scope.</li>
+    <li><strong>Traverse Prototypes:</strong> Trace property lookup along the <code>[[Prototype]]</code> chain to <code>Object.prototype</code>.</li>
+    <li><strong>Implement:</strong> Build a concurrency-bounded task pool from raw Promises.</li>
+  </ul>
+</div>
+
+<div class="prereqs-box">
+  <span class="prereq-label">Prerequisites:</span>
+  <a class="xref" data-old="c02">Variables &amp; Types</a> &middot; <a class="xref" data-old="c05">Functions</a> &middot; <a class="xref" data-old="n11">Scope &amp; Closures</a>
+</div>
+
+<h3>1. Why This Model Exists: The Browser GUI Constraint</h3>
+<p>In 1995, Brendan Eich designed JavaScript for Netscape Navigator under a strict design constraint: <b>the user interface must never freeze, and programmers must not face multi-threaded deadlock bugs</b>. If scripts manipulated DOM tree elements using preemptive threads (like Java or C++), developers would encounter continuous race conditions where Thread A removed a button while Thread B attempted to style it.</p>
+<p>To eliminate deadlocks while remaining responsive, JavaScript adopted a <b>single-threaded, non-blocking, event-driven runtime model</b> with run-to-completion semantics. Concurrency is achieved not through parallel CPU threads, but through asynchronous event notification queues coordinated by an event loop.</p>
+
+<h3>2. The Engine Architecture: V8 &amp; The Event Loop</h3>
+<p>To write correct asynchronous JavaScript, you must hold this physical runtime architecture in your mind:</p>
+
+<div class="diagram">  ┌────────────────────────────── JavaScript Engine (V8) ─────────────────────────────┐
+  │                                                                                   │
+  │   [Memory Heap]                                    [Call Stack]                   │
+  │   Objects, closures, arrays                        Synchronous execution frames:  │
+  │   allocated dynamically on heap                    ┌──────────────────────────┐   │
+  │   and garbage-collected                            │ calculateTotal()         │   │
+  │                                                    ├──────────────────────────┤   │
+  │                                                    │ processOrder()           │   │
+  │                                                    └──────────────────────────┘   │
+  └───────────────────────────────────────────────────────────────────────────────────┘
+                 ▲                                            │
+                 │                                            ▼ invokes asynchronous API
+  ┌──────────────┴────────────────────────────────────────────────────────────────────┐
+  │   [Host Environment / Web APIs / Node.js libuv]                                   │
+  │   Timers (setTimeout), Network Sockets (fetch), File I/O, DOM Event Listeners      │
+  └──────────────────────────────────────┬────────────────────────────────────────────┘
+                                         │ when I/O completes or timer fires
+                                         ▼
+  ┌───────────────────────────────────────────────────────────────────────────────────┐
+  │   [Microtask Queue] (High Priority)                                               │
+  │   Promise .then/.catch/.finally, queueMicrotask, MutationObserver                 │
+  │   ═════════════════════════════════════════════════════════════════════════════    │
+  │   [Macrotask / Task Queue] (Standard Priority)                                    │
+  │   setTimeout, setInterval, setImmediate (Node), I/O callbacks                     │
+  └───────────────────────────────────────────────────────────────────────────────────┘
+                                         │
+                                         ▼
+                      [The Event Loop Decision Loop]
+                      If Call Stack is empty:
+                        1. Drain ALL pending Microtasks until queue is 0.
+                        2. Perform UI render / layout pass (browser only).
+                        3. Dequeue and run EXACTLY ONE Macrotask.
+                        4. Repeat.</div>
+
+<h3>3. Execution Order: Tracing Synchronous vs Microtask vs Macrotask</h3>
+<p>Consider this classic interview drill. Can you predict the exact console output sequence before looking at the explanation?</p>
+
+<pre data-lang="javascript"><code class="language-javascript">console.log("1: Synchronous");
+
+setTimeout(() => {
+  console.log("2: Macrotask (Timer)");
+}, 0);
+
+Promise.resolve().then(() => {
+  console.log("3: Microtask 1");
+}).then(() => {
+  console.log("4: Microtask 2");
+});
+
+queueMicrotask(() => {
+  console.log("5: Microtask 3");
+});
+
+console.log("6: Synchronous End");</code></pre>
+
+<h4>Step-by-Step State Execution Trace</h4>
+<ol>
+  <li><code>console.log("1: Synchronous")</code> executes immediately on the Call Stack. Output: <code>1: Synchronous</code>.</li>
+  <li><code>setTimeout(..., 0)</code> requests the host environment (timer thread) to schedule a callback. When the 0ms delay elapses, the callback is pushed into the <b>Macrotask Queue</b>.</li>
+  <li><code>Promise.resolve().then(...)</code> resolves immediately; its <code>.then</code> callback is pushed into the <b>Microtask Queue</b>.</li>
+  <li><code>queueMicrotask(...)</code> pushes another callback directly into the <b>Microtask Queue</b>.</li>
+  <li><code>console.log("6: Synchronous End")</code> executes on the Call Stack. Output: <code>6: Synchronous End</code>.</li>
+  <li><b>Call Stack is now empty!</b> The Event Loop immediately checks the Microtask Queue:
+    <ul>
+      <li>Dequeues and runs Microtask 1. Output: <code>3: Microtask 1</code>. This returns a new Promise, scheduling Microtask 2.</li>
+      <li>Dequeues and runs Microtask 3. Output: <code>5: Microtask 3</code>.</li>
+      <li>Dequeues and runs Microtask 2. Output: <code>4: Microtask 2</code>.</li>
+    </ul>
+  </li>
+  <li><b>Microtask Queue is now empty!</b> The Event Loop takes the first item from the Macrotask Queue:
+    <ul>
+      <li>Dequeues and runs Timer callback. Output: <code>2: Macrotask (Timer)</code>.</li>
+    </ul>
+  </li>
+</ol>
+<p><b>Final Output:</b> <code>1, 6, 3, 5, 4, 2</code></p>
+
+<h3>4. The Four Rules of <code>this</code> Binding</h3>
+<p>In JavaScript, <code>this</code> is not bound to the function when it is declared. <b><code>this</code> is determined strictly by how the function is invoked at call time.</b></p>
+
+<ol>
+  <li><b>Default Binding:</b> Standalone function call <code>fn()</code>. In strict mode (<code>"use strict"</code>), <code>this</code> is <code>undefined</code>. In non-strict mode, it falls back to <code>window</code> (browser) or <code>global</code> (Node).</li>
+  <li><b>Implicit Binding:</b> Method call on an object: <code>obj.method()</code>. <code>this</code> is bound to <code>obj</code>.
+    <div class="callout warn"><b class="t">The Detached Method Trap</b>
+      <pre data-lang="javascript"><code class="language-javascript">const user = {
+  name: "Sarah",
+  greet() { console.log(\`Hello, \${this.name}\`); }
+};
+const fn = user.greet;
+fn(); // TypeError: Cannot read properties of undefined (reading 'name')
+// Why? 'fn' is called without an object context, triggering Default Binding!</code></pre>
+    </div>
+  </li>
+  <li><b>Explicit Binding:</b> Using <code>.call(context, ...args)</code>, <code>.apply(context, [args])</code>, or <code>.bind(context)</code> to hard-bind the receiver.</li>
+  <li><b><code>new</code> Binding:</b> When calling <code>new Constructor()</code>, JavaScript creates a fresh blank object, sets its prototype link, binds <code>this</code> to that new instance, and returns it.</li>
+</ol>
+
+<h4>Arrow Functions: Lexical <code>this</code></h4>
+<p>Arrow functions (<code>() =&gt; {}</code>) <b>do not have their own <code>this</code> binding</b>. They resolve <code>this</code> lexically from their enclosing scope at declaration time, exactly like a normal variable in the scope chain. <code>call()</code>, <code>apply()</code>, and <code>bind()</code> cannot alter an arrow function's <code>this</code>.</p>
+
+<pre data-lang="javascript"><code class="language-javascript">class OrderService {
+  constructor(taxRate) {
+    this.taxRate = taxRate;
+  }
+  // Arrow method: permanently preserves 'this' when passed as a callback
+  calculateTotal = (items) => {
+    return items.reduce((sum, item) => sum + item.price * (1 + this.taxRate), 0);
+  };
+}</code></pre>
+
+<h3>5. Prototypes &amp; The Prototype Chain</h3>
+<p>JavaScript does not use classical class-based inheritance; it uses <b>differential prototypical inheritance</b>:</p>
+<ul>
+  <li>Every JavaScript object has an internal hidden reference called <code>[[Prototype]]</code> (accessible via <code>Object.getPrototypeOf(obj)</code>).</li>
+  <li>When you access <code>obj.property</code>, the engine first searches <code>obj</code>'s own keys. If not found, it traverses up the prototype link: <code>obj &rarr; Class.prototype &rarr; Object.prototype &rarr; null</code>.</li>
+  <li>The ES6 <code>class</code> keyword is syntactic sugar over this prototype chain; methods declared inside a class body are placed directly on <code>Class.prototype</code> to conserve memory.</li>
+</ul>
+
+<pre data-lang="javascript"><code class="language-javascript">function Animal(name) {
+  this.name = name;
+}
+Animal.prototype.speak = function() {
+  return \`\${this.name} makes a noise.\`;
+};
+
+const dog = new Animal("Rex");
+console.log(dog.speak()); // "Rex makes a noise."
+console.log(Object.getPrototypeOf(dog) === Animal.prototype); // true
+console.log(Object.getPrototypeOf(Animal.prototype) === Object.prototype); // true
+console.log(Object.getPrototypeOf(Object.prototype)); // null (end of chain)</code></pre>
+
+<h3>6. Production Asynchronous Patterns</h3>
+<p>Modern JavaScript production applications rely on structured asynchronous coordination:</p>
+
+<table>
+<tr><th>Pattern</th><th>API</th><th>Failure Behavior</th><th>Primary Use Case</th></tr>
+<tr><td><b>Fail-Fast Parallel</b></td><td><code>Promise.all([p1, p2])</code></td><td>Rejects immediately if ANY promise rejects</td><td>Atomic transactions where all dependencies are mandatory.</td></tr>
+<tr><td><b>Resilient Multi-Fetch</b></td><td><code>Promise.allSettled([p1, p2])</code></td><td>Never rejects; returns status array</td><td>Dashboard aggregations where partial data is acceptable.</td></tr>
+<tr><td><b>Fastest Wins</b></td><td><code>Promise.race([p1, timeout])</code></td><td>Settles on the fastest outcome</td><td>Network request timeout guards.</td></tr>
+<tr><td><b>Request Cancellation</b></td><td><code>AbortController</code> + <code>signal</code></td><td>Throws <code>AbortError</code> on abort</td><td>Canceling in-flight HTTP requests when component unmounts.</td></tr>
+</table>
+
+<pre data-lang="javascript"><code class="language-javascript">// Resilient request with explicit timeout cancellation
+async function fetchWithTimeout(url, timeoutMs = 5000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(url, { signal: controller.signal });
+    if (!response.ok) throw new Error(\`HTTP \${response.status}\`);
+    return await response.json();
+  } catch (err) {
+    if (err.name === "AbortError") {
+      throw new Error(\`Request timed out after \${timeoutMs}ms\`);
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer); // Prevent timer leak
+  }
+}</code></pre>
+
+<div class="exercises"><h3>Practice Drills</h3>
+<details class="ex"><summary>68.1 <span class="levels">basic</span> Implement a sleep/delay utility in one line using Promises.</summary><div>
+<pre data-lang="javascript"><code class="language-javascript">const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Usage:
+await sleep(1000); // pauses execution for 1000ms without blocking event loop</code></pre>
+</div></details>
+
+<details class="ex"><summary>68.2 <span class="levels">intermediate</span> Fix this callback loop: why does it print "3, 3, 3" instead of "0, 1, 2"?</summary><div>
+<pre data-lang="javascript"><code class="language-javascript">// Broken: 'var' has function scope, shared across all iterations
+for (var i = 0; i < 3; i++) {
+  setTimeout(() => console.log(i), 10);
+}
+
+// Fix 1: Use block-scoped 'let' (creates a fresh binding per iteration)
+for (let i = 0; i < 3; i++) {
+  setTimeout(() => console.log(i), 10);
+}
+
+// Fix 2: Create a closure / IIFE passing i as a parameter
+for (var i = 0; i < 3; i++) {
+  ((capturedIndex) => {
+    setTimeout(() => console.log(capturedIndex), 10);
+  })(i);
+}</code></pre>
+</div></details>
+</div>
+
+<h3>7. Hands-on Implementation Challenge: Concurrency Limiter</h3>
+<div class="challenge-box">
+  <h4>Build <code>pLimit(concurrency)</code></h4>
+  <p>Write a utility that wraps async tasks and ensures that no more than $K$ tasks execute concurrently, queuing excess tasks until an active slot frees up:</p>
+  <ul>
+    <li>Input: Maximum concurrency integer $K$ (e.g. <code>const limit = pLimit(2)</code>).</li>
+    <li>Output: A wrapper function accepting an async thunk <code>() =&gt; Promise&lt;T&gt;</code> and returning a Promise resolving to <code>T</code>.</li>
+    <li>Edge Cases: When a task rejects, active slots must still free up and the error must propagate cleanly.</li>
+  </ul>
+</div>
+
+<div class="references-section">
+  <h4>Authoritative References</h4>
+  <ul>
+    <li><a href="https://tc39.es/ecma262/" target="_blank" rel="noreferrer">ECMAScript Language Specification (ECMA-262)</a></li>
+    <li><a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Event_loop" target="_blank" rel="noreferrer">MDN Web Docs: Concurrency model and the Event Loop</a></li>
+  </ul>
+</div>
+`;export{e as default};

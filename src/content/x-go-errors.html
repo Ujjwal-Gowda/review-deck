@@ -29,6 +29,51 @@ if errors.Is(err, ErrOutOfStock) { suggestAlternative() }      // true even if w
 var ve *ValidationError
 if errors.As(err, &amp;ve) { respond(400, ve.Field) }
 if errors.Is(err, fs.ErrNotExist) { useDefaults() }            // standard-library sentinels</code></pre>
+<h3>The Typed Nil Interface Trap (Go's #1 Gotcha)</h3>
+<p>An interface value in Go is a two-word structure: <code>(TypeDescriptor, ValuePointer)</code>. An interface variable is only equal to <code>nil</code> when <b>BOTH</b> the type and value are nil.</p>
+
+<div class="diagram">  ┌────────────────────────────────────────────────────────┐
+  │         Interface Value: iface = (Type, Value)          │
+  │                                                        │
+  │   var err error = nil                                  │
+  │   ┌────────────────────┬────────────────────┐          │
+  │   │     Type: nil      │     Value: nil     │  == nil  │
+  │   └────────────────────┴────────────────────┘          │
+  │                                                        │
+  │   var valErr *ValidationError = nil                    │
+  │   var err error = valErr                               │
+  │   ┌────────────────────┬────────────────────┐          │
+  │   │ Type: *Validation… │     Value: nil     │  != nil! │
+  │   └────────────────────┴────────────────────┘          │
+  └────────────────────────────────────────────────────────┘</div>
+
+<pre data-lang="go"><code class="language-go">// [HAZARD]: Returning concrete pointer type
+func checkUser(name string) *ValidationError {
+    if name == "" {
+        return &amp;ValidationError{Field: "name", Reason: "cannot be empty"}
+    }
+    return nil // returns typed pointer (*ValidationError)(nil)
+}
+
+func Run() error {
+    return checkUser("Sarah") // returns error interface with Type=*ValidationError, Value=nil
+}
+
+func main() {
+    err := Run()
+    if err != nil { // [WARNING] EVALUATES TO TRUE! Interface is NOT nil because Type is set!
+        fmt.Println("Error occurred:", err) // crashes with nil pointer dereference on err.Error()!
+    }
+}
+
+// [FIX]: Always return explicit untyped 'nil' on success paths
+func checkUserFixed(name string) error {
+    if name == "" {
+        return &amp;ValidationError{Field: "name", Reason: "cannot be empty"}
+    }
+    return nil // untyped nil sets both Type and Value to nil
+}</code></pre>
+
 <h3>Rules of thumb</h3>
 <ul>
 <li>Handle an error <b>or</b> return it with context, never both (no log-and-return at every layer).</li>

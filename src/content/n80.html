@@ -103,7 +103,7 @@ func main() {
 	// Wrap mux with Middleware Onion
 	handler := requestIDMiddleware(loggingMiddleware(mux))
 
-	// ⚠️ PRODUCTION MANDATORY: Explicit Timeout Hardening
+	// [WARN] PRODUCTION MANDATORY: Explicit Timeout Hardening
 	// Prevents Slowloris attacks from exhausting server sockets!
 	server := &http.Server{
 		Addr:              ":8080",

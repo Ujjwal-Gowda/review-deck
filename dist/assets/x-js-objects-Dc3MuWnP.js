@@ -1,0 +1,315 @@
+const e=`<p class="goal">Master JavaScript's object model: understand heap references, property descriptors, prototype chain delegation, the mechanics of the <code>new</code> operator, the four binding rules of <code>this</code>, and ES6 modern class syntax.</p>
+
+<h3>1. Learning Objectives</h3>
+<ul>
+  <li><b>Reference Semantics:</b> Contrast primitive pass-by-value with object pass-by-reference and identify memory aliasing bugs.</li>
+  <li><b>Property Descriptors:</b> Configure attributes (<code>writable</code>, <code>enumerable</code>, <code>configurable</code>) using <code>Object.defineProperty</code> and compare with <code>Object.freeze</code>.</li>
+  <li><b>Prototype Delegation:</b> Trace property lookup across the prototype chain (<code>__proto__</code> and <code>Object.getPrototypeOf</code>) up to <code>Object.prototype</code>.</li>
+  <li><b>The <code>new</code> Operator Mechanics:</b> Step through the exact four-step algorithm executed when instantiating a constructor function or class.</li>
+  <li><b>The 4 Rules of <code>this</code>:</b> Predict the value of <code>this</code> across default, implicit, explicit, and <code>new</code> bindings, plus lexical arrow functions.</li>
+  <li><b>Modern Collections:</b> Choose appropriately between <code>Object</code>, <code>Map</code>, <code>Set</code>, <code>WeakMap</code>, and <code>WeakSet</code> based on key types and garbage collection behavior.</li>
+</ul>
+
+<h3>2. Prerequisites &amp; Mental Model</h3>
+<p>JavaScript does not have traditional class-based inheritance like Java or C++. Instead, it implements <b>prototypal delegation</b>:</p>
+
+<ul>
+  <li><b>Objects are Property Dictionaries:</b> An object is a collection of key-value pairs stored in the V8 heap. Keys are either Strings or Symbols.</li>
+  <li><b>Delegation Links, Not Copying:</b> When you access <code>obj.foo</code>, if <code>foo</code> is not found directly on <code>obj</code>, the engine does not fail. It delegates to <code>obj</code>'s prototype object, then to that object's prototype, traversing the chain until it finds the property or reaches <code>null</code>.</li>
+  <li><b>Classes are Syntactic Sugar:</b> The ES6 <code>class</code> keyword introduces a cleaner, safer syntax for declaring constructor functions and attaching methods to the prototype, but the underlying runtime behavior remains prototypal delegation.</li>
+</ul>
+
+<h3>3. Object Identity, References &amp; Copying</h3>
+<p>Variables holding objects store a <b>pointer</b> (memory address in the heap). Reassigning does not clone the object; it copies the pointer.</p>
+
+<pre data-lang="javascript"><code class="language-javascript">const userA = { name: "Alice", settings: { theme: "dark" } };
+const userB = userA; // Both point to the exact same memory address!
+
+userB.name = "Bob";
+console.log(userA.name); // "Bob" - Mutating through userB mutated userA!
+console.log(userA === userB); // true (Identical reference)
+
+// 1. Shallow Copy (Spread operator or Object.assign)
+const shallowCopy = { ...userA };
+shallowCopy.name = "Charlie";
+console.log(userA.name); // "Bob" (Top-level primitive is cloned)
+shallowCopy.settings.theme = "light";
+console.log(userA.settings.theme); // "light" (Nested objects are STILL shared references!)
+
+// 2. Deep Copy (Native structuredClone)
+const deepCopy = structuredClone(userA);
+deepCopy.settings.theme = "contrast";
+console.log(userA.settings.theme); // "light" (Completely independent heap tree!)
+</code></pre>
+
+<h3>4. Property Descriptors &amp; Immutability Levels</h3>
+<p>Every property in a JavaScript object is backed by a <b>Property Descriptor</b> containing four flags:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Descriptor Attribute</th>
+      <th>Default (Literal)</th>
+      <th>Runtime Meaning</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>value</code></td>
+      <td>Assigned value</td>
+      <td>The actual data value associated with the property.</td>
+    </tr>
+    <tr>
+      <td><code>writable</code></td>
+      <td><code>true</code></td>
+      <td>If <code>false</code>, the property value cannot be changed via assignment.</td>
+    </tr>
+    <tr>
+      <td><code>enumerable</code></td>
+      <td><code>true</code></td>
+      <td>If <code>false</code>, the property is hidden from <code>for...in</code> loops and <code>Object.keys()</code>.</td>
+    </tr>
+    <tr>
+      <td><code>configurable</code></td>
+      <td><code>true</code></td>
+      <td>If <code>false</code>, the property cannot be deleted and descriptor flags cannot be modified.</td>
+    </tr>
+  </tbody>
+</table>
+
+<pre data-lang="javascript"><code class="language-javascript">const account = {};
+Object.defineProperty(account, "id", {
+  value: "ACC-9921",
+  writable: false,      // Cannot be changed
+  enumerable: true,     // Visible in Object.keys()
+  configurable: false   // Cannot be deleted or reconfigured
+});
+
+account.id = "ACC-0000"; // Silently fails in sloppy mode; throws TypeError in strict mode
+console.log(account.id); // "ACC-9921"
+</code></pre>
+
+<h4>Comparing Immutability Helpers:</h4>
+<ul>
+  <li><b><code>Object.preventExtensions(obj)</code>:</b> Prevents adding new properties. Existing properties can still be modified or deleted.</li>
+  <li><b><code>Object.seal(obj)</code>:</b> Prevents adding or removing properties. Marks all existing properties as <code>configurable: false</code>. Existing writable properties can still be modified.</li>
+  <li><b><code>Object.freeze(obj)</code>:</b> The ultimate shallow freeze. Prevents adding, removing, or modifying properties (<code>writable: false</code>, <code>configurable: false</code>). Note: nested objects remain mutable unless recursively frozen!</li>
+</ul>
+
+<h3>5. Prototypes &amp; The Prototype Chain</h3>
+<p>Every JavaScript object has an internal hidden link, <code>[[Prototype]]</code> (accessible via <code>Object.getPrototypeOf()</code> or legacy <code>__proto__</code>).</p>
+
+<pre data-lang="javascript"><code class="language-javascript">const animal = {
+  makeSound() {
+    return \`\${this.name} makes a sound.\`;
+  }
+};
+
+// Create dog with animal as its [[Prototype]]
+const dog = Object.create(animal);
+dog.name = "Rover";
+
+console.log(dog.makeSound()); // "Rover makes a sound."
+console.log(dog.hasOwnProperty("name"));      // true  (own property)
+console.log(dog.hasOwnProperty("makeSound")); // false (delegated to animal prototype!)
+
+// Prototype lookup chain:
+// dog -> animal -> Object.prototype -> null
+console.log(Object.getPrototypeOf(dog) === animal); // true
+console.log(Object.getPrototypeOf(animal) === Object.prototype); // true
+console.log(Object.getPrototypeOf(Object.prototype)); // null (end of chain)
+</code></pre>
+
+<h3>6. The <code>new</code> Operator: Step-by-Step Mechanics</h3>
+<p>When you invoke a function with <code>new Person("Alice")</code>, the JavaScript engine executes these four steps in order:</p>
+
+<ol>
+  <li><b>Allocates a new plain JavaScript object:</b> <code>const obj = {};</code></li>
+  <li><b>Links the prototype:</b> Sets <code>obj.__proto__ = Person.prototype;</code></li>
+  <li><b>Binds <code>this</code> and runs constructor:</b> Invokes <code>Person.call(obj, "Alice")</code>. Inside the constructor, <code>this</code> points to the new object.</li>
+  <li><b>Returns the instance:</b> If the constructor returns an object explicitly, that object is returned; otherwise, returns the freshly created <code>obj</code>.</li>
+</ol>
+
+<pre data-lang="javascript"><code class="language-javascript">// Manual reconstruction of the 'new' operator:
+function customNew(Constructor, ...args) {
+  // 1 & 2: Create object linked to constructor's prototype
+  const instance = Object.create(Constructor.prototype);
+  // 3: Execute constructor with this bound to instance
+  const result = Constructor.apply(instance, args);
+  // 4: Return object if constructor returned one, else instance
+  return (typeof result === "object" && result !== null) ? result : instance;
+}
+</code></pre>
+
+<h3>7. The Four Rules of <code>this</code> Binding</h3>
+<p>The value of <code>this</code> is determined <b>at call time</b> (call-site), not at declaration time, following these four rules ranked in order of priority:</p>
+
+<ol>
+  <li><b><code>new</code> Binding (Highest Priority):</b> If called with <code>new</code>, <code>this</code> refers to the newly created instance.</li>
+  <li><b>Explicit Binding:</b> If called with <code>.call()</code>, <code>.apply()</code>, or <code>.bind()</code>, <code>this</code> is explicitly set to the provided argument.</li>
+  <li><b>Implicit Binding:</b> If called as a method of an object (e.g. <code>user.greet()</code>), <code>this</code> is the object immediately preceding the dot.</li>
+  <li><b>Default Binding (Lowest Priority):</b> Standalone function invocation (e.g. <code>greet()</code>). In strict mode, <code>this</code> is <code>undefined</code>. In sloppy mode, <code>this</code> falls back to <code>window</code> or <code>globalThis</code>.</li>
+</ol>
+
+<div class="callout callout-info">
+  <b>Exception: Arrow Functions:</b> Arrow functions do <i>not</i> have their own <code>this</code> binding! They capture <code>this</code> lexically from their enclosing scope at the moment they are created, and cannot be rebound using <code>call</code>, <code>apply</code>, or <code>bind</code>.
+</div>
+
+<pre data-lang="javascript"><code class="language-javascript">const logger = {
+  name: "ServiceLogger",
+  logNormal: function() {
+    console.log(this.name);
+  },
+  logArrow: () => {
+    console.log(this.name); // Lexical this (enclosing scope: global/undefined)
+  }
+};
+
+logger.logNormal(); // "ServiceLogger" (Implicit binding: called on logger)
+logger.logArrow();  // undefined (Arrow function ignores logger!)
+
+const detached = logger.logNormal;
+detached(); // undefined (Default binding in strict mode: lost context!)
+
+// Fixing lost context with bind:
+const boundLogger = logger.logNormal.bind(logger);
+boundLogger(); // "ServiceLogger"
+</code></pre>
+
+<h3>8. Modern ES6+ Classes &amp; Encapsulation</h3>
+<p>Modern JavaScript classes provide clean syntax for constructors, prototype methods, static utilities, and true hard private fields (prefixed with <code>#</code>):</p>
+
+<pre data-lang="javascript"><code class="language-javascript">class BankAccount {
+  // True private fields (enforced by V8 engine at runtime)
+  #balance = 0;
+  #accountNumber;
+
+  static #totalAccounts = 0;
+
+  constructor(accountNumber, initialDeposit = 0) {
+    this.#accountNumber = accountNumber;
+    this.#balance = initialDeposit;
+    BankAccount.#totalAccounts++;
+  }
+
+  deposit(amount) {
+    if (amount <= 0) throw new RangeError("Deposit amount must be positive");
+    this.#balance += amount;
+    return this.#balance;
+  }
+
+  // Getter property
+  get balance() {
+    return this.#balance;
+  }
+
+  // Static method
+  static getTotalAccounts() {
+    return BankAccount.#totalAccounts;
+  }
+}
+
+const account = new BankAccount("ACC-100", 500);
+account.deposit(250);
+console.log(account.balance); // 750
+// console.log(account.#balance); // SyntaxError: Private field '#balance' must be declared in an enclosing class
+</code></pre>
+
+<h3>9. Modern Collections: Map, Set, WeakMap, WeakSet</h3>
+<p>Do not use plain Objects as general-purpose key-value maps. Use the modern collections:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Collection</th>
+      <th>Key Types</th>
+      <th>Key Features &amp; Differences from Plain Object</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><b><code>Map</code></b></td>
+      <td>Any value (primitives, objects, functions)</td>
+      <td>Guaranteed insertion order; accurate <code>.size</code> property; no prototype pollution risks; faster for frequent insertions and deletions.</td>
+    </tr>
+    <tr>
+      <td><b><code>Set</code></b></td>
+      <td>Any unique value</td>
+      <td>Stores unique values; provides <code>O(1)</code> membership testing (<code>.has()</code>); automatically eliminates duplicates.</td>
+    </tr>
+    <tr>
+      <td><b><code>WeakMap</code></b></td>
+      <td>Objects only</td>
+      <td>Keys are held <b>weakly</b>. If no other references to a key object exist, the entry is automatically garbage-collected. Prevents memory leaks in metadata caching.</td>
+    </tr>
+    <tr>
+      <td><b><code>WeakSet</code></b></td>
+      <td>Objects only</td>
+      <td>Objects held weakly; cannot be iterated; ideal for tagging objects (e.g. marking processed DOM nodes).</td>
+    </tr>
+  </tbody>
+</table>
+
+<pre data-lang="javascript"><code class="language-javascript">// Preventing Memory Leaks with WeakMap:
+const metadataCache = new WeakMap();
+
+function processUser(user) {
+  // Cache computation without preventing garbage collection of user
+  if (!metadataCache.has(user)) {
+    metadataCache.set(user, { processedAt: Date.now() });
+  }
+  return metadataCache.get(user);
+}
+
+let activeUser = { id: 42 };
+processUser(activeUser);
+
+// When activeUser is discarded:
+activeUser = null; 
+// The metadataCache entry is automatically cleaned up by V8 GC!
+</code></pre>
+
+<h3>10. Common Gotchas &amp; Anti-Patterns</h3>
+<ul>
+  <li><b>Passing Object Methods as Unbound Callbacks:</b> e.g. <code>setTimeout(obj.method, 100)</code> or <code>button.addEventListener("click", obj.handleClick)</code> strips implicit binding, causing <code>this</code> to be <code>undefined</code>. Fix: <code>() => obj.handleClick()</code> or <code>.bind(obj)</code>.</li>
+  <li><b>Assuming Shallow Copy is Deep:</b> <code>{ ...obj }</code> only clones top-level keys. Mutating nested arrays or objects alters the original source.</li>
+  <li><b>Iterating Plain Objects with <code>for...in</code> without Guards:</b> <code>for...in</code> walks the entire prototype chain. Always prefer <code>Object.keys()</code>, <code>Object.values()</code>, or <code>Object.entries()</code>.</li>
+  <li><b>Modifying <code>Object.prototype</code>:</b> Monkey-patching global prototypes pollutes every object in the process and creates catastrophic security vulnerabilities (Prototype Pollution).</li>
+</ul>
+
+<h3>11. Active Recall Drills</h3>
+<pre data-lang="javascript"><code class="language-javascript">// Drill 1: this binding with call and arrow function
+const bot = {
+  name: "Atlas",
+  ping: function() {
+    const fn = () => this.name;
+    return fn.call({ name: "Ranger" });
+  }
+};
+console.log(bot.ping());
+// Prediction: ?
+
+// Drill 2: Prototype mutation vs own property shadowing
+const proto = { score: 10 };
+const player = Object.create(proto);
+player.score += 5;
+console.log(player.score, proto.score);
+// Prediction: ?
+</code></pre>
+
+<details class="ex">
+  <summary>Click to view answers and explanations</summary>
+  <p><b>Drill 1:</b> <code>"Atlas"</code>. Arrow functions capture <code>this</code> lexically from their definition site (here, <code>bot</code>). <code>.call({ name: "Ranger" })</code> is ignored by arrow functions.</p>
+  <p><b>Drill 2:</b> <code>15 10</code>. <code>player.score += 5</code> reads <code>proto.score</code> (10), adds 5, and creates an <b>own property</b> <code>score: 15</code> on <code>player</code>. The prototype's <code>score</code> remains <code>10</code>.</p>
+</details>
+
+<h3>12. Practical Verification Exercise</h3>
+<p>Implement an EventEmitter class from scratch in JavaScript:</p>
+<ul>
+  <li>Methods: <code>on(event, listener)</code>, <code>off(event, listener)</code>, <code>emit(event, ...args)</code>, and <code>once(event, listener)</code>.</li>
+  <li>Must store listeners per event using a <code>Map</code> of arrays or Sets.</li>
+  <li><code>once</code> listeners must automatically unregister themselves after their first execution.</li>
+  <li>Must return an unregister function from <code>on</code>: <code>const unsub = emitter.on("event", fn); unsub();</code></li>
+  <li>Must handle listeners throwing errors gracefully without corrupting listener lists.</li>
+</ul>
+`;export{e as default};

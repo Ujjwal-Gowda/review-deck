@@ -25,7 +25,7 @@ export const TRACKS: { name: string; desc: string; chapters: number[] }[] = [
   T("Security (continuous)", "Security at every layer: OS, code, network, browser, identity, data, pipeline, cloud and AI.",
     ["x-secmap","n55","n57","n64","n70","n84","n85","n86","c26","n163","n164","n165","n123","n168","n166","n132","n167","n226"]),
   { name: "Data structures & algorithms", desc: "Every core structure and algorithm, easy to follow with pictures and step-by-step traces, then the problem-solving patterns.", chapters: [...part("Data Structures & Algorithms")] },
-  ...["Python", "TypeScript", "Go", "Rust", "C"].map(lang => ({
+  ...["JavaScript", "TypeScript", "Python", "Go", "Rust", "C"].map(lang => ({
     name: `${lang} in depth`, desc: `The shared language concepts, then every ${lang} fundamental in detail, plus the cheat sheet.`,
     chapters: [...shared(), ...part(lang)],
   })),

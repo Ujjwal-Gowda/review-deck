@@ -29,7 +29,17 @@ a { color: var(--accent); }
 .side a:hover { background: var(--accent-soft); }
 .side a.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
 .side a .n { color: var(--muted); font-variant-numeric: tabular-nums; min-width: 20px; }
-.side a.isdone .n::before { content: "✓"; color: var(--done); }
+.side a.isdone .n::before {
+  content: "";
+  display: inline-block;
+  width: 4px;
+  height: 8px;
+  border: solid var(--done);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+  margin-right: 6px;
+  vertical-align: 1px;
+}
 .side a.isdone .n span { display: none; }
 .main { margin-left: 300px; padding: 40px 56px 120px; max-width: 1020px; }
 .hero h1 { font-size: 44px; line-height: 1.1; margin: 10px 0 12px; letter-spacing: -.02em; }

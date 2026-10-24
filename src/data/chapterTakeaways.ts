@@ -214,39 +214,170 @@ export const CHAPTER_TAKEAWAYS: Record<number | string, ChapterDigestData> = {
       "Using linear searches (item in list) repeatedly inside a loop, silently turning an algorithm into O(N^2).",
       "Attempting to use a mutable list or dictionary as a dictionary key or set item."
     ]
+  },
+
+  // ── JavaScript in Depth ──
+  "javascript": {
+    mentalModel: [
+      "JavaScript execution is single-threaded on the Call Stack; asynchronous I/O is offloaded to host APIs and Libuv.",
+      "V8 allocates primitives directly on the stack/pointer tags and objects on the dynamic Memory Heap.",
+      "The Event Loop prioritizes the Microtask Queue (Promises, queueMicrotask) ahead of the Macrotask Queue (timers, I/O).",
+      "Inheritance is prototypal delegation: objects delegate property lookups upward through [[Prototype]] until null."
+    ],
+    keyRules: [
+      "Always prefer const by default; use let only for reassignment, and never use legacy var.",
+      "Strict equality (===) must always be used over loose equality (==) to prevent unexpected type coercion.",
+      "In regular functions, 'this' is bound at call time; in arrow functions, 'this' is lexically bound at creation time.",
+      "Drain microtasks to exhaustion: recursive microtasks starve the event loop and freeze UI rendering."
+    ],
+    traps: [
+      "Losing 'this' context when passing object methods as callbacks (e.g. setTimeout(obj.method, 100)).",
+      "Assuming shallow object cloning ({ ...obj }) deep-copies nested objects or arrays.",
+      "Floating-point rounding errors: 0.1 + 0.2 !== 0.3 due to IEEE 754 binary fraction representation."
+    ]
+  },
+
+  // ── TypeScript in Depth ──
+  "typescript": {
+    mentalModel: [
+      "TypeScript types are purely compile-time constructs that are completely erased during compilation.",
+      "The type system is structural ('duck typing'): types are compatible if their properties and shapes match.",
+      "TypeScript cannot validate runtime boundaries: external data (JSON, HTTP, files) must be validated with runtime schemas like Zod.",
+      "unknown is the safe top type; any is an unsafe escape hatch; never is the bottom type representing unreachable states."
+    ],
+    keyRules: [
+      "Model domain state transitions with Discriminated Unions and enforce exhaustive handling using the never type.",
+      "Enable strict: true and noUncheckedIndexedAccess in tsconfig to catch undefined array reads.",
+      "Use user-defined Type Predicates (val is T) to encapsulate complex narrowing logic cleanly.",
+      "Avoid unjustified type assertions (as T) without runtime validation."
+    ],
+    traps: [
+      "Assuming TypeScript types enforce validation at runtime on incoming API payloads.",
+      "Spreading 'any' through a codebase, which disables static analysis across all dependent functions.",
+      "Excess property checking only applies to inline object literals, not assigned variables."
+    ]
+  },
+
+  // ── Python in Depth ──
+  "python": {
+    mentalModel: [
+      "In Python, variables are names bound to objects in heap memory (everything is an object, including ints and functions).",
+      "CPython uses reference counting plus a cyclic generational garbage collector to free unused memory.",
+      "The Global Interpreter Lock (GIL) prevents multiple OS threads from executing Python bytecode simultaneously.",
+      "The Python Data Model executes idiomatic language syntax via dunder methods (__getitem__, __iter__, __len__)."
+    ],
+    keyRules: [
+      "Use 'is' exclusively for singleton identity comparisons (e.g. x is None); use '==' for value equality.",
+      "Never use mutable default arguments like def fn(x=[]):; use def fn(x=None): and initialize inside.",
+      "Use context managers ('with' statement) to guarantee immediate deterministic cleanup of files and locks.",
+      "Use multiprocessing or ProcessPoolExecutor for CPU-bound parallelism; use asyncio or threading for I/O concurrency."
+    ],
+    traps: [
+      "Shared mutable default arguments retaining mutations across independent function calls.",
+      "Modifying a list or dictionary while iterating over it, causing skipped elements or runtime errors.",
+      "Expecting threads to accelerate CPU-bound workloads under CPython's GIL."
+    ]
+  },
+
+  // ── Go in Depth ──
+  "go": {
+    mentalModel: [
+      "Go is a compiled, statically typed language designed for simplicity, explicit error handling, and high-concurrency services.",
+      "A slice header is a 24-byte struct (Data pointer, Len, Cap); sub-slices share the underlying backing array.",
+      "Interfaces are satisfied implicitly: any struct implementing all interface methods automatically satisfies the interface.",
+      "The Go runtime coordinates M goroutines onto N OS threads using a work-stealing M:N scheduler."
+    ],
+    keyRules: [
+      "Errors are ordinary values returned explicitly: always check 'if err != nil' immediately at the call site.",
+      "Never return a typed nil pointer to an error interface, because an interface is only nil if both type and value are nil.",
+      "Arguments to deferred functions are evaluated immediately when the defer statement is encountered.",
+      "Share memory by communicating over channels; do not communicate by sharing memory without synchronization."
+    ],
+    traps: [
+      "The Typed Nil Interface trap: (*MyError)(nil) assigned to error evaluates to err != nil being TRUE.",
+      "Goroutine leaks: spawning goroutines that block forever on unbuffered channels or missing context cancellations.",
+      "Accidental slice mutation: appending to a sub-slice within capacity silently overwrites sibling slice elements."
+    ]
+  },
+
+  // ── Rosetta Comparison ──
+  "rosetta": {
+    mentalModel: [
+      "Memory Models: C has manual pointer management; Rust enforces compile-time ownership; Go/JS/Python use runtime garbage collectors.",
+      "Concurrency Models: Go uses goroutines & channels; JS uses single-threaded event loop & Promises; Python uses GIL + asyncio; Rust uses Send/Sync threads.",
+      "Error Idioms: Go uses explicit error values; Rust uses Result<T, E> with ? operator; JS/Python use exceptions (try/catch).",
+      "Type Systems: Go has structural interfaces; TS has erased structural typing; Python has optional gradual typing; C has weak nominal types."
+    ],
+    keyRules: [
+      "Choose Go for networked microservices, high-throughput backend APIs, and single-binary container deployments.",
+      "Choose TypeScript for full-stack web applications, rich browser UIs, and end-to-end typed APIs.",
+      "Choose Python for data analysis, machine learning, rapid prototyping, and scripting.",
+      "Choose Rust/C for systems programming, low-latency performance, embedded devices, and OS internals."
+    ],
+    traps: [
+      "Transferring mental models verbatim between languages (e.g. writing class hierarchies in Go or using exceptions for control flow in Go).",
+      "Ignoring memory allocation profiles when moving from garbage-collected runtimes to compiled systems."
+    ]
   }
 };
 
 /**
- * Returns structured bullet takeaways for any chapter ID.
- * If curated takeaways do not exist, it synthesizes clean, punchy bullet points from topics and title.
+ * Returns structured bullet takeaways for any chapter ID, title, or topic list.
+ * Prioritizes curated language and foundation takeaways, then synthesizes tailored bullet points.
  */
 export function getChapterTakeaways(chapterId: number, title: string, topics: string[]): ChapterDigestData {
+  // 1. Direct ID match
   if (CHAPTER_TAKEAWAYS[chapterId]) {
     return CHAPTER_TAKEAWAYS[chapterId];
   }
 
-  // Synthesize intelligent, high-quality bullet points automatically for any of the 349 chapters
-  const mentalModel = topics.slice(0, 3).map(topic => 
-    `Master the foundation of ${topic}: understand its underlying mechanics, memory footprint, and architectural role.`
-  );
+  // 2. Curated domain matches
+  const lowerTitle = title.toLowerCase();
+  const lowerTopics = topics.map(t => t.toLowerCase()).join(" ");
 
-  const keyRules = topics.slice(3, 7).map(topic => 
-    `Core implementation principle: apply ${topic} following industry standard best practices and idiomatic patterns.`
-  );
-
-  if (keyRules.length === 0) {
-    keyRules.push(`Ensure correct implementation and verify edge cases across different runtime environments.`);
-    keyRules.push(`Always write automated tests verifying both happy paths and failure modes.`);
+  if (lowerTitle.includes("rosetta") || lowerTitle.includes("five languages") || lowerTitle.includes("side by side")) {
+    return CHAPTER_TAKEAWAYS["rosetta"];
+  }
+  if (lowerTitle.includes("javascript") || lowerTopics.includes("v8") || lowerTopics.includes("event loop")) {
+    return CHAPTER_TAKEAWAYS["javascript"];
+  }
+  if (lowerTitle.includes("typescript") || lowerTopics.includes("type annotation") || lowerTopics.includes("generics")) {
+    return CHAPTER_TAKEAWAYS["typescript"];
+  }
+  if (lowerTitle.includes("python") || lowerTopics.includes("cpython") || lowerTopics.includes("gil")) {
+    return CHAPTER_TAKEAWAYS["python"];
+  }
+  if (lowerTitle.includes("go ") || lowerTitle.startsWith("go") || lowerTopics.includes("goroutine") || lowerTopics.includes("slices")) {
+    return CHAPTER_TAKEAWAYS["go"];
   }
 
-  const traps = [
-    `Premature abstraction or misconfigured parameters when dealing with ${topics[0] || title}.`,
-    `Overlooking edge cases, network timeouts, or unhandled errors during high concurrency.`
+  // 3. High-quality intelligent synthesis for any of the 388 chapters
+  const mentalModel: string[] = [];
+  if (topics.length >= 2) {
+    mentalModel.push(`Foundational Concept: Master how ${topics[0]} and ${topics[1]} interact at the system and memory level.`);
+  } else {
+    mentalModel.push(`Foundational Concept: Understand the core architecture and execution model of ${title}.`);
+  }
+  if (topics[2]) {
+    mentalModel.push(`Mental Model: Treat ${topics[2]} as a core architectural building block rather than an isolated syntax feature.`);
+  }
+
+  const keyRules: string[] = [];
+  topics.slice(2, 6).forEach(topic => {
+    keyRules.push(`Implementation Principle: Apply idiomatic patterns for ${topic} with explicit boundary checks.`);
+  });
+  if (keyRules.length === 0) {
+    keyRules.push(`Always write automated tests covering both nominal happy paths and anomalous edge cases.`);
+    keyRules.push(`Verify performance characteristics, resource cleanup, and failure mode recovery.`);
+  }
+
+  const traps: string[] = [
+    `Over-engineering: introducing unnecessary abstractions before understanding the concrete problem.`,
+    `Silent failures: omitting error handling or swallowing exceptions without diagnostic logging.`
   ];
 
   return {
-    mentalModel: mentalModel.length > 0 ? mentalModel : [`Core architectural principles and mental model for ${title}.`],
+    mentalModel,
     keyRules,
     traps
   };

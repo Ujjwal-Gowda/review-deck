@@ -1,222 +1,316 @@
-<p class="goal">Master the dual-nature of TypeScript: understand how JS values behave at runtime, avoid implicit coercion traps, and layer compile-time safety on top.</p>
+<p class="goal">Master TypeScript's static type system: understand erased types, structural typing, type inference, union and intersection types, the semantics of unknown/any/never, and control-flow type narrowing.</p>
 
-<p>To master TypeScript, you must understand both levels of the language: the underlying runtime behavior of <b>JavaScript</b>, and the static type-checking layer of <b>TypeScript</b>. The type checker vanishes at compile time, meaning any runtime bugs (like division by zero, float precision errors, or indexing errors) are governed purely by JavaScript semantics.</p>
-
-<h3>1. Variable Declarations & Mutability</h3>
-<p>JavaScript has three declaration keywords: <code>const</code>, <code>let</code>, and <code>var</code>. Modern TypeScript code bases should exclusively use <code>const</code> and <code>let</code>.</p>
-
+<h3>1. Learning Objectives</h3>
 <ul>
-  <li><b><code>const</code> (Default choice):</b> Creates a block-scoped variable binding that cannot be reassigned. However, <code>const</code> <i>does not</i> make objects immutable! It only freezes the <i>variable binding</i>. You can still mutate the properties of an object or elements of an array.</li>
-  <li><b><code>let</code>:</b> Creates a block-scoped variable that can be reassigned freely.</li>
-  <li><b><code>var</code> (Do not use):</b> Declares variables that are function-scoped or globally scoped, and they are hoisted to the top of their scope. This can cause severe bugs due to lack of block scope.</li>
+  <li><b>Type Erasure:</b> Explain why TypeScript types disappear completely during compilation and why static types cannot validate incoming network or file data at runtime.</li>
+  <li><b>Structural Typing:</b> Compare TypeScript's structural type system ("shape-based compatibility") with nominal type systems (Java, C#).</li>
+  <li><b>Type Inference &amp; Annotations:</b> Identify when to let the compiler infer types automatically and when explicit annotations prevent type widening or enforce public contracts.</li>
+  <li><b>Type Taxonomy:</b> Contrast <code>unknown</code>, <code>any</code>, <code>never</code>, and <code>void</code>, and choose the correct top and bottom types for unvalidated inputs and unreachable branches.</li>
+  <li><b>Control Flow Analysis &amp; Narrowing:</b> Narrow union types using <code>typeof</code>, <code>instanceof</code>, <code>in</code>, equality guards, and custom type predicates.</li>
+  <li><b>Strict Nullability:</b> Leverage <code>strictNullChecks</code> to eliminate "cannot read properties of undefined" runtime crashes.</li>
 </ul>
 
-<pre data-lang="typescript"><code class="language-typescript">const MAX_LIMIT = 100;
-// MAX_LIMIT = 200; // Compile Error: Cannot assign to 'MAX_LIMIT' because it is a constant.
+<h3>2. Prerequisites &amp; Mental Model</h3>
+<p>TypeScript is <b>not a new programming language</b>; it is a static type checker layered on top of JavaScript. Understanding the compile-time vs runtime boundary is the most important concept in TypeScript:</p>
 
-const cart = ["milk", "eggs"];
-cart.push("bread"); // Fully allowed! The array structure is mutated, but the binding is unchanged.
-// cart = ["bread"]; // Compile Error: Reassignment of a const variable.
+<ul>
+  <li><b>Compile Time (TypeScript):</b> The TypeScript compiler (<code>tsc</code>) parses your code, checks types, verifies assignability, and generates diagnostic errors. Once type checking succeeds, all types, interfaces, type aliases, and generic parameters are completely erased!</li>
+  <li><b>Runtime (JavaScript Engine):</b> The browser or Node.js executes pure, standard JavaScript. The JavaScript engine has <i>zero awareness of your TypeScript types</i>.</li>
+  <li><b>Consequence:</b> TypeScript cannot protect you against malformed JSON from an API, corrupted database records, or invalid user inputs unless you implement explicit runtime boundary validation (e.g. with Zod or manual guard checks).</li>
+</ul>
 
-// If you need actual runtime immutability, use Object.freeze:
-const frozenCart = Object.freeze(["milk", "eggs"]);
-// frozenCart.push("bread"); // Runtime Error (in strict mode): Cannot add property, object is not extensible
+<div class="callout callout-info">
+  <b>Mental Model:</b> Think of TypeScript as an architectural blueprint inspector. The inspector verifies the blueprints before construction begins. But once the building is erected, the blueprints are filed away—the actual building stands or falls based on the physical materials (the JavaScript runtime).
+</div>
+
+<h3>3. Structural Typing: "Duck Typing" at Compile Time</h3>
+<p>Unlike nominal languages (like Java or C#) where two classes with identical fields are incompatible unless they share a named class or interface inheritance, TypeScript uses <b>structural typing</b>: two types are compatible if they share the same structure (properties and types).</p>
+
+<pre data-lang="typescript"><code class="language-typescript">interface Point2D {
+  x: number;
+  y: number;
+}
+
+interface Coordinate {
+  x: number;
+  y: number;
+}
+
+function renderPoint(p: Point2D) {
+  console.log(`Point at (${p.x}, ${p.y})`);
+}
+
+const coord: Coordinate = { x: 10, y: 20 };
+// Valid! Coordinate is structurally identical to Point2D:
+renderPoint(coord);
+
+// Excess Property Checking on Object Literals:
+// Passing an inline literal with extra fields throws a compiler error:
+// renderPoint({ x: 10, y: 20, z: 30 }); // Error: Object literal may only specify known properties!
+
+// But passing an existing variable with extra fields is permitted (structural subtyping):
+const point3D = { x: 10, y: 20, z: 30 };
+renderPoint(point3D); // Valid! point3D has at least x and y.
 </code></pre>
 
-<h3>2. JavaScript Primitive Types & Runtime Behaviors</h3>
-<p>JavaScript has seven primitive types, and TypeScript maps type annotations directly to them. Understanding how these behave at runtime is crucial.</p>
+<h3>4. Primitive Types, Arrays &amp; Tuples</h3>
+<p>TypeScript mirrors JavaScript's primitive types and adds powerful collection types:</p>
 
 <table>
-  <tr>
-    <th>Type</th>
-    <th>Examples</th>
-    <th>Key Behaviors, Quirks & Pitfalls</th>
-  </tr>
-  <tr>
-    <td><code>number</code></td>
-    <td><code>42</code>, <code>3.14</code>, <code>NaN</code></td>
-    <td><b>Every number is a 64-bit float (IEEE 754).</b> There is no separate <code>int</code> type. Safe integer math is only exact up to <code>2^53 - 1</code> (<code>Number.MAX_SAFE_INTEGER</code>). Beyond this, precision is lost.</td>
-  </tr>
-  <tr>
-    <td><code>bigint</code></td>
-    <td><code>9007199254740993n</code></td>
-    <td>Used for arbitrarily large integers. To declare a <code>bigint</code>, append an <code>n</code> to the integer. Note: <code>bigint</code> cannot be mixed directly with <code>number</code> variables without explicit conversion.</td>
-  </tr>
-  <tr>
-    <td><code>string</code></td>
-    <td><code>"hi"</code>, <code>`Value: ${x}`</code></td>
-    <td>Immutable UTF-16 character sequences. Note that emojis use surrogate pairs (2 code units), so <code>"😀".length</code> is actually <code>2</code>!</td>
-  </tr>
-  <tr>
-    <td><code>boolean</code></td>
-    <td><code>true</code>, <code>false</code></td>
-    <td>No surprises here. Standard boolean flags.</td>
-  </tr>
-  <tr>
-    <td><code>null</code> / <code>undefined</code></td>
-    <td><code>null</code>, <code>undefined</code></td>
-    <td>Two distinct "nothingness" values. <b><code>undefined</code></b> represents the absence of a value (e.g., an uninitialized variable or missing parameter). <b><code>null</code></b> represents the intentional absence of an object value.</td>
-  </tr>
-  <tr>
-    <td><code>symbol</code></td>
-    <td><code>Symbol("id")</code></td>
-    <td>Represents a unique, immutable identifier. Primarily used for advanced metadata or private object keys.</td>
-  </tr>
+  <thead>
+    <tr>
+      <th>TypeScript Type</th>
+      <th>Example Annotation</th>
+      <th>Key Semantics</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>number</code></td>
+      <td><code>let count: number = 42;</code></td>
+      <td>All numbers (integers, floats, <code>NaN</code>, <code>Infinity</code>).</td>
+    </tr>
+    <tr>
+      <td><code>string</code></td>
+      <td><code>let name: string = "Alice";</code></td>
+      <td>All string values.</td>
+    </tr>
+    <tr>
+      <td><code>boolean</code></td>
+      <td><code>let isValid: boolean = true;</code></td>
+      <td><code>true</code> or <code>false</code>.</td>
+    </tr>
+    <tr>
+      <td><code>Array&lt;T&gt;</code> / <code>T[]</code></td>
+      <td><code>let items: string[] = ["a", "b"];</code></td>
+      <td>Homogeneous list of elements.</td>
+    </tr>
+    <tr>
+      <td><b>Tuple</b> <code>[T, U]</code></td>
+      <td><code>let pair: [string, number] = ["id", 1];</code></td>
+      <td>Fixed-length array where elements at specific indices have defined types.</td>
+    </tr>
+    <tr>
+      <td><b>Readonly Array</b></td>
+      <td><code>let fixed: readonly number[] = [1, 2];</code></td>
+      <td>Array methods that mutate (<code>push</code>, <code>pop</code>, <code>splice</code>) are forbidden at compile time.</td>
+    </tr>
+  </tbody>
 </table>
 
-<pre data-lang="typescript"><code class="language-typescript">// Floating Point Precision Gaps
-console.log(0.1 + 0.2 === 0.3); // false! (0.1 + 0.2 is actually 0.30000000000000004)
-console.log(Math.abs((0.1 + 0.2) - 0.3) < Number.EPSILON); // true (The correct way to compare floats)
+<h3>5. Union Types (<code>|</code>) &amp; Intersection Types (<code>&amp;</code>)</h3>
+<p>Union and intersection types allow precise modeling of flexible data:</p>
 
-// BigInt declaration and safety
-const safeInt = Number.MAX_SAFE_INTEGER; // 9007199254740991
-const dangerousPlusOne = safeInt + 1;    // 9007199254740992
-const dangerousPlusTwo = safeInt + 2;    // 9007199254740992 (Precision is now lost!)
-
-const bigIntOne = 9007199254740991n;
-console.log(bigIntOne + 2n);             // 9007199254740993n (Exact arithmetic preserved!)
-</code></pre>
-
-<h3>3. Implicit Coercion & Surprising Operators</h3>
-<p>JavaScript is a <b>weakly typed</b> language, meaning it frequently coerces types behind the scenes. This produces counterintuitive behavior that TypeScript blocks in many cases, but can still manifest at runtime.</p>
-
-<pre data-lang="typescript"><code class="language-typescript">// 1. Loose vs Strict Equality
-// Always use === (strict equality), which compares value AND type without coercion.
-console.log(5 == "5");  // true (loose equality coerces the string "5" into the number 5)
-console.log(5 === "5"); // false (correct! different types)
-
-// 2. Truthiness and False Values
-// Falsy values: false, null, undefined, 0, NaN, "" (empty string). Everything else is truthy.
-// Beware of empty objects/arrays: {} and [] are truthy!
-const list: string[] = [];
-if (list) {
-  console.log("This prints because empty arrays are truthy!");
-}
-
-// 3. Logical OR (||) vs Nullish Coalescing (??)
-// Logical OR replaces any falsy value. Nullish coalescing only replaces null or undefined.
-const displayCount = 0;
-console.log(displayCount || 10); // 10 (0 is falsy, so it's replaced!)
-console.log(displayCount ?? 10); // 0 (0 is not null or undefined, so it's preserved! Usually what you want)
-
-// 4. Addition vs Subtraction Coercion
-console.log("5" + 3); // "53" (The + operator acts as string concatenation if a string is present)
-console.log("5" - 3); // 2 (The - operator forces mathematical subtraction, converting "5" to 5)
-
-// 5. Historical Bug
-console.log(typeof null); // "object" (A well-known JS engine bug that can never be fixed for backwards-compatibility)
-</code></pre>
-
-<h3>4. Adding Static Types in TypeScript</h3>
-<p>TypeScript layers a static type checking system over JavaScript's runtime values. Type annotations can be added explicitly, but TypeScript is excellent at type inference.</p>
-
-<pre data-lang="typescript"><code class="language-typescript">// 1. Explicit annotations
-let totalItems: number = 10;
-let userEmail: string = "alice@example.com";
-
-// 2. Inference: TypeScript automatically infers the types for us
-let age = 30; // inferred as 'number'
-const username = "john_doe"; // inferred as the string literal type "john_doe" (cannot change)
-
-// 3. Unions: Allowing a variable to hold more than one type
-let userId: string | number;
-userId = "usr_90a"; // OK
-userId = 1204;       // OK
-
-// 4. 'unknown' vs 'any'
-// Avoid 'any'! 'any' disables all type safety.
-// Use 'unknown' for values whose type is not yet verified (e.g., from an external API or JSON.parse).
-// 'unknown' forces you to check the type before performing operations.
-
-let data: unknown = JSON.parse('{"id": 42, "role": "admin"}');
-
-// We cannot do: data.role (Compile error: Object is of type 'unknown')
-
-// Narrowing data safely via runtime checks:
-if (typeof data === "object" && data !== null && "role" in data) {
-  // TypeScript has narrowed 'data' and knows it is an object with a 'role' key
-  console.log("User role:", (data as { role: string }).role);
-}
-</code></pre>
-
-<h3>5. Type Erasure</h3>
-<p>A vital mental model for TypeScript: <b>types are entirely erased when compiled to JavaScript</b>. The TypeScript compiler (<code>tsc</code>) checks your code for errors, strips all type annotations, interfaces, and type aliases, and outputs plain JavaScript.</p>
-
-<p>This means TypeScript types do not exist at runtime! For example, <code>const x = input as User</code> performs no runtime validation or type casting; it is purely a compile-time assertion to appease the compiler. To validate actual incoming data (such as API payloads), you must use a schema validation library like <code>zod</code> or manually verify object structures.</p>
-
-<h3>6. Practical Advice</h3>
 <ul>
-  <li>Always write <code>const</code> by default, and only use <code>let</code> when you know you will reassign the variable.</li>
-  <li>Always use <code>===</code> and <code>!==</code>. Never use <code>==</code> or <code>!=</code>.</li>
-  <li>Use the nullish coalescing operator <code>??</code> instead of the logical OR operator <code>||</code> when defining default values for numbers, booleans, or strings, to avoid overriding valid falsy values like <code>0</code>, <code>false</code>, or <code>""</code>.</li>
-  <li>Leverage type inference to keep your code clean. Annotate function parameters, return values, and external inputs, but let TypeScript automatically infer your local variables.</li>
+  <li><b>Union Types (<code>A | B</code>):</b> Represents a value that can be <i>either</i> type <code>A</code> OR type <code>B</code>. You can only safely access properties common to both types without prior narrowing.</li>
+  <li><b>Literal Types:</b> Narrow primitives to exact allowed values (e.g. <code>type HttpMethod = "GET" | "POST" | "PUT" | "DELETE"</code>).</li>
+  <li><b>Intersection Types (<code>A &amp; B</code>):</b> Combines all properties of both types together. Used for mixins and composite models.</li>
 </ul>
 
-<div class="exercises">
-  <h3>Practice</h3>
-  <details class="ex">
-    <summary>0.1 <span class="levels">basic</span> Create a JavaScript/TypeScript script that processes user profile information. The program should accept a payload of type <code>unknown</code> (representing an external API payload), safely verify that it is an object containing a string <code>name</code>, an optional number <code>age</code>, and a boolean <code>active</code>, and then print a formatted profile card. If the data is invalid, it should output a specific validation error.</summary>
-    <div>
-      <p><b>Solution Strategy:</b> We write a type guard function <code>isUserProfile(data: unknown)</code> that checks the fields of the object. We use <code>typeof</code> to ensure primitive matches, and check for <code>null</code>.</p>
-<pre data-lang="typescript"><code class="language-typescript">// TypeScript Type-Safe Verification
+<pre data-lang="typescript"><code class="language-typescript">type Status = "idle" | "loading" | "success" | "error";
+
+interface Timestamps {
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 interface UserProfile {
+  id: string;
   name: string;
-  age?: number;
-  active: boolean;
 }
 
-// Custom type guard
-function isUserProfile(data: unknown): data is UserProfile {
-  if (typeof data !== "object" || data === null) {
-    return false;
-  }
+// Intersection: combines all properties
+type PersistedUser = UserProfile & Timestamps;
 
-  // Asserting we can safely inspect the object
-  const candidate = data as Record<string, unknown>;
-
-  // Validate 'name' (must be string)
-  if (typeof candidate.name !== "string") {
-    return false;
-  }
-
-  // Validate optional 'age' (must be undefined or number)
-  if (candidate.age !== undefined && typeof candidate.age !== "number") {
-    return false;
-  }
-
-  // Validate 'active' (must be boolean)
-  if (typeof candidate.active !== "boolean") {
-    return false;
-  }
-
-  return true;
-}
-
-// Testing our safe type guard
-function processPayload(payload: unknown) {
-  if (isUserProfile(payload)) {
-    // TypeScript has narrowed 'payload' to UserProfile!
-    const ageStr = payload.age !== undefined ? `${payload.age} years old` : "Age not specified";
-    const status = payload.active ? "Active Member" : "Inactive Member";
-    console.log(`Profile: ${payload.name} (${ageStr}) - ${status}`);
-  } else {
-    console.error("Validation failed: Payload does not conform to UserProfile schema!");
-  }
-}
-
-// 1. Valid payload
-processPayload({ name: "Alice", age: 28, active: true }); 
-// Outputs: Profile: Alice (28 years old) - Active Member
-
-// 2. Missing 'active' field
-processPayload({ name: "Bob", age: 40 }); 
-// Outputs: Validation failed: Payload does not conform to UserProfile schema!
-
-// 3. Invalid field type
-processPayload({ name: "Charlie", age: "not a number", active: false });
-// Outputs: Validation failed: Payload does not conform to UserProfile schema!
+const user: PersistedUser = {
+  id: "u-101",
+  name: "Sarah",
+  createdAt: new Date(),
+  updatedAt: new Date()
+};
 </code></pre>
-    </div>
-  </details>
-</div>
+
+<h3>6. Type Hierarchy: <code>unknown</code> vs <code>any</code> vs <code>never</code></h3>
+<p>Understanding TypeScript's top and bottom types is critical for type safety:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Type</th>
+      <th>Position in Hierarchy</th>
+      <th>Compiler Restrictions</th>
+      <th>Correct Production Use Case</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><b><code>unknown</code></b></td>
+      <td><b>Top Type (Safe)</b></td>
+      <td>Can hold any value, but you <b>cannot</b> read properties, call it, or pass it to typed functions without explicit type narrowing.</td>
+      <td><b>Always prefer for untrusted external data</b> (parsed JSON, HTTP responses, user input).</td>
+    </tr>
+    <tr>
+      <td><b><code>any</code></b></td>
+      <td><b>Escape Hatch (Unsafe)</b></td>
+      <td>Disables the type checker completely. Any operation is permitted at compile time, deferring crashes to runtime!</td>
+      <td>Avoid in production code. Only for temporary migrations or debugging.</td>
+    </tr>
+    <tr>
+      <td><b><code>never</code></b></td>
+      <td><b>Bottom Type (Empty)</b></td>
+      <td>Represents a state that can <b>never occur</b>. No value (other than <code>never</code> itself) is assignable to <code>never</code>.</td>
+      <td>Exhaustive switch/match checking; functions that throw or never return.</td>
+    </tr>
+    <tr>
+      <td><b><code>void</code></b></td>
+      <td>Unit Type</td>
+      <td>Represents the return value of functions that do not return an explicit value.</td>
+      <td>Function signatures that perform side effects without returning data.</td>
+    </tr>
+  </tbody>
+</table>
+
+<pre data-lang="typescript"><code class="language-typescript">// [FAIL] Unsafe: using any
+function processAny(payload: any) {
+  payload.sendEmail(); // Compiles cleanly, but crashes at runtime if method doesn't exist!
+}
+
+// [OK] Safe: using unknown with narrowing
+function processUnknown(payload: unknown) {
+  // payload.sendEmail(); // Error: 'payload' is of type 'unknown'.
+  if (typeof payload === "object" && payload !== null && "sendEmail" in payload) {
+    // Narrowed safely!
+    (payload as { sendEmail: () => void }).sendEmail();
+  }
+}
+</code></pre>
+
+<h3>7. Control Flow Analysis &amp; Type Narrowing</h3>
+<p>The TypeScript compiler tracks code branches and narrows broad union types into specific subtypes:</p>
+
+<pre data-lang="typescript"><code class="language-typescript">// 1. typeof narrowing (for primitives)
+function formatInput(val: string | number) {
+  if (typeof val === "number") {
+    return val.toFixed(2); // Narrowed to number!
+  }
+  return val.trim(); // Narrowed to string!
+}
+
+// 2. instanceof narrowing (for classes and errors)
+function handleAction(err: Error | string) {
+  if (err instanceof Error) {
+    console.error("Stack:", err.stack);
+  } else {
+    console.warn("Error message:", err);
+  }
+}
+
+// 3. in operator narrowing (for object property presence)
+interface Admin { role: "admin"; permissions: string[]; }
+interface Member { role: "member"; teamId: string; }
+
+function authorize(user: Admin | Member) {
+  if ("permissions" in user) {
+    console.log("Admin permissions:", user.permissions);
+  } else {
+    console.log("Member team:", user.teamId);
+  }
+}
+</code></pre>
+
+<h3>8. Discriminated Unions &amp; Exhaustive Checking</h3>
+<p>A <b>discriminated union</b> (or tagged union) pairs multiple object types sharing a common literal property (the "discriminant"). When combined with the <code>never</code> type, it guarantees exhaustive handling of all cases at compile time:</p>
+
+<pre data-lang="typescript"><code class="language-typescript">type NetworkState =
+  | { state: "idle" }
+  | { state: "loading" }
+  | { state: "success"; data: string[] }
+  | { state: "error"; error: Error };
+
+function renderView(s: NetworkState): string {
+  switch (s.state) {
+    case "idle":
+      return "Press Start to begin.";
+    case "loading":
+      return "Fetching data, please wait...";
+    case "success":
+      return `Loaded ${s.data.length} items.`;
+    case "error":
+      return `Failed: ${s.error.message}`;
+    default: {
+      // Exhaustive checking guard:
+      // If a new variant (e.g. 'paused') is added to NetworkState,
+      // the compiler throws a compile-time error here because s is NOT assignable to never!
+      const _exhaustive: never = s;
+      throw new Error(`Unhandled state: ${_exhaustive}`);
+    }
+  }
+}
+</code></pre>
+
+<h3>9. Custom Type Predicates: <code>val is T</code></h3>
+<p>When type checking logic is complex, encapsulate the guard in a function returning a <b>Type Predicate</b>:</p>
+
+<pre data-lang="typescript"><code class="language-typescript">interface ApiResponse {
+  status: "ok";
+  payload: Record<string, unknown>;
+}
+
+// User-defined type predicate:
+function isApiResponse(data: unknown): data is ApiResponse {
+  return (
+    typeof data === "object" &&
+    data !== null &&
+    (data as Record<string, unknown>).status === "ok" &&
+    typeof (data as Record<string, unknown>).payload === "object"
+  );
+}
+
+// Usage in application code:
+function parseServerMessage(raw: unknown) {
+  if (isApiResponse(raw)) {
+    // Compiler now knows raw is definitely an ApiResponse!
+    console.log("Valid payload keys:", Object.keys(raw.payload));
+  } else {
+    console.error("Invalid server payload shape");
+  }
+}
+</code></pre>
+
+<h3>10. Common Gotchas &amp; Anti-Patterns</h3>
+<ul>
+  <li><b>Unjustified Type Assertions (<code>as Type</code>):</b> The <code>as</code> operator tells the compiler "trust me, I know better than you." If your assertion is wrong, TypeScript will not protect you from runtime crashes. Prefer narrowing or schema parsing over assertions.</li>
+  <li><b>Assuming Types Validate Runtime Input:</b> Types like <code>interface User</code> only exist before compilation. An incoming HTTP request with missing fields will bypass TypeScript entirely unless parsed at runtime.</li>
+  <li><b>Overusing <code>any</code>:</b> Using <code>any</code> creates infectious "holes" in your type safety, causing un-typed values to spread across your entire codebase. Use <code>unknown</code> instead.</li>
+  <li><b>Using <code>Function</code> or <code>Object</code> as Types:</b> The global <code>Function</code> type accepts any function without type-checking arguments or return values. Use specific signatures: <code>(...args: unknown[]) =&gt; void</code>.</li>
+</ul>
+
+<h3>11. Active Recall Drills</h3>
+<pre data-lang="typescript"><code class="language-typescript">// Drill 1: Narrowing unknown with arrays
+function getLength(input: unknown): number {
+  if (Array.isArray(input)) {
+    return input.length; // Is input.length valid here?
+  }
+  return 0;
+}
+
+// Drill 2: Type widening with let vs const
+const codeA = "SUCCESS"; // What is the type of codeA?
+let codeB = "SUCCESS";   // What is the type of codeB?
+</code></pre>
+
+<details class="ex">
+  <summary>Click to view answers and explanations</summary>
+  <p><b>Drill 1:</b> Yes! <code>Array.isArray(input)</code> is built into TypeScript's standard library as a type predicate (<code>arg is any[]</code>). Inside the <code>if</code> block, <code>input</code> is safely narrowed to an array.</p>
+  <p><b>Drill 2:</b> <code>codeA</code> has the literal type <code>"SUCCESS"</code> because a <code>const</code> cannot be reassigned. <code>codeB</code> is widened to the broad type <code>string</code> because a <code>let</code> variable can be reassigned to any other string later.</p>
+</details>
+
+<h3>12. Practical Verification Drill</h3>
+<p>Build a safe, strictly typed JSON parser utility:</p>
+<ul>
+  <li>Signature: <code>function safeJsonParse&lt;T&gt;(raw: string, validator: (val: unknown) =&gt; val is T): { ok: true; data: T } | { ok: false; error: Error }</code></li>
+  <li>Safely execute <code>JSON.parse(raw)</code> inside a <code>try/catch</code>.</li>
+  <li>Run the provided <code>validator</code> type predicate on the parsed output.</li>
+  <li>Return a discriminated union result so callers must check <code>result.ok</code> before accessing <code>result.data</code>.</li>
+  <li>Verify that malformed JSON strings and valid JSON strings with incorrect schema shapes are rejected cleanly with descriptive errors.</li>
+</ul>

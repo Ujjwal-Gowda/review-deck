@@ -227,7 +227,7 @@ if [ "$HEALTHY" = true ]; then
   docker rename "${NEW_CONTAINER}" "${OLD_CONTAINER}"
   echo "=== Deployment Succeeded with Zero Downtime ==="
 else
-  echo "❌ Candidate failed health checks! Triggering instant automatic rollback..."
+  echo "[FAIL] Candidate failed health checks! Triggering instant automatic rollback..."
   docker stop "${NEW_CONTAINER}"
   docker rm "${NEW_CONTAINER}"
   echo "Active production container was untouched. No user disruption."

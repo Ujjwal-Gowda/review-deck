@@ -28,6 +28,21 @@ import { ReviewDeck } from "./components/ReviewDeck";
 import { NotesDrawer } from "./components/NotesDrawer";
 import { ChapterDigest } from "./components/ChapterDigest";
 import { PREDICT_CHALLENGES, KNOWLEDGE_QUIZZES } from "./data/learningWidgets";
+import {
+  IconSearch,
+  IconSidebar,
+  IconZap,
+  IconBook,
+  IconBullets,
+  IconMaximize,
+  IconMinimize,
+  IconPalette,
+  IconCheck,
+  IconChevronRight,
+  IconArrowLeft,
+  IconArrowRight,
+  IconMenu,
+} from "./components/Icons";
 
 Object.entries({ python, c, javascript, typescript, go, rust, bash, sql, http, yaml, plaintext, xml, css, json, ini })
   .forEach(([name, lang]) => hljs.registerLanguage(name, lang));
@@ -72,7 +87,7 @@ const partIndex = (key: string) => PARTS.findIndex(p => p.key === key);
 const partByTitle = (t: string) => PARTS.find(p => p.title === t)!;
 const hueOf = (ch: Chapter) => partHue(partIndex(ch.part));
 const typing = (e: KeyboardEvent) => !!(e.target as HTMLElement).closest("input, textarea, select");
-type Theme = "auto" | "light" | "dark";
+export type Theme = "editorial" | "playful" | "dark" | "light";
 type FontSize = "normal" | "large" | "xlarge";
 type FontFamily = "sans" | "serif";
 
@@ -81,7 +96,8 @@ export function App() {
   const [done, setDone] = usePersisted<number[]>("ef-done", []);
   const [topics, setTopics] = usePersisted<Record<string, boolean>>("ef-topics", {});
   const [last, setLast] = usePersisted<number | null>("ef-last", null);
-  const [theme, setTheme] = usePersisted<Theme>("ef-theme", "auto");
+  const [storedTheme, setTheme] = usePersisted<string>("ef-theme", "editorial");
+  const theme: Theme = (["editorial", "playful", "dark", "light"] as const).includes(storedTheme as any) ? (storedTheme as Theme) : "editorial";
   const [collapsed, setCollapsed] = usePersisted("ef-side-collapsed", false);
   const [zen, setZen] = usePersisted("ef-zen-mode", false);
   const [fontSize, setFontSize] = usePersisted<FontSize>("ef-font-size", "normal");
@@ -98,8 +114,7 @@ export function App() {
 
   useEffect(() => { if (current && !isGlossary(current)) setLast(current.id); }, [current, setLast]);
   useEffect(() => {
-    if (theme === "auto") delete document.documentElement.dataset.theme;
-    else document.documentElement.dataset.theme = theme;
+    document.documentElement.dataset.theme = theme;
   }, [theme]);
 
   useEffect(() => {
@@ -146,7 +161,12 @@ export function App() {
   else if (searchQ !== null) view = <SearchView q={searchQ} />;
   else view = <Home doneSet={doneSet} last={last} />;
 
-  const nextTheme: Record<Theme, Theme> = { auto: "light", light: "dark", dark: "auto" };
+  const nextTheme: Record<Theme, Theme> = {
+    editorial: "playful",
+    playful: "dark",
+    dark: "light",
+    light: "editorial",
+  };
   const nextFont: Record<FontSize, FontSize> = { normal: "large", large: "xlarge", xlarge: "normal" };
 
   return (
@@ -154,81 +174,92 @@ export function App() {
       <ReadingProgress />
       <Sidebar current={current?.id} doneSet={doneSet} open={menuOpen} onNavigate={() => setMenuOpen(false)} />
       
-      <div className="topbtns">
+      <header className="topbtns" role="toolbar" aria-label="Reading controls">
+        <button
+          className={`iconbtn ${!collapsed ? "active" : ""}`}
+          onClick={() => setCollapsed(c => !c)}
+          title={collapsed ? "Show sidebar ( [ )" : "Hide sidebar ( [ )"}
+          aria-label="Toggle sidebar"
+        >
+          <IconSidebar size={15} />
+        </button>
+
+        <div className="nav-divider" />
+
         <button
           className="iconbtn cmdk-btn"
           onClick={() => setPaletteOpen(true)}
-          title="Command Palette (⌘K / Ctrl+K)"
+          title="Search & Commands (Cmd+K / Ctrl+K)"
           aria-label="Open command palette"
         >
-          <span className="cmdk-kbd">⌘K</span>
+          <IconSearch size={14} />
+          <span className="cmdk-kbd">Cmd K</span>
         </button>
 
         <a
           href="#/review"
-          className="iconbtn"
+          className={`iconbtn ${route === "review" ? "active" : ""}`}
           title="Spaced Repetition Review Deck"
-          aria-label="Review deck"
+          aria-label="Spaced repetition review deck"
         >
-          ⚡
+          <IconZap size={14} />
+          <span className="nav-btn-label">Review</span>
         </a>
 
         <button
-          className={`iconbtn${zen ? " active" : ""}`}
-          onClick={() => setZen(z => !z)}
-          title={zen ? "Exit Zen mode (Z)" : "Enter Zen focus mode (Z)"}
-          aria-label="Toggle Zen mode"
-        >
-          📖
-        </button>
-
-        <button
-          className={`iconbtn${bulletMode ? " active" : ""}`}
+          className={`iconbtn ${bulletMode ? "active" : ""}`}
           onClick={() => setBulletMode(b => !b)}
-          title={bulletMode ? "Exit Bullet-Points Mode (B)" : "Enter Bullet-Points & Scannable Mode (B)"}
+          title={bulletMode ? "Exit Bullet-Points Mode (B)" : "Scannable Bullet-Points Mode (B)"}
           aria-label="Toggle bullet-points mode"
         >
-          •≡
+          <IconBullets size={15} />
+          <span className="nav-btn-label">{bulletMode ? "Bullets" : "Prose"}</span>
         </button>
 
         <button
-          className="iconbtn"
+          className={`iconbtn ${zen ? "active" : ""}`}
+          onClick={() => setZen(z => !z)}
+          title={zen ? "Exit Zen focus mode (Z)" : "Zen focus mode (Z)"}
+          aria-label="Toggle Zen mode"
+        >
+          {zen ? <IconMinimize size={15} /> : <IconMaximize size={15} />}
+        </button>
+
+        <div className="nav-divider" />
+
+        <button
+          className="iconbtn font-btn"
           onClick={() => setFontFamily(f => f === "sans" ? "serif" : "sans")}
           title={`Font: ${fontFamily} (click to toggle serif/sans)`}
-          aria-label="Toggle serif font"
+          aria-label="Toggle font family"
         >
-          {fontFamily === "sans" ? "Sans" : "Serif"}
+          <span className="font-type-indicator">{fontFamily === "sans" ? "Sans" : "Serif"}</span>
         </button>
 
         <button
-          className="iconbtn"
+          className="iconbtn font-btn"
           onClick={() => setFontSize(nextFont[fontSize])}
           title={`Text Size: ${fontSize} (click to change)`}
-          aria-label="Change font size"
+          aria-label="Change text size"
         >
-          Aa
+          <span className="font-type-indicator">Aa</span>
         </button>
 
         <button
-          className="iconbtn"
-          onClick={() => setCollapsed(c => !c)}
-          title={collapsed ? "Show sidebar [" : "Hide sidebar ["}
-          aria-label="Toggle sidebar"
-        >
-          {collapsed ? "☰" : "⟨"}
-        </button>
-
-        <button
-          className="iconbtn"
+          className="iconbtn theme-switch-btn"
           onClick={() => setTheme(nextTheme[theme])}
-          title={`Theme: ${theme} (click to change)`}
-          aria-label="Change theme"
+          title={`Theme: ${theme.toUpperCase()} (click to switch)`}
+          aria-label={`Current theme is ${theme}. Click to switch theme.`}
         >
-          {theme === "auto" ? "◐" : theme === "light" ? "☀" : "☾"}
+          <IconPalette size={14} />
+          <span className="theme-pill-tag">{theme}</span>
         </button>
-      </div>
+      </header>
 
-      <button className="menu" onClick={() => setMenuOpen(o => !o)}>Contents</button>
+      <button className="menu" onClick={() => setMenuOpen(o => !o)} aria-label="Open contents">
+        <IconMenu size={16} />
+        <span>Contents</span>
+      </button>
       <main className="main">{view}</main>
 
       <CommandPalette
@@ -280,7 +311,7 @@ function Sidebar({ current, doneSet, open, onNavigate }: { current?: number; don
         id="find"
         className="find"
         type="search"
-        placeholder="Find… ( / or ⌘K )"
+        placeholder="Search curriculum… ( / or Cmd+K )"
         value={q}
         onChange={e => setQ(e.target.value)}
         onKeyDown={e => {
@@ -292,8 +323,14 @@ function Sidebar({ current, doneSet, open, onNavigate }: { current?: number; don
       />
 
       <div className="sidebar-quick-links">
-        <a href="#/review" className="quick-chip">⚡ Review Deck</a>
-        <a href="#/glossary" className="quick-chip">📚 Glossary</a>
+        <a href="#/review" className="quick-chip">
+          <IconZap size={13} />
+          <span>Review Deck</span>
+        </a>
+        <a href="#/glossary" className="quick-chip">
+          <IconBook size={13} />
+          <span>Glossary</span>
+        </a>
       </div>
 
       <div className="level-filter-bar">
@@ -340,7 +377,9 @@ function Sidebar({ current, doneSet, open, onNavigate }: { current?: number; don
                   className={`pt${isOpen ? " open" : ""}`}
                   onClick={() => setOpenParts(o => (o.includes(part.key) ? o.filter(k => k !== part.key) : [...o, part.key]))}
                 >
-                  <span className="swatch" /><span className="caret">▸</span> {part.title}
+                  <span className="swatch" />
+                  <IconChevronRight className="caret" size={12} />
+                  <span>{part.title}</span>
                   <span className="pc">{partDone ? `${partDone}/` : ""}{chs.length}</span>
                 </button>
                 {isOpen && chs.map(ch => (
@@ -405,7 +444,7 @@ function ChapterView({ ch, done, onDone, topics, setTopics, bulletMode, onToggle
       const b = document.createElement("button");
       b.className = "copy"; b.type = "button"; b.textContent = "Copy";
       b.onclick = () => navigator.clipboard?.writeText(code.innerText).then(() => {
-        b.textContent = "Copied ✓"; setTimeout(() => (b.textContent = "Copy"), 1500);
+        b.textContent = "Copied"; setTimeout(() => (b.textContent = "Copy"), 1500);
       });
       pre.appendChild(b);
     });
@@ -429,7 +468,7 @@ function ChapterView({ ch, done, onDone, topics, setTopics, bulletMode, onToggle
   return (
     <div className={`reader${heads.length > 1 ? "" : " solo"}${bulletMode ? " bullet-mode" : ""}`} style={{ ["--h" as string]: hueOf(ch) }}>
       <article>
-        <Art stage={si} hue={hueOf(ch)} seed={ch.id + 1} className="banner" height={150} />
+        <Art stage={si} hue={hueOf(ch)} seed={ch.id + 1} className="banner" height={56} />
         <div className="crumbs">
           <span className="stagechip">Stage {si} · {STAGES[si]?.name}</span>
           <span className="eyebrow">Part {part.key} · {part.title}</span>
@@ -438,15 +477,7 @@ function ChapterView({ ch, done, onDone, topics, setTopics, bulletMode, onToggle
         <div className="meta">
           <span className={`badge lv-${ch.level}`}>{LEVEL_NAME[ch.level]}</span>
           {words > 0 && <span className="muted">~{Math.max(1, Math.round(words / 200))} min read</span>}
-          <span className="muted">{learned}/{ch.topics.length} topics checked off</span>
-          <button
-            type="button"
-            className={`badge bullet-badge-toggle ${bulletMode ? "active" : ""}`}
-            onClick={onToggleBulletMode}
-            title="Toggle Scannable Bullet Points Mode"
-          >
-            {bulletMode ? "● Bullet Mode Active" : "○ Bullet Mode"}
-          </button>
+          <span className="muted">{learned}/{ch.topics.length} topics mastered</span>
         </div>
 
         <NotesDrawer chapterId={ch.id} chapterTitle={ch.title} />
@@ -499,14 +530,30 @@ function ChapterView({ ch, done, onDone, topics, setTopics, bulletMode, onToggle
         )}
 
         <button className={`donebtn${done ? " on" : ""}`} onClick={onDone}>
-          {done ? "✓ Done" : "Mark chapter done"}
+          {done ? (
+            <>
+              <IconCheck size={16} /> Completed
+            </>
+          ) : (
+            "Mark chapter done"
+          )}
         </button>
 
         <nav className="pager">
-          {prev ? <a href={`#/ch/${prev.id}`}>← {pad(prev.id)} {prev.title}</a> : <span />}
-          {next && <a href={`#/ch/${next.id}`}>{pad(next.id)} {next.title} →</a>}
+          {prev ? (
+            <a href={`#/ch/${prev.id}`}>
+              <IconArrowLeft size={14} /> {pad(prev.id)} {prev.title}
+            </a>
+          ) : (
+            <span />
+          )}
+          {next && (
+            <a href={`#/ch/${next.id}`}>
+              {pad(next.id)} {next.title} <IconArrowRight size={14} />
+            </a>
+          )}
         </nav>
-        <p className="muted keyhint">Keys: ← → previous / next chapter · ⌘K search / command · Z zen mode · [ toggle sidebar</p>
+        <p className="muted keyhint">Keys: ← → previous / next chapter · Cmd+K command · B bullet points mode · Z zen mode · [ toggle sidebar</p>
       </article>
 
       {heads.length > 1 && (
@@ -611,9 +658,12 @@ function Home({ doneSet, last }: { doneSet: Set<number>; last: number | null }) 
               First unfinished: {pad(firstUndone.id)} {firstUndone.title}
             </a>
           )}
-          <a className="cta ghost" href="#/review">⚡ Spaced Review</a>
+          <a className="cta ghost" href="#/review">
+            <IconZap size={15} />
+            <span>Spaced Review</span>
+          </a>
         </p>
-        <p className="muted">{doneSet.size} of {CHAPTERS.length} chapters completed · Press ⌘K for search &amp; commands</p>
+        <p className="muted">{doneSet.size} of {CHAPTERS.length} chapters completed · Press Cmd+K for search &amp; commands</p>
       </header>
 
       <h2 className="sectionh">The 15 stages of understanding</h2>

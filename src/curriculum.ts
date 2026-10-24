@@ -3,7 +3,7 @@
 // content-keys: files in src/content (written chapters). Empty = outline only.
 const RAW = `
 # 0|Learning Methodology
-Learning to Program in the AI Era|C|c00,c39|recognition vs recall;predict then run;20-minute rule;spaced repetition;AI as reviewer not author;Rule 8: build something that breaks;learning any new language fast
+Learning to Program in the AI Era|C|c00,learn-problem-solving,c39|recognition vs recall;predict then run;20-minute rule;spaced repetition;problem decomposition;trace tables;systematic debugging;AI as reviewer not author;learning any new language fast
 # I|Computing
 What a Computer Actually Is|C|c01|CPU;registers;RAM;fetch-decode-execute;I/O;compiled vs interpreted vs VM;processes;stdin/stdout/stderr;exit codes
 Binary, Bytes & Number Representation|C|n02|bits and bytes;binary;hexadecimal;two's complement;integer overflow;IEEE 754 floats;endianness;boolean algebra
@@ -34,7 +34,24 @@ Modules & Project Layout Across Languages|C|x-lang-modules|files/packages/crates
 Memory & Value Semantics Across Languages|C|x-lang-memory|copy vs share;references;GC/refcount/ownership/manual;mutation visibility
 Concurrency Across Languages|C|x-lang-concurrency|threads;async/await;goroutines/channels;locks;parallelism
 Files, I/O & the Standard Library Across Languages|P|x-lang-io|reading/writing files;stdin/stdout;JSON;HTTP clients;time;CLI args
-# IV|Python
+# IV|JavaScript
+JavaScript Overview & Runtime Model|C|n68|V8 heap and stack;call stack;event loop;microtasks vs macrotasks;4 rules of this;prototype delegation;async patterns;concurrency limiting
+JavaScript Fundamentals: Types, Scope & Hoisting|C|x-js-fundamentals|primitives vs objects;let vs const vs var;coercion rules;truthiness;evaluation order;lexical environments;closures;hoisting;execution context
+JavaScript Objects, Prototypes & Modern Classes|C|x-js-objects|object identity;property descriptors;Object.defineProperty;prototypes;prototype chain;new operator mechanics;this binding;classes;private fields;Map;Set;WeakMap
+Asynchronous JavaScript: Event Loop, Promises & Timers|C|x-js-async|call stack;macrotask queue;microtask queue;Promise constructor;promise chaining;async await;error propagation;Promise combinators;AbortController;race conditions
+Practical JavaScript: Node.js, Modules, Streams & Projects|P|x-js-practical|Node vs browser;CommonJS vs ESM;streams;backpressure;zero-dep HTTP server;Vitest;graceful shutdown;6 mastery projects
+# V|TypeScript
+TypeScript Overview & Mental Model|C|c35|erased types;compile vs runtime;structural typing;unions;generics;async;traps
+TypeScript Cheat Sheet|R|x-ts-cheat|syntax at a glance;types;array/object methods;async;node APIs
+TypeScript Foundations: Annotations, Unions & Narrowing|C|x-ts-basics|type annotations;inference;primitives;arrays;tuples;union types;literal types;unknown vs any vs never;type narrowing;control flow analysis
+TypeScript Control Flow & Functions|C|x-ts-flow|if/switch;for-of/for-in;arrow functions;defaults;rest/spread;closures;this
+Arrays, Objects, Maps & Sets|C|x-ts-collections|array methods;destructuring;objects;Map/Set;immutability;sorting
+Interfaces, Classes & Type Modelling|C|x-ts-types|interfaces vs types;unions;classes;access modifiers;narrowing;enums alternatives
+Errors, Modules & Node I/O|P|x-ts-errors-io|throw/try/catch;error types;ESM imports;fs/promises;path;process
+Promises & Async in Depth|C|x-ts-async|promises;async/await;parallelism;cancellation;streams;event loop
+TypeScript Tooling: tsconfig, npm, Build & Test|P|x-ts-tooling|tsconfig;npm/pnpm;scripts;tsx/tsc;vitest;eslint/prettier
+Advanced TypeScript: Type Guards & Utility Types|P|n69|narrowing;type guards;type-level programming;keyof;satisfies;runtime validation with zod
+# VI|Python
 Python Overview & Mental Model|C|c34|Rosetta table;object model;idioms;typed Python;traps;uv
 Python Cheat Sheet|R|x-py-cheat|syntax at a glance;common operations;stdlib quick reference;idioms
 Python Basics: Syntax, Types & Operators|C|x-py-basics|indentation;names;int/float/str/bool/None;operators;truthiness;input/print
@@ -45,17 +62,7 @@ Python Errors, Files & Context Managers|C|x-py-errors-io|try/except/else/finally
 Python Iterators, Generators & Decorators|P|x-py-iter|iteration protocol;generators;itertools;decorators;functools
 Python Typing, Modules & Packaging|P|x-py-packaging|type hints;mypy/pyright;modules;packages;uv;pyproject;pytest
 Python Concurrency: asyncio, Threads & Processes|P|x-py-concurrency|GIL;threading;multiprocessing;asyncio;concurrent.futures
-# V|TypeScript
-TypeScript Overview & Mental Model|C|c35|erased types;structural typing;unions;generics;async;traps
-TypeScript Cheat Sheet|R|x-ts-cheat|syntax at a glance;types;array/object methods;async;node APIs
-JS/TS Basics: Values, Types & Operators|C|x-ts-basics|let/const;primitives;number quirks;equality;truthiness;type annotations
-TypeScript Control Flow & Functions|C|x-ts-flow|if/switch;for-of/for-in;arrow functions;defaults;rest/spread;closures;this
-Arrays, Objects, Maps & Sets|C|x-ts-collections|array methods;destructuring;objects;Map/Set;immutability;sorting
-Interfaces, Classes & Type Modelling|C|x-ts-types|interfaces vs types;unions;classes;access modifiers;narrowing;enums alternatives
-Errors, Modules & Node I/O|P|x-ts-errors-io|throw/try/catch;error types;ESM imports;fs/promises;path;process
-Promises & Async in Depth|C|x-ts-async|promises;async/await;parallelism;cancellation;streams;event loop
-TypeScript Tooling: tsconfig, npm, Build & Test|P|x-ts-tooling|tsconfig;npm/pnpm;scripts;tsx/tsc;vitest;eslint/prettier
-# VI|Go
+# VII|Go
 Go Overview & Mental Model|C|c36|zero values;slices;interfaces;errors;goroutines;traps
 Go Cheat Sheet|R|x-go-cheat|syntax at a glance;slices/maps;errors;goroutines;go commands
 Go Basics: Packages, Variables & Types|C|x-go-basics|package main;var/:=;zero values;types;constants/iota;conversions;fmt
@@ -65,7 +72,7 @@ Go Structs, Methods & Interfaces|C|x-go-types|structs;methods;pointer vs value r
 Go Errors, Defer & Panic|C|x-go-errors|error values;wrapping %w;errors.Is/As;custom errors;defer;panic/recover
 Go Goroutines, Channels & Context|C|x-go-concurrency|goroutines;channels;select;WaitGroup;Mutex;context;worker pools
 Go Modules, Testing & Tooling|P|x-go-tooling|go mod;project layout;go test;table tests;benchmarks;go vet;gofmt
-# VII|Linux
+# VIII|Linux
 Shell|C|c17|navigation;files;grep/sed/awk/sort/uniq/cut/xargs/find;pipes;redirection;env;scripting
 Processes|C|n53|ps/top/htop;kill/signals;jobs/fg/bg;nohup;nice
 Filesystems|C|n54|FHS (/etc /var /proc /sys);inodes;links;mounts;disk usage
@@ -74,7 +81,7 @@ Services|P|n56|systemd;systemctl;journalctl;unit files
 SSH|P|n57|keys;ssh-keygen;authorized_keys;known_hosts;scp/rsync;port forwarding
 Networking Tools|P|n58|curl;ping;traceroute;dig;ss;tcpdump
 Package Management|R|n59|apt/dpkg;repositories;dependencies
-# VIII|Git & Collaboration
+# IX|Git & Collaboration
 Git Fundamentals|C|n43|working tree;staging;commit;HEAD;status/diff/log;restore/rm/mv
 Branching|C|n44|branch;switch;fast-forward;three-way merge;detached HEAD
 Merge & Rebase|C|n45|merge conflicts;rebase;interactive rebase;cherry-pick;revert vs reset;reflog;bisect;stash;worktrees
@@ -84,13 +91,13 @@ Pull Requests|P|n48|small PRs;descriptions;draft PRs;CODEOWNERS;CI checks
 Code Review|P|n49|what to look for;giving/receiving feedback;review checklists
 Open Source|P|n50|fork→branch→PR flow;CONTRIBUTING;LICENSE;maintainer etiquette
 GitHub Actions|P|n51|workflows;jobs;steps;runners;matrix;caching;secrets;environments;artifacts
-# IX|Computer Science
+# X|Computer Science
 Big-O|C|n20|time vs space;amortised;best/average/worst;lower bounds;time-space trade-offs;measuring
 Recursion|C|n21|base case;recursive leap of faith;call stack;memoisation;tail calls;recursion → iteration
 Memory & Pointers|C|c10|stack vs heap;pointers;value vs reference semantics;aliasing;shallow vs deep copy;GC;refcounting;ownership/borrowing;leaks
 Data Structures|C|c12|arrays vs linked lists;stack;queue;deque;hash tables;BST;heaps;graphs;tries;union-find;B-trees;Bloom filters;LRU cache
 Algorithms|C|c11|searching;sorting;divide and conquer;greedy;dynamic programming;two pointers;sliding window;backtracking
-# X|Data Structures & Algorithms
+# XI|Data Structures & Algorithms
 How to Think About Data Structures|C|x-dsa-intro|abstract data types;operations & costs;memory pictures;choosing by operations
 Arrays & Dynamic Arrays|C|x-dsa-arrays|contiguous memory;indexing;insert/delete cost;resizing;amortised append
 Linked Lists|C|x-dsa-linked|nodes & pointers;singly/doubly/circular;insert/delete;reverse;cycle detection;merge;when to use
@@ -113,7 +120,7 @@ Dynamic Programming Step by Step|C|x-dsa-dp|overlapping subproblems;memoisation;
 Greedy Algorithms|P|x-dsa-greedy|greedy choice;interval scheduling;coins;Huffman;when greedy fails
 Bit Manipulation|R|x-dsa-bits|bitwise ops;masks;flags;tricks;bitsets
 Choosing the Right Data Structure|C|x-dsa-choose|operation → structure table;language equivalents;decision guide
-# XI|Software Engineering
+# XII|Software Engineering
 Clean Code|C|c21|KISS;YAGNI;DRY;naming;cohesion/coupling;SOLID;patterns;smells;refactoring
 SOLID|C|n34|SRP;open/closed;Liskov;interface segregation;dependency inversion
 Object-Oriented Programming|C|c13|classes;encapsulation;invariants;inheritance;polymorphism;interfaces;composition over inheritance;Liskov
@@ -128,14 +135,14 @@ Packages|C|c15|pip/uv;npm/pnpm;go mod;cargo;make/CMake;lockfiles;semver;transiti
 Configuration|P|n40|env vars;config files;12-factor;secrets;feature flags
 Documentation|P|n41|README;API docs;architecture docs;runbooks;changelog;comments that explain why
 ADRs|R|n42|context;decision;alternatives;consequences
-# XII|Systems & OS Internals
+# XIII|Systems & OS Internals
 Source Code → Compiler → Machine|C|c22|lexer;parser;AST;IR;optimiser;linker;JIT;AOT;transpiler;WebAssembly;memory hierarchy;cache locality;profiling
 Linking, Loading & Libraries|C|x-linking|object files;symbols;static vs dynamic linking;ELF;ld.so;ldd;ABI;FFI
 Operating System Basics|C|c23|kernel vs user space;system calls;virtual memory;swap;scheduler;file descriptors;signals;fork/exec;containers vs VMs
 I/O Models|C|x-io|blocking vs non-blocking;select/poll/epoll;io_uring;event loops;async runtimes;thread-per-request
 Concurrency|C|c20|processes/threads/goroutines/async;races;locks;deadlock;channels;actors;event loop;GIL
 Parallelism|R|n27|multicore;data parallelism;Amdahl's law;SIMD;GPU;work stealing
-# XIII|C
+# XIV|C
 C Overview & Mental Model|C|c38|pointers;manual memory;UB;sanitizers;build pipeline
 C Cheat Sheet|R|x-c-cheat|syntax at a glance;printf formats;pointers;memory;string.h;gcc flags
 C Basics: Types, Operators & Control Flow|C|x-c-basics|int sizes;char;float;operators;if/switch/loops;printf/scanf
@@ -146,7 +153,7 @@ C Strings & Text|C|x-c-strings|NUL-terminated;string.h;safe copying;snprintf;par
 C Structs, Unions & Enums|C|x-c-structs|struct layout;typedef;opaque types;unions;enums;bit fields
 C Files & I/O|P|x-c-io|FILE*;fopen/fread/fwrite;fgets;errno;POSIX open/read/write
 C Preprocessor & Undefined Behaviour|C|x-c-preproc|#include/#define/#ifdef;macros pitfalls;UB catalogue;sanitizers;warnings
-# XIV|Rust
+# XV|Rust
 Rust Overview & Mental Model|C|c37|ownership;borrowing;enums;traits;Result;lifetimes;traps
 Rust Cheat Sheet|R|x-rs-cheat|syntax at a glance;ownership;Option/Result;iterators;cargo commands
 Rust Basics: Variables, Types & Expressions|C|x-rs-basics|let/mut;shadowing;scalar types;tuples/arrays;expressions;functions;control flow
@@ -157,7 +164,7 @@ Rust Traits & Generics|C|x-rs-traits|traits;default methods;derive;generics & bo
 Rust Error Handling|C|x-rs-errors|Result;?;custom errors;From;thiserror/anyhow;panic vs Result
 Rust Concurrency & Async|P|x-rs-concurrency|threads;move closures;channels;Arc/Mutex;Send/Sync;rayon;tokio
 Rust Cargo, Modules & Testing|P|x-rs-tooling|cargo;crates;modules/visibility;tests;docs;clippy;features
-# XV|Networking & the Web
+# XVI|Networking & the Web
 How the Internet Works|C|c24|layers;IP;TCP/UDP;ports;DNS;TLS;HTTP;REST/GraphQL/gRPC/WebSocket
 DNS|C|n61|records (A/AAAA/CNAME/MX/TXT);resolvers;TTL;caching;dig
 TCP/IP|C|n62|MAC;IP;subnets;gateway;ARP;DHCP;NAT;routing;sockets;handshake
@@ -168,10 +175,9 @@ Proxies, Load Balancers & NAT|C|x-lb|forward vs reverse proxy;L4 vs L7;balancing
 Browsers|C|n65|DOM;CSSOM;render tree;layout;paint;compositing;event loop
 HTML|P|n66|semantic HTML;forms;accessibility;ARIA;SEO
 CSS|P|n67|box model;flexbox;grid;responsive;specificity;stacking contexts;animations
-JavaScript|C|n68|execution context;closures;this;prototypes;modules (ESM/CJS);event loop;microtasks;promises
-TypeScript|C|n69|unions;intersections;generics;narrowing;mapped/conditional types;tsconfig;runtime validation (zod)
+DOM Scripting & Browser APIs|P|dom-apis|DOM manipulation;events;bubbling;custom elements;fetch API;Web Workers;Storage
 Web Security|C|n70|same-origin policy;CORS;CSRF;XSS;CSP;cookie flags;storage
-# XVI|Frontend
+# XVII|Frontend
 React|P|n71|components;props;state;hooks;effects;refs;context;reconciliation;keys
 State|P|n72|local vs global state;lifting state;reducers;server state
 Routing|P|n73|client routing;nested routes;URL as state
@@ -181,7 +187,7 @@ Frontend Performance|P|n76|bundle size;code splitting;lazy loading;memoisation;C
 Next.js|P|n77|App Router;Server vs Client Components;Server Actions;route handlers;middleware
 SSR/SSG/ISR|R|n78|rendering strategies;streaming;caching;revalidation
 Accessibility|P|n79|semantics;keyboard;screen readers;contrast;WCAG
-# XVII|Backend
+# XVIII|Backend
 Servers|C|n80|HTTP server from scratch;routing;middleware;request/response;graceful shutdown
 Node.js|P|n81|event loop;libuv;streams;buffers;worker threads;child processes
 REST|C|n82|resources;CRUD;status codes;pagination;filtering;versioning
@@ -194,7 +200,7 @@ SSE|R|n88|server push;EventSource;vs WebSockets
 Webhooks|P|n89|signatures;retries;idempotency;verification
 Queues|C|n90|producer/consumer;ack;retry;dead-letter queue;queue vs pub/sub vs stream
 Background Jobs|P|n91|workers;scheduling;BullMQ;idempotent jobs
-# XVIII|Databases
+# XIX|Databases
 Data Models & Storage Fundamentals|C|x-datamodels|relational/document/key-value/graph/column;storage engines;B-tree vs LSM;durability;choosing a model
 Relational Databases|C|c25|tables;keys;constraints;normalisation;indexes;transactions;ACID;SQL vs NoSQL
 SQL|C|n93|SELECT/WHERE/JOIN/GROUP BY;subqueries;CTEs;window functions;views
@@ -209,7 +215,7 @@ MongoDB|R|n101|documents;collections;aggregation;indexes;when to use
 Redis|P|n102|data types;TTL;pub/sub;streams;persistence;caching patterns
 Search Engines|R|n103|inverted index;BM25;Elasticsearch/OpenSearch
 Vector Databases|P|n104|embeddings;HNSW;pgvector;hybrid search
-# XIX|Testing
+# XX|Testing
 Testing Strategy|C|x-teststrategy|the testing ladder;what each level catches;cost vs confidence;choosing tests
 Unit Testing|C|c16|test pyramid;AAA;edge cases;test doubles;TDD;coverage;property-based;CI
 Integration Testing|P|n106|real DB;testcontainers;fixtures
@@ -221,7 +227,7 @@ Property Testing|R|n109|hypothesis;fast-check;invariants
 Load Testing|R|n110|k6;latency percentiles;throughput
 Fuzzing|R|n111|go fuzz;cargo-fuzz;sanitizers
 Testing in Production|P|x-prodtest|smoke tests;synthetic monitoring;canary analysis;feature-flag checks;chaos
-# XX|Docker
+# XXI|Docker
 Containers|C|n112|why containers;namespaces;cgroups;VM vs container
 Images|C|n113|layers;tags;registries;image size
 Dockerfiles|P|n114|FROM/RUN/COPY/CMD/ENTRYPOINT;multi-stage;.dockerignore;non-root;layer caching
@@ -230,7 +236,7 @@ Docker Networking|P|n116|bridge;ports;container DNS;service-to-service
 Registries|R|n117|Docker Hub;GHCR;ECR;tagging strategy
 Docker Compose|P|n118|services;depends_on;healthchecks;env;profiles;dev vs prod
 Production Containers|P|n119|security;healthchecks;resource limits;logging
-# XXI|CI/CD
+# XXII|CI/CD
 The Path to Production|C|x-path|commit → PR → CI → image → registry → deploy → proxy → app → data → monitoring
 Continuous Integration|C|n120|lint;typecheck;test;build on every push
 GitHub Actions in Depth|P|n121|reusable workflows;caching;matrix;OIDC to cloud
@@ -238,7 +244,7 @@ Artifacts|R|n122|build outputs;container images;retention
 Secrets|C|n123|secret stores;rotation;never in git
 Continuous Delivery|P|n124|registry→deploy→health check;environments;approvals
 Deployment Strategies|P|n125|rolling;blue-green;canary;feature flags;rollback
-# XXII|Cloud
+# XXIII|Cloud
 Cloud Fundamentals|C|n126|VM;bare metal;serverless;managed services;regions/AZs;shared responsibility
 AWS|R|n127|the core service map and GCP/Azure equivalents
 Compute|P|n128|EC2;ECS;Lambda;autoscaling
@@ -248,7 +254,7 @@ Cloud Networking|R|n131|VPC;subnets;security groups;load balancers
 IAM|C|n132|users/roles/policies;least privilege
 CDN|P|n133|edge caching;CloudFront/Cloudflare;cache keys
 Serverless|R|n134|functions;cold starts;event triggers;limits
-# XXIII|Kubernetes
+# XXIV|Kubernetes
 Kubernetes Architecture|C|n135|why orchestration;control plane;nodes;etcd;scheduler
 Pods|C|n136|pod lifecycle;probes;sidecars
 Deployments|P|n137|ReplicaSets;rollouts;StatefulSets;DaemonSets;Jobs/CronJobs
@@ -261,7 +267,7 @@ Scaling|P|n143|requests/limits;HPA;cluster autoscaling
 Helm|R|n144|charts;values;Kustomize alternative
 RBAC|R|n145|roles;service accounts;namespaces
 Network Policies|R|n146|pod-to-pod rules;CNI
-# XXIV|Infrastructure
+# XXV|Infrastructure
 Terraform|P|n147|providers;resources;state;plan/apply;modules;remote state;drift
 Infrastructure as Code|C|n148|declarative infra;review via PRs;reproducibility
 Reverse Proxies|P|n149|Nginx;Caddy;Traefik;TLS termination;load balancing;WebSocket proxying
@@ -269,7 +275,7 @@ Production DNS|R|n150|domains;records for services;DNS-based failover
 Production TLS|P|n151|Let's Encrypt;ACME;certificate renewal
 Backups|C|n152|backup types;restore drills;3-2-1 rule
 Disaster Recovery|R|n153|RPO;RTO;failover
-# XXV|Observability
+# XXVI|Observability
 Logging|C|n154|structured logs;levels;correlation/request IDs
 Metrics|C|n155|RED/USE;latency percentiles;error rate;saturation
 Tracing|P|n156|spans;context propagation;distributed traces
@@ -278,12 +284,12 @@ Prometheus|P|n158|scraping;PromQL;exporters
 Grafana|P|n159|dashboards;Loki;Tempo/Jaeger
 Alerting|P|n160|symptom-based alerts;noise;on-call
 SLO/SLI/SLA|C|n161|error budgets;availability maths
-# XXVI|Production Engineering
+# XXVII|Production Engineering
 Production Readiness|C|x-prodready|the checklist;configuration;secrets;observability;resilience;data safety;operations
 Health Checks & Graceful Shutdown|P|x-health|liveness/readiness;dependency checks;SIGTERM handling;draining;startup
 Rate Limiting & Load Protection|P|x-ratelimit|token bucket;sliding window;where to enforce;quotas;load shedding;fairness
 Operating a Service|P|x-operate|ownership;on-call;runbooks;deploy hygiene;toil;capacity reviews
-# XXVII|Security
+# XXVIII|Security
 Security Across the Stack|C|x-secmap|where security shows up at every layer;threat modelling;defence in depth
 OWASP Top 10|C|c26|injection;XSS;CSRF;SSRF;access control;crypto basics;secrets;supply chain;prompt injection
 Authentication Security|C|n163|password storage;MFA;session security;brute force
@@ -292,7 +298,7 @@ Secrets Management|P|n165|vaults;env injection;rotation
 Container Security|R|n166|minimal images;non-root;image scanning
 Cloud Security|R|n167|IAM;network segmentation;audit logs
 Supply Chain Security|R|n168|lockfiles;SBOM;signing;dependency audits
-# XXVIII|Distributed Systems
+# XXIX|Distributed Systems
 CAP & PACELC|C|n169|partitions;consistency vs availability;latency trade-offs
 Consistency|C|n170|strong;eventual;read-your-writes;quorum
 Replication|C|n171|leader/follower;multi-leader;replication lag
@@ -302,7 +308,7 @@ Event Streaming|R|n174|Kafka;NATS;logs vs queues;consumer groups
 Consensus|R|n175|leader election;Raft
 Distributed Locks|R|n176|leases;fencing tokens
 Resilience|C|n177|timeouts;retries+backoff;circuit breakers;bulkheads;load shedding;backpressure
-# XXIX|System Design
+# XXX|System Design
 Requirements|C|n178|functional vs non-functional;constraints
 System API Design|P|n179|entities;endpoints;contracts
 Capacity Planning|C|n180|QPS;storage;bandwidth estimates;back-of-envelope
@@ -311,7 +317,7 @@ Caching|C|n182|cache-aside;write-through/back;invalidation;stampede;TTL;eviction
 Scaling|C|n183|vertical vs horizontal;stateless services;read replicas
 Failure Modes|C|n184|single points of failure;graceful degradation
 Trade-offs|C|n185|cost;complexity;consistency;latency — practice: URL shortener, chat, feed, rate limiter
-# XXX|Performance
+# XXXI|Performance
 Profiling|C|n186|CPU/memory profilers;flame graphs
 CPU Performance|R|n187|caches;branch prediction;SIMD
 Memory Performance|R|n188|allocation;GC tuning;locality
@@ -319,7 +325,7 @@ Database Performance|P|n189|indexes;query optimisation;pooling
 Network Performance|R|n190|latency;compression;HTTP/2;CDN
 Load Testing in Practice|P|n191|realistic loads;percentiles;Little's law
 Benchmarking|P|n192|micro vs macro benchmarks;statistical noise
-# XXXI|Machine Learning
+# XXXII|Machine Learning
 ML Fundamentals|C|c27|supervised/unsupervised/RL;loss;gradient descent;backprop;overfitting;train/val/test
 Statistics|R|n194|distributions;mean/variance;sampling;significance
 Linear Algebra|R|n195|vectors;matrices;dot product;matrix multiply
@@ -328,7 +334,7 @@ Deep Learning|C|n197|neurons;activations;optimisers;batching;regularisation;drop
 Neural Networks|P|n198|build an MLP from scratch;PyTorch basics
 CNNs|R|n199|convolution;pooling;vision
 Transformers (architecture)|C|n200|attention;multi-head;positional encoding;blocks
-# XXXII|LLMs
+# XXXIII|LLMs
 Tokenization|C|n201|BPE;vocab;tokens≠words;cost/context implications
 How LLMs Work|C|c29|pipeline;attention;sampling;pretraining;SFT;RLHF;reasoning;hallucination;modalities
 Training|R|n203|pretraining data;compute (6·N·D);scaling laws
@@ -337,7 +343,7 @@ Quantization|C|n205|FP16/BF16/FP8/INT4;GGUF;AWQ;GPTQ;quality trade-off
 Inference|C|n206|prefill vs decode;KV cache;batching;speculative decoding
 Local Models|P|n207|Ollama;llama.cpp;vLLM;offloading;tokens/sec
 GPU/VRAM|C|c28|weights maths;KV cache formula;speed ceiling;training memory;hardware tiers
-# XXXIII|RAG
+# XXXIV|RAG
 Embeddings|C|c31|vectors;cosine similarity;RAG pipeline;fine-tuning vs RAG vs prompting
 Chunking|P|n210|strategies;overlap;structure-aware chunking
 Vector Search|P|n211|HNSW;ANN;metadata filters
@@ -345,7 +351,7 @@ Hybrid Search|P|n212|BM25 + vectors;fusion
 Reranking|P|n213|cross-encoders;top-k tuning
 RAG Evaluation|P|n214|retrieval recall;faithfulness;golden sets
 Production RAG|P|n215|ingestion pipelines;freshness;access control
-# XXXIV|AI Engineering
+# XXXV|AI Engineering
 Providers & APIs|C|c30|provider landscape;Anthropic/OpenAI-compatible/Ollama code;streaming;cost control;prompting
 APIs in Depth|P|n217|messages;system prompts;stop reasons;rate limits;retries
 Structured Outputs|P|n218|JSON schema;validation;repair
@@ -358,7 +364,7 @@ MCP Servers|P|n224|build one (notes/Postgres/GitHub);local vs remote hosting;aut
 MCP Clients|R|n225|connecting servers;capability negotiation
 AI Security|C|n226|prompt injection;data exfiltration;least privilege;human approval
 AI Evaluation|P|n227|evals;LLM-as-judge;regression suites
-# XXXV|MLOps
+# XXXVI|MLOps
 Model Versioning|R|n228|registries;pinning model IDs
 Dataset Versioning|R|n229|DVC;lineage
 Evaluation in Production|P|n230|online vs offline;A/B tests
@@ -366,7 +372,7 @@ Model Deployment|R|n231|serving stacks;autoscaling GPUs
 AI Monitoring|P|n232|latency;token usage;drift;quality
 AI Cost|C|n233|tokens/request;caching;batching;GPU hours
 AI Reliability|P|n234|fallbacks;timeouts;budgets;audit logs
-# XXXVI|Projects
+# XXXVII|Projects
 CLI Project|P|n235|todo CLI: files, JSON, errors, args, git
 Backend Project|P|n236|HTTP server from scratch → REST task API (TS + Postgres)
 Full Stack Project|P|n237|React + Node + Postgres + Redis
@@ -379,7 +385,7 @@ RAG System|P|n243|parse → chunk → embed → pgvector → rerank → LLM
 MCP Server Project|P|n244|your own MCP server
 AI Agent Project|P|n245|tool-using agent with limits and approvals
 Production AI Platform|P|n246|capstone: auth, agents, MCP, RAG, memory, observability, CI/CD
-# XXXVII|Engineering Practice
+# XXXVIII|Engineering Practice
 Debugging in Practice|P|n247|production debugging;reading logs/traces
 Code Review Practice|P|n248|reviewing others;self-review
 Writing Docs|P|n249|docs as engineering
@@ -389,7 +395,7 @@ System Design Practice|P|n252|timed design exercises
 Open Source Practice|P|n253|first contributions;maintainership
 Interview Preparation|R|n254|DSA practice;system design;behavioural
 Glossary|R|glossary|every term, searchable
-# XXXVIII|AI Integration in Apps
+# XXXIX|AI Integration in Apps
 AI Integration Overview|C|ai-overview|why integrate AI;integration patterns;build vs buy;cost model;latency vs quality trade-offs;when NOT to use AI
 Text Generation in Apps|C|ai-text-gen|chat completions;streaming to the UI;system prompts;multi-turn context;temperature and sampling;token budgets;provider SDKs
 Image Generation APIs|P|ai-image-gen|DALL·E / Stable Diffusion / Flux APIs;prompt engineering for images;style consistency;content policy;cost per image;using generated images safely
@@ -404,7 +410,7 @@ AI Rate Limits and Reliability|P|ai-reliability|provider rate limits;exponential
 Prompt Engineering Patterns|C|ai-prompting|zero/few-shot;chain of thought;step-back prompting;structured outputs;self-consistency;re-asking on failure;injection defence
 Testing AI Features|P|ai-testing|determinism challenges;snapshot tests for prompts;LLM-as-judge evals;golden datasets;regression on model upgrades;latency budgets
 AI Feature Flags and Rollout|R|ai-feature-flags|A/B testing AI vs rule-based;gradual rollout;kill switch;shadowing;feedback collection
-# XXXIX|Payment Gateways
+# XL|Payment Gateways
 Payments Fundamentals|C|pay-fundamentals|payment flow;settlement;interchange fees;chargebacks;PCI-DSS basics;card-present vs card-not-present
 Stripe Integration|C|pay-stripe|Stripe objects;client-side Elements;server-side PaymentIntent flow;3D Secure;idempotency keys;test cards
 Razorpay Integration|P|pay-razorpay|Razorpay order flow;checkout.js;server-side order creation;signature verification;UPI/netbanking/wallets;international cards;webhook events
@@ -418,7 +424,7 @@ Payouts and Marketplaces|R|pay-payouts|Stripe Connect;platform vs direct account
 PCI Compliance|C|pay-pci|PCI-DSS levels;scope reduction with hosted fields;SAQ A vs D;tokenization;never log card data;penetration testing requirements
 Payment Security|C|pay-security|HTTPS everywhere;CSRF on payment endpoints;velocity checks;fraud signals;Stripe Radar rules;3DS2;IP geolocation checks
 Invoice Generation|P|pay-invoices|programmatic PDF invoices;Stripe invoicing;tax breakdown;invoice numbering;send-and-remind flows;B2B net terms
-# XL|Practical SaaS Engineering
+# XLI|Practical SaaS Engineering
 SaaS Architecture Patterns|C|saas-architecture|multi-tenant data models;tenant isolation;slug routing;feature flag per tenant
 Authentication for SaaS|C|saas-auth|social login OAuth;magic link email;passkeys;organisation SSO SAML/OIDC;invitation flow;seat management
 Onboarding Flow Engineering|P|saas-onboarding|signup funnel;email verification;guided setup wizard;empty states;first-run experience;activation metric tracking

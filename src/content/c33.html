@@ -153,6 +153,61 @@ if err != nil {
   <li><b>Go:</b> Uses lightweight <b>Goroutines</b> (costing only ~2KB of initial stack memory vs 2MB for an OS thread). Multiplexes millions of goroutines across all CPU cores with channels for safe synchronization (CSP).</li>
 </ul>
 
+<h3>7. Memory Management &amp; Garbage Collection Contrasted</h3>
+<table>
+<tr><th>Dimension</th><th>Python (CPython)</th><th>JavaScript (V8)</th><th>TypeScript</th><th>Go</th></tr>
+<tr><td><b>Primary GC</b></td><td>Deterministic Reference Counting</td><td>Generational Mark-Sweep-Compact</td><td>Identical to JS (Types are erased)</td><td>Tri-color concurrent mark-sweep</td></tr>
+<tr><td><b>Cycle Handling</b></td><td>Cyclic GC runs periodically</td><td>Scavenger (young) / Full GC (old)</td><td>Inherited from V8 / JavaScriptCore</td><td>Pointers cannot create raw cycles that defeat GC</td></tr>
+<tr><td><b>Allocation Target</b></td><td>All variables are pointers to heap <code>PyObject</code>s</td><td>Primitives inline / Smi; objects on V8 heap</td><td>Identical to JS</td><td>Aggressive stack allocation via Escape Analysis</td></tr>
+<tr><td><b>Stop-The-World (STW)</b></td><td>Brief during cyclic collector sweeps</td><td>Sub-millisecond or incremental concurrent</td><td>Inherited from JS engine</td><td>Ultra-low latency STW pauses (&lt; 1 ms)</td></tr>
+</table>
+
+<h3>8. Mutability, Slices, and Copying Semantics</h3>
+<p>One of the most dangerous areas when switching between these four languages is assuming that assignment or sub-collections behave the same:</p>
+
+<pre data-lang="python"><code class="language-python"># Python: Slicing creates a SHALLOW COPY of the list
+original = [1, 2, 3, 4]
+sub = original[1:3]  # [2, 3] (new list object!)
+sub.append(99)       # Mutates ONLY 'sub'
+print(original)      # [1, 2, 3, 4] (untouched!)</code></pre>
+
+<pre data-lang="javascript"><code class="language-javascript">// JavaScript / TypeScript: Slicing creates a SHALLOW COPY of array references
+const original = [1, 2, 3, 4];
+const sub = original.slice(1, 3); // [2, 3] (new array!)
+sub.push(99);                     // Mutates ONLY 'sub'
+console.log(original);            // [1, 2, 3, 4] (untouched)</code></pre>
+
+<pre data-lang="go"><code class="language-go">// Go: Slicing shares the EXACT SAME BACKING ARRAY!
+original := []int{1, 2, 3, 4}
+sub := original[1:3] // elements [2, 3], len=2, cap=3
+sub[0] = 888         // [WARN] MUTATES original[1]!
+fmt.Println(original) // [1, 888, 3, 4] -> Original array was modified!</code></pre>
+
+<h3>9. Testing &amp; Tooling Across the Four Languages</h3>
+<table>
+<tr><th>Tooling Category</th><th>Python</th><th>JavaScript (Node)</th><th>TypeScript</th><th>Go</th></tr>
+<tr><td><b>Test Runner</b></td><td><code>pytest</code> (fixtures, parametrization)</td><td><code>node --test</code>, <code>vitest</code>, <code>jest</code></td><td><code>vitest</code>, <code>jest -t</code></td><td><code>go test -v -race ./...</code> (built-in!)</td></tr>
+<tr><td><b>Benchmark Tool</b></td><td><code>pytest-benchmark</code></td><td><code>mitata</code>, <code>tinybench</code></td><td><code>mitata</code>, <code>tinybench</code></td><td><code>go test -bench=. -benchmem</code> (built-in!)</td></tr>
+<tr><td><b>Code Formatter</b></td><td><code>ruff format</code> / <code>black</code></td><td><code>prettier</code>, <code>biome</code></td><td><code>prettier</code>, <code>biome</code></td><td><code>gofmt</code> (enforced standard)</td></tr>
+<tr><td><b>Static Linter</b></td><td><code>ruff check</code> / <code>flake8</code></td><td><code>eslint</code>, <code>biome</code></td><td><code>eslint</code> + <code>@typescript-eslint</code></td><td><code>go vet</code>, <code>staticcheck</code></td></tr>
+</table>
+
+<div class="exercises"><h3>Comparative Prediction Drills</h3>
+<details class="ex"><summary>33.1 <span class="levels">think</span> Predict the output in Python vs JavaScript: <code>[] + []</code> and <code>[] + {}</code></summary><div>
+<p><strong>Python:</strong></p>
+<pre data-lang="python"><code class="language-python">[] + []   # [] (concatenates two empty lists)
+[] + {}   # TypeError: can only concatenate list (not "dict") to list (Strong typing!)</code></pre>
+<p><strong>JavaScript:</strong></p>
+<pre data-lang="javascript"><code class="language-javascript">[] + []   # "" (coerces both arrays to empty strings and concatenates)
+[] + {}   # "[object Object]" (coerces array to "" and object to string) (Weak typing!)</code></pre>
+</div></details>
+
+<details class="ex"><summary>33.2 <span class="levels">think</span> Predict what happens in Go vs TypeScript when passing a struct/object to a function that mutates a field.</summary><div>
+<p><strong>TypeScript (Reference Semantics):</strong> Objects are passed by reference. Mutating <code>user.name = "Alice"</code> inside a function alters the caller's object.</p>
+<p><strong>Go (Value Semantics):</strong> If passed as a value (<code>func update(u User)</code>), Go copies the entire struct bitwise onto the new stack frame. Mutating <code>u.Name = "Alice"</code> affects ONLY the local copy. To mutate the caller's struct, you must pass an explicit pointer: <code>func update(u *User)</code>.</p>
+</div></details>
+</div>
+
 <div class="callout key"><b class="t">Language Selection Matrix</b>
 <table>
 <tr><th>Language</th><th>When To Choose It</th><th>When To Avoid It</th></tr>

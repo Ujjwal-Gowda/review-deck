@@ -1,0 +1,100 @@
+const r=`<p class="goal">Go's explicit error handling: creating, wrapping and inspecting errors, and using defer, panic and recover correctly.</p>
+<h3>Errors are values</h3>
+<pre data-lang="go"><code class="language-go">func LoadStock(path string) (map[string]int, error) {
+    f, err := os.Open(path)
+    if err != nil {
+        return nil, fmt.Errorf("load stock: %w", err)          // %w WRAPS: the original stays inspectable
+    }
+    defer f.Close()
+    stock := map[string]int{}
+    sc := bufio.NewScanner(f)
+    for line := 1; sc.Scan(); line++ {
+        sku, qtyStr, ok := strings.Cut(sc.Text(), ",")
+        if !ok { return nil, fmt.Errorf("%s:%d: missing comma", path, line) }
+        qty, err := strconv.Atoi(strings.TrimSpace(qtyStr))
+        if err != nil { return nil, fmt.Errorf("%s:%d: bad qty: %w", path, line, err) }
+        stock[sku] = qty
+    }
+    return stock, sc.Err()                                     // don't forget the scanner's own error
+}</code></pre>
+<h3>Three kinds of error values</h3>
+<pre data-lang="go"><code class="language-go">var ErrOutOfStock = errors.New("out of stock")                // 1. sentinel: compare with errors.Is
+
+type ValidationError struct{ Field, Reason string }           // 2. custom type: carries data, match with errors.As
+func (e *ValidationError) Error() string { return e.Field + ": " + e.Reason }
+
+return fmt.Errorf("reserve %s: %w", sku, ErrOutOfStock)        // 3. wrapped: adds context
+
+if errors.Is(err, ErrOutOfStock) { suggestAlternative() }      // true even if wrapped several times
+var ve *ValidationError
+if errors.As(err, &amp;ve) { respond(400, ve.Field) }
+if errors.Is(err, fs.ErrNotExist) { useDefaults() }            // standard-library sentinels</code></pre>
+<h3>The Typed Nil Interface Trap (Go's #1 Gotcha)</h3>
+<p>An interface value in Go is a two-word structure: <code>(TypeDescriptor, ValuePointer)</code>. An interface variable is only equal to <code>nil</code> when <b>BOTH</b> the type and value are nil.</p>
+
+<div class="diagram">  ┌────────────────────────────────────────────────────────┐
+  │         Interface Value: iface = (Type, Value)          │
+  │                                                        │
+  │   var err error = nil                                  │
+  │   ┌────────────────────┬────────────────────┐          │
+  │   │     Type: nil      │     Value: nil     │  == nil  │
+  │   └────────────────────┴────────────────────┘          │
+  │                                                        │
+  │   var valErr *ValidationError = nil                    │
+  │   var err error = valErr                               │
+  │   ┌────────────────────┬────────────────────┐          │
+  │   │ Type: *Validation… │     Value: nil     │  != nil! │
+  │   └────────────────────┴────────────────────┘          │
+  └────────────────────────────────────────────────────────┘</div>
+
+<pre data-lang="go"><code class="language-go">// [HAZARD]: Returning concrete pointer type
+func checkUser(name string) *ValidationError {
+    if name == "" {
+        return &amp;ValidationError{Field: "name", Reason: "cannot be empty"}
+    }
+    return nil // returns typed pointer (*ValidationError)(nil)
+}
+
+func Run() error {
+    return checkUser("Sarah") // returns error interface with Type=*ValidationError, Value=nil
+}
+
+func main() {
+    err := Run()
+    if err != nil { // [WARNING] EVALUATES TO TRUE! Interface is NOT nil because Type is set!
+        fmt.Println("Error occurred:", err) // crashes with nil pointer dereference on err.Error()!
+    }
+}
+
+// [FIX]: Always return explicit untyped 'nil' on success paths
+func checkUserFixed(name string) error {
+    if name == "" {
+        return &amp;ValidationError{Field: "name", Reason: "cannot be empty"}
+    }
+    return nil // untyped nil sets both Type and Value to nil
+}</code></pre>
+
+<h3>Rules of thumb</h3>
+<ul>
+<li>Handle an error <b>or</b> return it with context, never both (no log-and-return at every layer).</li>
+<li>Error messages are lowercase with no final punctuation, because they get chained: <code>load stock: stock.csv:3: bad qty: invalid syntax</code>.</li>
+<li>Never discard errors with <code>_</code> unless you can explain why; <code>errcheck</code>/<code>staticcheck</code> flag it.</li>
+<li><code>errors.Join(err1, err2)</code> combines several errors (for example, from validating many fields).</li>
+</ul>
+<h3>panic and recover</h3>
+<pre data-lang="go"><code class="language-go">func mustParseConfig(s string) Config {        // "Must" functions panic: only for startup or programmer errors
+    c, err := parse(s); if err != nil { panic(err) }; return c
+}
+func safeHandler(h http.HandlerFunc) http.HandlerFunc {   // recover at a boundary so one bad request can't kill the server
+    return func(w http.ResponseWriter, r *http.Request) {
+        defer func() {
+            if v := recover(); v != nil { slog.Error("panic", "err", v); http.Error(w, "internal error", 500) }
+        }()
+        h(w, r)
+    }
+}</code></pre>
+<p>Panics are for bugs and impossible states (an index out of range, a nil map write). Expected failures (missing file, bad input, network down) are <code>error</code> values.</p>
+<div class="exercises"><h3>Practice</h3>
+<details class="ex"><summary>0.1 <span class="levels">basic</span> Write <code>Validate(o Order) error</code> that checks 3 fields and returns all problems with <code>errors.Join</code> of <code>*ValidationError</code>s. In the caller, use <code>errors.As</code> to report the first field.</summary><div><p>Collect <code>errs = append(errs, &amp;ValidationError{…})</code> and <code>return errors.Join(errs...)</code> (nil if empty). <code>errors.As</code> finds the first matching wrapped error inside a joined error.</p></div></details>
+</div>
+`;export{r as default};

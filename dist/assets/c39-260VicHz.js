@@ -1,0 +1,37 @@
+const t=`<p class="goal">The universal language acquisition checklist and four-language roadmap: JavaScript, TypeScript, Python, and Go.</p>
+
+<h3>1. The Ten Questions for Any New Language</h3>
+<p>Whenever you learn any new programming language, fill out this 10-point architectural profile (keep it in your personal notes as your reference manual):</p>
+<ol>
+  <li><b>Execution &amp; Compilation:</b> Is it compiled to native machine code (Go), compiled to bytecode and interpreted (Python, V8 JS), or transpiled/erased (TypeScript)?</li>
+  <li><b>Typing Discipline:</b> Is it statically typed or dynamically typed? Strongly typed or weakly typed? Does it use structural typing (TS, Go) or nominal typing (Java, C++)?</li>
+  <li><b>Memory Management:</b> Is it garbage-collected (JS, Python, Go), reference-counted with cycle detection (CPython), or manual/ownership-based (C, Rust)?</li>
+  <li><b>Value vs Reference Semantics:</b> What happens during assignment (<code>b = a</code>) or passing to a function? Does it copy values or copy references? What data structures are immutable?</li>
+  <li><b>Error Handling:</b> Does it throw exceptions (Python, JS), return explicit error values (Go), or use Result sum types (Rust, TS patterns)?</li>
+  <li><b>Abstraction Paradigm:</b> Does it use class-based inheritance (Python, modern JS), prototypes (JS engine), struct embedding and interfaces (Go), or functional composition?</li>
+  <li><b>Collections &amp; Data Structures:</b> What are the standard sequence, map, and set types? What are their time complexity guarantees and iteration idioms?</li>
+  <li><b>Strings &amp; Unicode:</b> How are strings encoded (UTF-8 in Go, UTF-16 in JS, Unicode code points in Python)? Is indexing $O(1)$ by byte or by character?</li>
+  <li><b>Concurrency &amp; Async I/O:</b> Does it use an event loop (JavaScript), lightweight green threads / goroutines (Go), or async/await over thread pools (Python)? What synchronization primitives exist?</li>
+  <li><b>Toolchain &amp; Ecosystem:</b> What is the standard package manager (npm/pnpm, uv, go mod), formatter (prettier, black/ruff, gofmt), linter, and test runner?</li>
+  <li><b>Testing &amp; Debugging:</b> How are unit tests written? What debugger and profiler are standard?</li>
+</ol>
+
+<h3>2. The Four-Language Fluency Roadmap</h3>
+<table>
+<tr><th>Language</th><th>Primary Paradigm</th><th>Execution Model</th><th>Core Strength</th></tr>
+<tr><td><b>1. JavaScript</b></td><td>Dynamic, Multi-paradigm, Event-driven</td><td>V8 / JavaScriptCore JIT Bytecode</td><td>The universal runtime of the web and event-driven I/O (Node.js).</td></tr>
+<tr><td><b>2. TypeScript</b></td><td>Static, Structural, Type-Erased</td><td>Compile-time verification &rarr; Plain JS</td><td>Scale, refactoring safety, and API boundary correctness.</td></tr>
+<tr><td><b>3. Python</b></td><td>Dynamic, Highly readable, Object-centric</td><td>CPython bytecode interpreter + GIL</td><td>Data processing, scripting, machine learning, and automation.</td></tr>
+<tr><td><b>4. Go</b></td><td>Static, Explicit, Concurrency-first</td><td>Ahead-of-Time (AOT) Native Binary</td><td>High-throughput cloud services, microservices, and network daemons.</td></tr>
+</table>
+
+<h3>3. The 5 Universal Programs to Build in Each Language</h3>
+<p>To verify that you truly know a language—rather than merely recognizing its syntax—implement these five projects from scratch without relying on AI code generation:</p>
+<ol>
+  <li><b>Algorithmic Drill:</b> Implement FizzBuzz, binary search, and an LRU cache with comprehensive automated unit tests.</li>
+  <li><b>File &amp; Data Processor:</b> A CLI tool that reads a 50MB CSV/JSON log file, aggregates statistics into a hash map, and outputs a formatted report.</li>
+  <li><b>HTTP Client &amp; API Consumer:</b> A CLI that fetches data from a REST API with exponential backoff retries, JSON validation, and error logging.</li>
+  <li><b>Concurrent Job Worker:</b> A worker pool processing tasks concurrently with cancellation, worker limits, and graceful shutdown.</li>
+  <li><b>Production REST API:</b> A microservice backed by PostgreSQL with connection pooling, migrations, health probes, and structured JSON logs.</li>
+</ol>
+`;export{t as default};

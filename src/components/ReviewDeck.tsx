@@ -1,202 +1,529 @@
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
+import {
+  type CardSchedule,
+  type ReviewHistoryEntry,
+  type ReviewRating,
+  calculateNextReview,
+  initCardSchedule,
+  selectDueCards,
+  toDateString
+} from "../utils/spacedRepetition";
+import {
+  IconTarget,
+  IconCards,
+  IconCheckCircle,
+  IconRotateCcw,
+  IconAlertTriangle,
+  IconCheck,
+  IconZap,
+  IconChevronDown,
+  IconArrowRight
+} from "./Icons";
 
-interface ReviewCard {
+export interface ReviewCard {
   id: string;
   chapterId: number;
   chapterTitle: string;
+  language?: "JavaScript" | "TypeScript" | "Python" | "Go" | "Foundations";
   question: string;
   answer: string;
   tag: string;
+  codeSnippet?: string;
 }
 
-const DEFAULT_REVIEW_CARDS: ReviewCard[] = [
+export const COMPREHENSIVE_REVIEW_CARDS: ReviewCard[] = [
+  // ── JavaScript in Depth ──
   {
-    id: "card-ai-1",
-    chapterId: 349,
-    chapterTitle: "AI Integration Overview",
-    question: "What are the three core architectural models for integrating AI in apps, and when do you use each?",
-    answer: "1) Direct Synchronous Proxy: for fast, sub-second tasks. 2) Server-Sent Events (SSE) Streaming: for conversational/text generation to drop Time-To-First-Token. 3) Asynchronous Background Worker Queue: for slow, GPU-bound tasks (images, large document indexing) returning 202 Accepted.",
-    tag: "AI Architecture",
+    id: "card-js-eventloop",
+    chapterId: 171,
+    chapterTitle: "JavaScript Runtime & Event Loop",
+    language: "JavaScript",
+    question: "What is the exact execution order of synchronous code, microtasks, and macrotasks (timers)?",
+    answer: "1. The call stack runs all synchronous code to completion.\n2. When the call stack empties, the event loop empties the ENTIRE microtask queue (Promise callbacks, queueMicrotask) including any newly queued microtasks.\n3. The browser performs rendering updates if needed.\n4. Exactly ONE macrotask (setTimeout, setInterval, I/O) is dequeued and executed, after which the microtask queue is checked again.",
+    tag: "JS Runtime",
+    codeSnippet: `console.log("1");
+setTimeout(() => console.log("2"), 0);
+Promise.resolve().then(() => console.log("3"));
+console.log("4");
+// Prints: 1, 4, 3, 2`
   },
   {
-    id: "card-ai-2",
-    chapterId: 355,
-    chapterTitle: "Building an AI Search Bar",
-    question: "How does Reciprocal Rank Fusion (RRF) work and why is it preferred over weighted score averaging?",
-    answer: "RRF calculates score as sum(1 / (60 + rank)) for each document across semantic and keyword retrieval lists. It operates strictly on ordinal ranks rather than raw similarity scores, making it immune to incompatible score distributions between BM25 and vector cosine similarity.",
-    tag: "AI Search",
+    id: "card-js-this-binding",
+    chapterId: 171,
+    chapterTitle: "JavaScript Functions & 'this'",
+    language: "JavaScript",
+    question: "How is 'this' determined in a regular function vs an arrow function?",
+    answer: "In regular functions, 'this' is dynamic and bound at CALL time: obj.method() binds to obj, standalone fn() binds to undefined (in strict mode) or global. In arrow functions, 'this' is lexical: it captures 'this' from the enclosing scope where the arrow function was defined, and cannot be changed by call, apply, or bind.",
+    tag: "JS Semantics"
   },
   {
-    id: "card-pay-1",
-    chapterId: 364,
-    chapterTitle: "Stripe Integration",
-    question: "Why must payment idempotency keys be deterministic rather than timestamp-based?",
-    answer: "Timestamp-based keys (like Date.now()) generate a brand-new key if a network drops and a client or worker retries 2 seconds later, leading to double-charges. Deterministic keys derived from the cart/order ID guarantee that retries return the exact original PaymentIntent without charging twice.",
-    tag: "Payments",
-  },
-  {
-    id: "card-pay-2",
-    chapterId: 367,
-    chapterTitle: "Webhooks for Payments",
-    question: "How do you defend a payment webhook handler against replay attacks and concurrent duplicate delivery?",
-    answer: "1) Verify the gateway HMAC signature and reject timestamps older than 300 seconds. 2) Process events inside an atomic database transaction with a UNIQUE constraint on event_id (or Redis SETNX lock), discarding duplicate deliveries before fulfilling orders.",
-    tag: "Payments Security",
-  },
-  {
-    id: "card-pay-3",
-    chapterId: 371,
-    chapterTitle: "Multi-currency and Tax",
-    question: "What is a zero-decimal currency in payment processing (e.g. Stripe, Razorpay)?",
-    answer: "Currencies like Japanese Yen (JPY) and Korean Won (KRW) do not have fractional sub-units (cents/paise). Passing amount: 1000 in JPY charges ¥1,000, whereas in USD it charges $10.00. Failing to account for this charges customers 100x too much or too little.",
-    tag: "Payments",
-  },
-  {
-    id: "card-saas-1",
-    chapterId: 376,
-    chapterTitle: "SaaS Architecture Patterns",
-    question: "What is PostgreSQL Row-Level Security (RLS) and why is it the gold standard for multi-tenant SaaS?",
-    answer: "RLS enforces tenant isolation at the database engine level via security policies. Even if application code contains a bug or omits a WHERE tenant_id = ... filter, the database guarantees that queries can never read or overwrite another tenant's data.",
-    tag: "SaaS Architecture",
-  },
-  {
-    id: "card-saas-2",
-    chapterId: 381,
-    chapterTitle: "Usage Metering and Limits",
-    question: "Why are Redis atomic counters used for SaaS rate limiting and quota enforcement instead of SQL row updates?",
-    answer: "Redis INCR and sliding window operations execute in-memory in sub-millisecond time. Relational databases running row locks on every incoming HTTP hit cause connection pool exhaustion and catastrophic transaction lock contention under scale.",
-    tag: "SaaS Metering",
+    id: "card-js-prototypes",
+    chapterId: 171,
+    chapterTitle: "JavaScript Object Model",
+    language: "JavaScript",
+    question: "How does property lookup traverse the prototype chain, and where does it terminate?",
+    answer: "When accessing obj.prop, JavaScript checks obj's own properties. If not found, it follows the internal [[Prototype]] reference (Object.getPrototypeOf(obj)). It walks up the chain: obj → Class.prototype → Object.prototype → null. If null is reached without finding the property, it evaluates to undefined.",
+    tag: "JS Objects"
   },
 
+  // ── TypeScript in Depth ──
   {
-    id: "card-c00-1",
-    chapterId: 0,
-    chapterTitle: "Learning to Program in the AI Era",
-    question: "What is the psychological phenomenon known as 'desirable difficulty' and how does AI bypass it?",
-    answer: "Desirable difficulty refers to effortful retrieval and struggle, which encodes neural pathways into long-term memory. When AI outputs code directly, you only experience passive recognition (which is effortless) rather than generative recall (which creates lasting skill).",
-    tag: "Methodology",
+    id: "card-ts-type-erasure",
+    chapterId: 49,
+    chapterTitle: "TypeScript Overview & Mental Model",
+    language: "TypeScript",
+    question: "What is type erasure and why does it mandate runtime validation for API boundaries?",
+    answer: "TypeScript types exist solely at compile time. The compiler verifies assignability and then completely erases all interfaces, type aliases, and generic parameters when generating JavaScript. Because no types exist at runtime, external data (HTTP responses, localStorage, form inputs) must be validated with runtime schemas (e.g. Zod, Valibot) before casting.",
+    tag: "TS Foundations"
   },
   {
-    id: "card-c01-1",
-    chapterId: 1,
-    chapterTitle: "What a Computer Actually Is",
-    question: "Explain the CPU Fetch-Decode-Execute cycle and what happens to the Program Counter (PC).",
-    answer: "The CPU reads an instruction from memory at the address held in the Program Counter (Fetch), translates the opcode into control signals (Decode), performs the ALU/register operation (Execute), and automatically increments the Program Counter to point to the next sequential instruction.",
-    tag: "Hardware",
+    id: "card-ts-discriminated-unions",
+    chapterId: 54,
+    chapterTitle: "Interfaces, Classes & Type Modelling",
+    language: "TypeScript",
+    question: "What is a discriminated union and how does TypeScript ensure exhaustive checking?",
+    answer: "A discriminated union is a union of object types that each share a common literal property (the 'discriminant' tag, e.g. status: 'success' | 'error'). TypeScript narrows the type inside switch/if blocks. Exhaustiveness is verified by assigning the default case to the 'never' type (const _exhaustive: never = val), causing a compile-time error if any union member is unhandled.",
+    tag: "TS Types"
   },
   {
-    id: "card-n02-1",
-    chapterId: 2,
-    chapterTitle: "Binary, Bytes & Number Representation",
-    question: "Why does two's complement simplify computer arithmetic hardware?",
-    answer: "In two's complement, addition and subtraction use the exact same digital adder circuitry. Subtraction A - B is simply performed as A + (~B + 1). There is also only one zero, preventing negative zero anomalies.",
-    tag: "Representation",
+    id: "card-ts-structural-typing",
+    chapterId: 49,
+    chapterTitle: "TypeScript Structural Type System",
+    language: "TypeScript",
+    question: "What is structural typing (duck typing) in TypeScript compared to nominal typing in Java/C#?",
+    answer: "In structural typing, type compatibility is determined entirely by the shape/members of the data, not by its declared name or explicit inheritance hierarchy. If object A possesses all the properties required by interface B with compatible types, A is assignable to B even if it never declared an 'implements B' relationship.",
+    tag: "TS Typing"
+  },
+
+  // ── Python in Depth ──
+  {
+    id: "card-py-names-vs-objects",
+    chapterId: 38,
+    chapterTitle: "Python Overview & Object Model",
+    language: "Python",
+    question: "What is the difference between identity ('is') and equality ('==') in Python?",
+    answer: "'==' checks value equality by invoking __eq__(): do these two objects have equivalent content? 'is' checks memory identity (id(a) == id(b)): do both variables point to the exact same object in heap memory? Never use 'is' for integers or strings (small integer caching is a CPython implementation detail); use 'is' only for singletons like None.",
+    tag: "Python Objects"
   },
   {
-    id: "card-n03-1",
-    chapterId: 3,
-    chapterTitle: "Memory & Data Representation",
-    question: "What is struct padding and memory alignment, and why do modern CPUs require it?",
-    answer: "CPUs access memory in word-sized chunks (e.g. 64-bit / 8-byte aligned). If a 4-byte integer is stored across a word boundary, the CPU must make two memory read cycles and stitch them together. Compilers insert padding bytes between struct fields so every type is placed at a memory address divisible by its size.",
-    tag: "Memory",
+    id: "card-py-mutable-default-args",
+    chapterId: 41,
+    chapterTitle: "Python Functions & Control Flow",
+    language: "Python",
+    question: "Why does 'def append_to(item, target=[])' cause unexpected bugs across multiple calls?",
+    answer: "In Python, default parameter expressions are evaluated ONCE at function definition time when the module loads, not every time the function is called. The exact same list object is retained and mutated across all subsequent invocations. The idiom is to use sentinel None: def append_to(item, target=None): if target is None: target = [].",
+    tag: "Python Functions"
   },
   {
-    id: "card-c02-1",
-    chapterId: 5,
-    chapterTitle: "Variables & Types",
-    question: "What is the key difference between static vs dynamic typing and strong vs weak typing?",
-    answer: "Static vs Dynamic is about WHEN types are checked: compile-time (C, Rust, TS) vs runtime (Python, JS). Strong vs Weak is about whether types are silently coerced: Python is strongly dynamic (1 + '2' raises TypeError), while JavaScript is weakly dynamic (1 + '2' coerces to '12').",
-    tag: "Programming",
+    id: "card-py-gil-concurrency",
+    chapterId: 47,
+    chapterTitle: "Python Concurrency: asyncio, Threads & Processes",
+    language: "Python",
+    question: "What is the Global Interpreter Lock (GIL) and when do threads help vs multiprocessing?",
+    answer: "The GIL is a mutex in CPython that prevents multiple native threads from executing Python bytecode simultaneously. Multi-threading does NOT speed up CPU-bound operations in Python. However, threads DO release the GIL during blocking I/O (disk, network socket reads). For CPU-bound parallelism, use multiprocessing (separate memory spaces) or ProcessPoolExecutor.",
+    tag: "Python Concurrency"
+  },
+
+  // ── Go in Depth ──
+  {
+    id: "card-go-slice-header",
+    chapterId: 63,
+    chapterTitle: "Go Arrays, Slices, Maps & Strings",
+    language: "Go",
+    question: "What are the three components of a Go slice header in memory?",
+    answer: "A slice header is a 24-byte struct (on 64-bit platforms) containing:\n1. Data *T: pointer to the backing array memory.\n2. Len int: the number of active elements.\n3. Cap int: the capacity (distance from start of slice to end of backing array).\nSub-slices share the exact same backing array until append exceeds capacity, which allocates a new array and severs the link.",
+    tag: "Go Memory"
   },
   {
-    id: "card-n20-1",
-    chapterId: 19,
-    chapterTitle: "Big-O",
-    question: "What does amortized time complexity mean, and how does it apply to dynamic array resizing?",
-    answer: "Amortized time is the average cost per operation over a long sequence of operations. When a dynamic array doubles capacity (costing O(n) to copy), that expensive resize only happens once every n operations. Spreading that cost across all appends gives an amortized cost of O(1) per append.",
-    tag: "Algorithms",
+    id: "card-go-nil-interface-trap",
+    chapterId: 64,
+    chapterTitle: "Go Structs, Methods & Interfaces",
+    language: "Go",
+    question: "Why can an interface holding a nil pointer evaluate to NOT equal to nil (err != nil is true)?",
+    answer: "In Go, an interface value is a two-word pair: (TypeDescriptor, ValuePointer). An interface is only equal to nil if BOTH its type and value are nil. If a function returns a typed pointer (*MyError)(nil) stored in an error interface, the interface's type word is *MyError, so 'err != nil' evaluates to TRUE! Always return untyped nil directly on error-free paths.",
+    tag: "Go Interfaces"
   },
   {
-    id: "card-c10-1",
+    id: "card-go-goroutines-channels",
+    chapterId: 66,
+    chapterTitle: "Go Goroutines, Channels & Context",
+    language: "Go",
+    question: "What is the difference between an unbuffered and buffered channel in Go?",
+    answer: "An unbuffered channel (make(chan T)) requires synchronous rendezvous: a send blocks until another goroutine is actively receiving, and a receive blocks until another goroutine sends. A buffered channel (make(chan T, n)) allows sends to complete without blocking as long as the internal ring buffer has space. When the buffer is full, sends block.",
+    tag: "Go Concurrency"
+  },
+
+  // ── Shared Foundations & Computer Science ──
+  {
+    id: "card-js-coercion-rules",
+    chapterId: 24,
+    chapterTitle: "JavaScript Fundamentals: Types, Scope & Hoisting",
+    language: "JavaScript",
+    question: "How does the + operator behave differently from -, *, and / in JavaScript?",
+    answer: "The + operator is overloaded: if EITHER operand converts to a string (via ToPrimitive), it performs string concatenation ('5' + 2 === '52'). All other arithmetic operators (-, *, /, %) convert both operands into numbers via ToNumber ('5' - 2 === 3).",
+    tag: "JS Coercion",
+    codeSnippet: `console.log("5" + 2); // "52"
+console.log("5" - 2); // 3
+console.log("5" * "2"); // 10
+console.log([] + {}); // "[object Object]"`
+  },
+  {
+    id: "card-js-promise-combinators",
+    chapterId: 26,
+    chapterTitle: "Asynchronous JavaScript: Event Loop, Promises & Timers",
+    language: "JavaScript",
+    question: "When should you use Promise.all vs Promise.allSettled vs Promise.race vs Promise.any?",
+    answer: "• Promise.all: Resolves when ALL fulfill; rejects immediately on FIRST rejection (fail-fast).\n• Promise.allSettled: Resolves when ALL settle (fulfill OR reject); never rejects.\n• Promise.race: Settles as soon as the FIRST promise settles (resolves or rejects); great for timeouts.\n• Promise.any: Resolves as soon as the FIRST promise fulfills; rejects only if ALL reject (AggregateError).",
+    tag: "JS Async"
+  },
+  {
+    id: "card-js-streams-backpressure",
+    chapterId: 27,
+    chapterTitle: "Practical JavaScript: Node.js, Modules, Streams & Projects",
+    language: "JavaScript",
+    question: "What is backpressure in Node.js streams and why does stream.pipeline prevent memory overflow?",
+    answer: "Backpressure occurs when data is read faster than the downstream writer can consume it. If unmanaged, incoming chunks accumulate in RAM until the process crashes with OutOfMemory. stream.pipeline automatically coordinates pause() on the readable source until the writable destination emits 'drain', maintaining constant low heap consumption.",
+    tag: "Node.js Streams"
+  },
+  {
+    id: "card-ts-unknown-vs-any",
+    chapterId: 30,
+    chapterTitle: "TypeScript Foundations: Annotations, Unions & Narrowing",
+    language: "TypeScript",
+    question: "What is the difference between unknown and any in TypeScript?",
+    answer: "'any' completely turns off static type checking; any operation or property access is permitted at compile time, pushing crashes to runtime. 'unknown' is the safe top type: it accepts any value, but the compiler forbids reading properties, indexing, or invoking it until you narrow the type using typeof, instanceof, or a custom type predicate.",
+    tag: "TS Safety",
+    codeSnippet: `let a: any = "hello";
+a.toUpperCase(); // OK
+a.nonExistent(); // OK at compile time, crashes at runtime!
+
+let b: unknown = "hello";
+// b.toUpperCase(); // Compile error!
+if (typeof b === "string") b.toUpperCase(); // Safe!`
+  },
+  {
+    id: "card-ts-type-predicates",
+    chapterId: 33,
+    chapterTitle: "Interfaces, Classes & Type Modelling",
+    language: "TypeScript",
+    question: "What is a custom type predicate (val is T) and when is it required?",
+    answer: "A type predicate is a function return type annotation in the form 'paramName is TypeName'. When the function returns true, the TypeScript compiler narrows the passed variable to that specific type in subsequent conditional blocks. It is essential for validating complex nested objects or API responses where simple typeof/instanceof checks are insufficient.",
+    tag: "TS Narrowing"
+  },
+  {
+    id: "card-py-dunder-protocol",
+    chapterId: 43,
+    chapterTitle: "Python Classes & the Data Model",
+    language: "Python",
+    question: "How does Python's Data Model use dunder methods to enable idiomatic language features?",
+    answer: "Python features are implemented through special methods ('dunder' methods):\n• Iteration (for x in obj): calls __iter__() and __next__()\n• Indexing (obj[key]): calls __getitem__(key)\n• Length (len(obj)): calls __len__()\n• String representation: calls __repr__() and __str__()\n• Context managers (with obj:): calls __enter__() and __exit__()",
+    tag: "Python Data Model"
+  },
+  {
+    id: "card-go-defer-timing",
+    chapterId: 62,
+    chapterTitle: "Go Control Flow & Functions",
+    language: "Go",
+    question: "When are arguments to a deferred function evaluated in Go?",
+    answer: "Arguments to a deferred function are evaluated IMMEDIATELY when the defer statement is reached, not when the function returns! However, the deferred function body itself executes in LIFO order upon surrounding function exit. If you need late evaluation, pass values through a closure or pointer.",
+    tag: "Go Defer",
+    codeSnippet: `i := 0
+defer fmt.Println("deferred:", i) // i is evaluated NOW (0)
+i++
+fmt.Println("normal:", i)
+// Output:
+// normal: 1
+// deferred: 0`
+  },
+  {
+    id: "card-foundations-stack-heap",
     chapterId: 21,
     chapterTitle: "Memory & Pointers",
-    question: "What are the core differences between stack allocation and heap allocation?",
-    answer: "The Stack stores local variables and call frames; allocation is a single pointer decrement and cleanup is automatic on return (ultra-fast, fixed size). The Heap stores dynamic, arbitrarily-sized data that outlives the current function; allocation requires finding free blocks, and cleanup requires manual free, reference counting, or garbage collection.",
-    tag: "Computer Science",
+    language: "Foundations",
+    question: "What are the fundamental differences between stack memory and heap memory?",
+    answer: "Stack memory is organized as contiguous LIFO frames. Allocation/deallocation is a single CPU stack pointer register shift (instantaneous, zero fragmentation, scoped to function return). Heap memory is dynamic, arbitrarily sized, and managed via an allocator (e.g. malloc/free, runtime GC). Allocations require searching free-lists and outlive the allocating function.",
+    tag: "Foundations"
   },
+  {
+    id: "card-foundations-bisection-debug",
+    chapterId: 22,
+    chapterTitle: "Debugging & Scientific Method",
+    language: "Foundations",
+    question: "What is the bisection method in systematic debugging?",
+    answer: "Bisection isolates a bug by repeatedly dividing the search space in half. In code execution: print state or inspect at the exact midpoint of a workflow to test whether the bug occurred in the first half or second half. In version control: 'git bisect' performs a binary search over commit history to find the exact commit that introduced a failing test in O(log N) steps.",
+    tag: "Foundations"
+  }
 ];
 
 export function ReviewDeck() {
+  const [schedules, setSchedules] = useState<Record<string, CardSchedule>>(() => {
+    try {
+      const stored = localStorage.getItem("ef-deck-schedules");
+      return stored ? JSON.parse(stored) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  const [history, setHistory] = useState<ReviewHistoryEntry[]>(() => {
+    try {
+      const stored = localStorage.getItem("ef-deck-history");
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [filterMode, setFilterMode] = useState<"due" | "all">("due");
+  const [selectedLanguage, setSelectedLanguage] = useState<string>("All");
   const [currentIndex, setCurrentIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
-  const [reviewedCount, setReviewedCount] = useState(0);
+  const [reviewedToday, setReviewedToday] = useState(0);
 
-  const cards = DEFAULT_REVIEW_CARDS;
-  const currentCard = cards[currentIndex];
+  // Sync schedules & history to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem("ef-deck-schedules", JSON.stringify(schedules));
+    } catch { /* private mode */ }
+  }, [schedules]);
 
-  const handleNext = () => {
+  useEffect(() => {
+    try {
+      localStorage.setItem("ef-deck-history", JSON.stringify(history));
+    } catch { /* private mode */ }
+  }, [history]);
+
+  const todayStr = useMemo(() => toDateString(), []);
+
+  // Filter cards by language and due date
+  const filteredCards = useMemo(() => {
+    let pool = COMPREHENSIVE_REVIEW_CARDS;
+    if (selectedLanguage !== "All") {
+      pool = pool.filter(c => c.language === selectedLanguage);
+    }
+    if (filterMode === "due") {
+      return selectDueCards(pool, schedules, todayStr);
+    }
+    return pool;
+  }, [selectedLanguage, filterMode, schedules, todayStr]);
+
+  const currentCard = filteredCards[currentIndex] ?? filteredCards[0];
+
+  const currentSchedule = useMemo(() => {
+    if (!currentCard) return null;
+    return schedules[currentCard.id] ?? initCardSchedule(currentCard.id, todayStr);
+  }, [currentCard, schedules, todayStr]);
+
+  // Projected interval calculations for the 4 rating buttons
+  const projections = useMemo(() => {
+    if (!currentSchedule) return null;
+    return {
+      again: calculateNextReview(currentSchedule, 1, todayStr).nextSchedule.interval,
+      hard: calculateNextReview(currentSchedule, 3, todayStr).nextSchedule.interval,
+      good: calculateNextReview(currentSchedule, 4, todayStr).nextSchedule.interval,
+      easy: calculateNextReview(currentSchedule, 5, todayStr).nextSchedule.interval,
+    };
+  }, [currentSchedule, todayStr]);
+
+  const handleRate = (rating: ReviewRating) => {
+    if (!currentCard || !currentSchedule) return;
+
+    const { nextSchedule, historyEntry } = calculateNextReview(currentSchedule, rating, todayStr);
+
+    setSchedules(prev => ({
+      ...prev,
+      [currentCard.id]: nextSchedule
+    }));
+
+    setHistory(prev => [historyEntry, ...prev.slice(0, 99)]);
+    setReviewedToday(c => c + 1);
     setFlipped(false);
-    setReviewedCount(c => c + 1);
-    setCurrentIndex(i => (i + 1) % cards.length);
+
+    if (filterMode === "due") {
+      // In due mode, the card was answered and will drop out of due list
+      setCurrentIndex(0);
+    } else {
+      setCurrentIndex(i => (i + 1) % Math.max(1, filteredCards.length));
+    }
   };
+
+  const totalDueCount = useMemo(() => {
+    return selectDueCards(COMPREHENSIVE_REVIEW_CARDS, schedules, todayStr).length;
+  }, [schedules, todayStr]);
 
   return (
     <article className="review-deck-view">
-      <div className="eyebrow">Active Recall & Spaced Repetition</div>
-      <h1 className="chtitle">Spaced Repetition Review Deck</h1>
-      <p className="lead">
-        Recall builds retention. Read the prompt, formulate your answer out loud or in your mind before flipping the card, and test your mental model.
-      </p>
-
-      <div className="deck-progress">
-        <span>Card {currentIndex + 1} of {cards.length}</span>
-        <span className="muted">· {reviewedCount} cards reviewed this session</span>
+      <div className="crumbs">
+        <span className="stagechip">Spaced Repetition</span>
+        <span className="eyebrow">Active Recall Engine (SM-2)</span>
       </div>
 
-      {currentCard && (
-        <div className={`flashcard ${flipped ? "flipped" : ""}`} onClick={() => setFlipped(f => !f)}>
-          <div className="card-top">
-            <span className="card-tag">{currentCard.tag}</span>
-            <span className="card-ch">Ch. {String(currentCard.chapterId).padStart(2, "0")}: {currentCard.chapterTitle}</span>
-          </div>
+      <h1 className="chtitle">Spaced Repetition Review Deck</h1>
+      <p className="lead">
+        Active recall with mathematical spaced repetition. Reviewing at 1-day, 6-day, and exponential intervals prevents cognitive decay and builds permanent language fluency.
+      </p>
 
-          <div className="card-body">
-            <h3 className="card-prompt">{currentCard.question}</h3>
-            {flipped ? (
-              <div className="card-answer">
-                <hr className="card-divider" />
-                <p><b>Model Answer:</b></p>
-                <p>{currentCard.answer}</p>
-              </div>
-            ) : (
-              <div className="card-hint">
-                <span className="hint-pill">Click to reveal answer ▾</span>
-              </div>
-            )}
-          </div>
-
-          <div className="card-actions" onClick={e => e.stopPropagation()}>
-            {!flipped ? (
-              <button type="button" className="cta" onClick={() => setFlipped(true)}>
-                Reveal Answer
-              </button>
-            ) : (
-              <div className="flip-feedback-btns">
-                <button type="button" className="review-btn review-again" onClick={handleNext}>
-                  🔄 Review Soon
-                </button>
-                <button type="button" className="review-btn review-good" onClick={handleNext}>
-                  ✓ Mastered
-                </button>
-              </div>
-            )}
-          </div>
+      {/* Control Toolbar */}
+      <div className="deck-controls-bar">
+        <div className="deck-mode-tabs">
+          <button
+            type="button"
+            className={`deck-tab-btn ${filterMode === "due" ? "active" : ""}`}
+            onClick={() => { setFilterMode("due"); setCurrentIndex(0); setFlipped(false); }}
+          >
+            <IconTarget size={15} />
+            <span>Due Today ({totalDueCount})</span>
+          </button>
+          <button
+            type="button"
+            className={`deck-tab-btn ${filterMode === "all" ? "active" : ""}`}
+            onClick={() => { setFilterMode("all"); setCurrentIndex(0); setFlipped(false); }}
+          >
+            <IconCards size={15} />
+            <span>All Cards ({COMPREHENSIVE_REVIEW_CARDS.length})</span>
+          </button>
         </div>
+
+        <div className="deck-lang-filters">
+          {["All", "JavaScript", "TypeScript", "Python", "Go", "Foundations"].map(lang => (
+            <button
+              key={lang}
+              type="button"
+              className={`lang-filter-chip ${selectedLanguage === lang ? "active" : ""}`}
+              onClick={() => { setSelectedLanguage(lang); setCurrentIndex(0); setFlipped(false); }}
+            >
+              {lang}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="deck-progress">
+        <span>
+          Card {filteredCards.length > 0 ? currentIndex + 1 : 0} of {filteredCards.length}
+        </span>
+        <span className="muted">· {reviewedToday} cards completed this session</span>
+        {currentSchedule && (
+          <span className="deck-meta-chip">
+            Rep: {currentSchedule.repetition} · Interval: {currentSchedule.interval}d · Ease: {currentSchedule.easeFactor}
+          </span>
+        )}
+      </div>
+
+      {filteredCards.length === 0 ? (
+        <div className="deck-empty-state">
+          <div className="empty-icon">
+            <IconCheckCircle size={44} />
+          </div>
+          <h3>All caught up for today!</h3>
+          <p className="muted">
+            You have reviewed all cards currently due. Switch to <b>"All Cards"</b> above to practice in free-study mode, or come back tomorrow for your next scheduled interval.
+          </p>
+          <button
+            type="button"
+            className="cta small"
+            onClick={() => setFilterMode("all")}
+          >
+            <span>Browse All Cards in Free Study Mode</span>
+            <IconArrowRight size={14} />
+          </button>
+        </div>
+      ) : (
+        currentCard && (
+          <div className={`flashcard ${flipped ? "flipped" : ""}`} onClick={() => setFlipped(f => !f)}>
+            <div className="card-top">
+              <span className="card-tag">{currentCard.language ?? currentCard.tag}</span>
+              <span className="card-ch">Ch. {String(currentCard.chapterId).padStart(2, "0")}: {currentCard.chapterTitle}</span>
+            </div>
+
+            <div className="card-body">
+              <h3 className="card-prompt">{currentCard.question}</h3>
+
+              {currentCard.codeSnippet && !flipped && (
+                <pre className="card-code"><code className="language-javascript">{currentCard.codeSnippet}</code></pre>
+              )}
+
+              {flipped ? (
+                <div className="card-answer">
+                  <hr className="card-divider" />
+                  <p><b>Model Answer &amp; Mental Model:</b></p>
+                  <p style={{ whiteSpace: "pre-line" }}>{currentCard.answer}</p>
+                </div>
+              ) : (
+                <div className="card-hint">
+                  <span className="hint-pill">
+                    Click to reveal answer <IconChevronDown size={13} />
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <div className="card-actions" onClick={e => e.stopPropagation()}>
+              {!flipped ? (
+                <button type="button" className="cta" onClick={() => setFlipped(true)}>
+                  Reveal Answer
+                </button>
+              ) : (
+                <div className="sm2-rating-grid">
+                  <button
+                    type="button"
+                    className="sm2-btn btn-again"
+                    onClick={() => handleRate(1)}
+                    title="Incorrect recall. Resets interval to 1 day."
+                  >
+                    <span className="btn-rating-title">
+                      <IconRotateCcw size={14} /> Again
+                    </span>
+                    <span className="btn-interval">{projections?.again ?? 1}d</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="sm2-btn btn-hard"
+                    onClick={() => handleRate(3)}
+                    title="Recalled with significant difficulty."
+                  >
+                    <span className="btn-rating-title">
+                      <IconAlertTriangle size={14} /> Hard
+                    </span>
+                    <span className="btn-interval">{projections?.hard ?? 3}d</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="sm2-btn btn-good"
+                    onClick={() => handleRate(4)}
+                    title="Correct response with normal hesitation."
+                  >
+                    <span className="btn-rating-title">
+                      <IconCheck size={14} /> Good
+                    </span>
+                    <span className="btn-interval">{projections?.good ?? 6}d</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="sm2-btn btn-easy"
+                    onClick={() => handleRate(5)}
+                    title="Effortless, perfect recall. Increases ease factor."
+                  >
+                    <span className="btn-rating-title">
+                      <IconZap size={14} /> Easy
+                    </span>
+                    <span className="btn-interval">{projections?.easy ?? 8}d</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )
       )}
 
+      {/* Spaced Repetition Reference Footer */}
       <div className="review-tips">
-        <h4>Spaced Repetition Intervals</h4>
+        <h4>The SuperMemo-2 (SM-2) Spaced Repetition Formula</h4>
         <p className="muted">
-          According to the Ebbinghaus forgetting curve, reviewing a concept after <b>1 day</b>, <b>1 week</b>, and <b>1 month</b> cements it into long-term recall for years.
+          Your card intervals expand exponentially according to: <code>Interval(n) = Interval(n-1) × EaseFactor</code>. Rating <b>Good</b> or <b>Easy</b> cements memories right before the forgetting curve triggers decay, while rating <b>Again</b> resets the card for reinforcement tomorrow.
         </p>
       </div>
     </article>

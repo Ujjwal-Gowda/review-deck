@@ -1,11 +1,17 @@
 import { useState, useEffect } from "react";
+import {
+  IconBookmark,
+  IconBookmarkFilled,
+  IconFileText,
+  IconCheck
+} from "./Icons";
 
 interface Props {
   chapterId: number;
   chapterTitle: string;
 }
 
-export function NotesDrawer({ chapterId, chapterTitle }: Props) {
+export function NotesDrawer({ chapterId }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const [note, setNote] = useState("");
   const [bookmarked, setBookmarked] = useState(false);
@@ -57,7 +63,17 @@ export function NotesDrawer({ chapterId, chapterTitle }: Props) {
           onClick={toggleBookmark}
           title={bookmarked ? "Remove Bookmark" : "Bookmark this chapter"}
         >
-          {bookmarked ? "★ Bookmarked" : "☆ Bookmark"}
+          {bookmarked ? (
+            <>
+              <IconBookmarkFilled size={14} />
+              <span>Bookmarked</span>
+            </>
+          ) : (
+            <>
+              <IconBookmark size={14} />
+              <span>Bookmark</span>
+            </>
+          )}
         </button>
 
         <button
@@ -66,7 +82,9 @@ export function NotesDrawer({ chapterId, chapterTitle }: Props) {
           onClick={() => setIsOpen(o => !o)}
           title="Toggle personal chapter notes"
         >
-          📝 Personal Notes {note.trim() ? "•" : ""}
+          <IconFileText size={14} />
+          <span>Personal Notes</span>
+          {note.trim() && <span className="note-indicator-dot" />}
         </button>
       </div>
 
@@ -74,7 +92,12 @@ export function NotesDrawer({ chapterId, chapterTitle }: Props) {
         <div className="notes-panel">
           <div className="notes-header">
             <b>Your Notes on Chapter {String(chapterId).padStart(2, "0")}</b>
-            {savedStatus && <span className="notes-saved">Saved ✓</span>}
+            {savedStatus && (
+              <span className="notes-saved">
+                <IconCheck size={13} />
+                <span>Saved</span>
+              </span>
+            )}
           </div>
           <textarea
             className="notes-textarea"

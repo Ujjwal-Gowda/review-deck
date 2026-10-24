@@ -1,12 +1,13 @@
 import { useState } from "react";
 import type { KnowledgeQuiz } from "../data/learningWidgets";
+import { IconCheck, IconX } from "./Icons";
 
 interface Props {
   quizzes: KnowledgeQuiz[];
   chapterId: number;
 }
 
-export function KnowledgeCheck({ quizzes, chapterId }: Props) {
+export function KnowledgeCheck({ quizzes }: Props) {
   const [selectedMap, setSelectedMap] = useState<Record<number, number>>({});
   const [revealedMap, setRevealedMap] = useState<Record<number, boolean>>({});
 
@@ -74,7 +75,17 @@ export function KnowledgeCheck({ quizzes, chapterId }: Props) {
               ) : (
                 <div className={`kc-feedback ${isCorrect ? "kc-correct" : "kc-wrong"}`}>
                   <div className="feedback-status">
-                    {isCorrect ? "✓ Correct!" : "✗ Not quite"}
+                    {isCorrect ? (
+                      <>
+                        <IconCheck size={16} />
+                        <span>Correct!</span>
+                      </>
+                    ) : (
+                      <>
+                        <IconX size={16} />
+                        <span>Not quite</span>
+                      </>
+                    )}
                   </div>
                   <div className="feedback-explanation">
                     {q.explanation}

@@ -40,7 +40,7 @@
 │   │          │                            │                   │ Approved         │     │
 │   │          └────────────────────────────┴───────────────────┘                  │     │
 │   │                                                                              │     │
-│   │   ★ Circuit Breakers:                                                        │     │
+│   │   * Circuit Breakers:                                                        │     │
 │   │     • Max Steps: 8                                                           │     │
 │   │     • Token Budget: 20,000 tokens ($0.15 max cost)                           │     │
 │   │     • Wall-Clock Timeout: 60 seconds                                         │     │
@@ -107,7 +107,7 @@ export class AgentRunner {
       },
     ];
 
-    console.log(`\n🚀 Starting Agent Session for Goal: "${goal}"`);
+    console.log(`\n[START] Starting Agent Session for Goal: "${goal}"`);
 
     for (let step = 1; step <= this.maxSteps; step++) {
       console.log(`\n--- Step ${step}/${this.maxSteps} ---`);
@@ -145,18 +145,18 @@ export class AgentRunner {
         // Model provided final answer
         rl.close();
         const textResponse = candidate.parts?.map((p: any) => p.text).filter(Boolean).join("\n");
-        console.log(`\n✅ Goal achieved in ${step} steps. Total cost: $${currentCost.toFixed(4)}`);
+        console.log(`\n[OK] Goal achieved in ${step} steps. Total cost: $${currentCost.toFixed(4)}`);
         return textResponse;
       }
 
       // Execute Tool Calls
       const responseParts: any[] = [];
       for (const call of functionCalls) {
-        console.log(`🔧 Tool Call: ${call.name}(${JSON.stringify(call.args)})`);
+        console.log(`[TOOL] Tool Call: ${call.name}(${JSON.stringify(call.args)})`);
 
         // Human-In-The-Loop Approval for Mutating Tools
         if (call.name === "draft_supplier_reorder") {
-          const answer = await rl.question(`⚠️  HUMAN APPROVAL REQUIRED: Allow agent to draft reorder ${JSON.stringify(call.args)}? (yes/no): `);
+          const answer = await rl.question(`[WARN]  HUMAN APPROVAL REQUIRED: Allow agent to draft reorder ${JSON.stringify(call.args)}? (yes/no): `);
           if (answer.trim().toLowerCase() !== "yes") {
             responseParts.push({
               functionResponse: {

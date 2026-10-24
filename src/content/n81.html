@@ -25,7 +25,7 @@
 │   │   ┌──────────────────────────────────────┐  ┌─────────────────────────────┐  │     │
 │   │   │     Kernel Event Demultiplexer       │  │    libuv Worker Pool        │  │     │
 │   │   │     (Linux epoll / macOS kqueue)     │  │    (Default 4 Threads)      │  │     │
-│   │   │   ★ Handles: TCP/UDP Network Sockets │  │   ★ Handles: File I/O, DNS, │  │     │
+│   │   │   * Handles: TCP/UDP Network Sockets │  │   * Handles: File I/O, DNS, │  │     │
 │   │   │     Zero worker threads used!        │  │     Crypto (`pbkdf2`), zlib │  │     │
 │   │   └──────────────────────────────────────┘  └─────────────────────────────┘  │     │
 │   └──────────────────────────────────────────────────────────────────────────────┘     │
@@ -71,11 +71,11 @@
 import { pipeline } from "node:stream/promises";
 import { createGzip } from "node:zlib";
 
-// ❌ DANGEROUS: Naive manual piping without error cleanup
+// [FAIL] DANGEROUS: Naive manual piping without error cleanup
 // const read = createReadStream("huge.csv");
 // read.pipe(res); // If client disconnects halfway, file descriptor leaks!
 
-// ✅ THE PRODUCTION STANDARD: stream/promises pipeline
+// [OK] THE PRODUCTION STANDARD: stream/promises pipeline
 export async function streamCompressedExport(inputFile: string, outputFile: string) {
   try {
     await pipeline(

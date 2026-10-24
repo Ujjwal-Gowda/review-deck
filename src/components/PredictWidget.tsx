@@ -1,12 +1,13 @@
 import { useState } from "react";
 import type { PredictChallenge } from "../data/learningWidgets";
+import { IconCheck, IconX, IconRotateCcw } from "./Icons";
 
 interface Props {
   challenge: PredictChallenge;
   chapterId: number;
 }
 
-export function PredictWidget({ challenge, chapterId }: Props) {
+export function PredictWidget({ challenge }: Props) {
   const [selected, setSelected] = useState<number | null>(null);
   const [revealed, setRevealed] = useState(false);
 
@@ -85,10 +86,23 @@ export function PredictWidget({ challenge, chapterId }: Props) {
         ) : (
           <div className="predict-result">
             <div className={`result-banner ${selected === challenge.correct ? "banner-correct" : "banner-wrong"}`}>
-              {selected === challenge.correct ? "✓ Correct prediction! Your mental model holds." : "✗ Prediction diverged from reality. That's where real learning happens!"}
+              {selected === challenge.correct ? (
+                <>
+                  <IconCheck size={16} />
+                  <span>Correct prediction. Your mental model holds.</span>
+                </>
+              ) : (
+                <>
+                  <IconX size={16} />
+                  <span>Prediction diverged from reality. That is where real learning happens.</span>
+                </>
+              )}
             </div>
             <p className="predict-expl"><b>Why: </b>{challenge.explanation}</p>
-            <button type="button" className="predict-retry-btn" onClick={handleReset}>Try Again</button>
+            <button type="button" className="predict-retry-btn" onClick={handleReset}>
+              <IconRotateCcw size={14} />
+              <span>Try Again</span>
+            </button>
           </div>
         )}
       </div>

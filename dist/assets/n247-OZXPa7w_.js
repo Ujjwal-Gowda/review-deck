@@ -1,0 +1,121 @@
+const e=`<p class="goal">Engineering Practice: Live Production Debugging. Master the scientific diagnostic methodology, telemetry correlation (Metrics → Traces → Logs), and low-overhead Linux profiling tools.</p>
+
+<h3>The Golden Rule: Stop the Bleeding First</h3>
+<p>When an alert fires at 2:00 AM and production error rates spike from 0.01% to 15%, junior engineers freeze or attempt to read the entire codebase line-by-line looking for typos. Senior engineers follow a strict triage protocol: <b>Mitigation precedes Diagnosis</b>.</p>
+
+<div class="diagram">
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                              Production Incident Triage Flow                           │
+│                                                                                        │
+│   [ALERT] High Severity Alert: 5xx Error Rate Spikes to 18% on /checkout                   │
+│                                              │                                         │
+│                                              ▼ Step 1: Mitigate Blast Radius           │
+│   ┌──────────────────────────────────────────────────────────────────────────────┐     │
+│   │ • Did we deploy in the last 30 minutes? ──► YES ──► REVERT IMMEDIATELY       │     │
+│   │ • Is a downstream provider failing?    ──► YES ──► FLIP FEATURE FLAG OFF    │     │
+│   │ • Is memory / CPU saturated?           ──► YES ──► HORIZONTALLY SCALE UP     │     │
+│   └──────────────────────────────────────┬───────────────────────────────────────┘     │
+│                                          │ Service Restored / Error Rate Normal        │
+│                                          ▼ Step 2: Correlate Telemetry                 │
+│   ┌──────────────────────────────────────────────────────────────────────────────┐     │
+│   │ 1. Metric Dashboard (Prometheus)  ──► Identifies time window &amp; affected route │     │
+│   │ 2. Trace Span (Tempo / Jaeger)    ──► Identifies exact failing database query│     │
+│   │ 3. Correlated Logs (Loki)         ──► Pinpoints stack trace via \`trace_id\`   │     │
+│   └──────────────────────────────────────┬───────────────────────────────────────┘     │
+│                                          │                                             │
+│                                          ▼ Step 3: Low-Overhead Linux Profiling        │
+│   ┌──────────────────────────────────────────────────────────────────────────────┐     │
+│   │ \`strace -c -p PID\` ──► \`py-spy\` / \`pprof\` ──► \`ss -tulpn\` ──► \`dmesg -T\`     │     │
+│   └──────────────────────────────────────────────────────────────────────────────┘     │
+└────────────────────────────────────────────────────────────────────────────────────────┘
+</div>
+
+<h3>The 3 Pillars of Observability Correlation</h3>
+<p>Never search unstructured log files blindly. Always follow the narrowing funnel:</p>
+
+<div class="cheat">
+  <div class="card">
+    <h4>1. Metrics (The "What &amp; Where")</h4>
+    <p>High-cardinality time series data in Prometheus / Grafana. Shows aggregate error spikes, P99 latency jumps, and CPU saturation across services in seconds.</p>
+  </div>
+  <div class="card">
+    <h4>2. Traces (The "Why")</h4>
+    <p>Distributed OpenTelemetry waterfall graphs. Shows the exact breakdown of time across HTTP Gateway → Database Query → Redis Cache → Third-Party API.</p>
+  </div>
+  <div class="card">
+    <h4>3. Structured Logs (The "Proof")</h4>
+    <p>JSON log entries stamped with the request's <code>trace_id</code>. Lets you grep the exact error message and parameter payload for a single failing transaction.</p>
+  </div>
+</div>
+
+<h3>The Essential Linux Production Toolkit</h3>
+<p>When you have shell access to a struggling node, these commands reveal what the Linux kernel is doing without restarting the process:</p>
+
+<pre data-lang="shell"><code class="language-bash"># 1. Check if the Linux Out-Of-Memory (OOM) Killer assassinated your process
+dmesg -T | grep -E -i "killed process|oom-killer"
+
+# 2. Inspect active network sockets, connection queues, and TCP states
+# Look for SYN_RECV surges (SYN flood) or CLOSE_WAIT leaks (socket not closed by app)
+ss -tulpn
+ss -s
+
+# 3. Profile system calls in real-time without recompilation
+# Shows whether process is blocked on disk I/O, network reads, or mutex futex locks
+strace -c -p <PID>
+
+# 4. Check open file descriptors (Catch "Too many open files" limits)
+lsof -p <PID> | wc -l
+cat /proc/<PID>/limits | grep "Max open files"
+
+# 5. Non-invasive CPU & Memory Sampling for running apps
+# Python:
+py-spy top --pid <PID>
+# Go:
+go tool pprof http://localhost:6060/debug/pprof/profile?seconds=10</code></pre>
+
+<h3>The 5 Most Common Production Culprits</h3>
+<table>
+  <tr><th>Symptom</th><th>Root Cause</th><th>Diagnostic Tell</th><th>Permanent Fix</th></tr>
+  <tr>
+    <td>API latency jumps from 20ms to 10,000ms simultaneously across all endpoints</td>
+    <td><b>Database Connection Pool Exhaustion</b></td>
+    <td>API logs show <code>pool timeout: connection acquired in 10000ms</code> while DB CPU is only 5%.</td>
+    <td>Ensure every DB transaction is wrapped in <code>try...finally { client.release(); }</code>. Never make external HTTP calls inside a DB transaction!</td>
+  </tr>
+  <tr>
+    <td>Sudden CPU spike to 100% every hour at exact minute :00</td>
+    <td><b>Cache Stampede (Thundering Herd)</b></td>
+    <td>Redis key expired; 5,000 concurrent web requests all miss cache and hit PostgreSQL with the same expensive query.</td>
+    <td>Add <b>Jitter</b> to TTLs (<code>TTL = 3600 + rand(0, 300)</code>) or use <b>SingleFlight / Mutex Locking</b> on cache reload.</td>
+  </tr>
+  <tr>
+    <td>Node.js / Python memory climbs linearly over days until crash</td>
+    <td><b>Global State / Event Listener Leak</b></td>
+    <td>Memory profile shows millions of uncollected objects attached to global arrays or un-deregistered socket listeners.</td>
+    <td>Avoid global mutable arrays; use WeakMap / WeakRef; inspect heap snapshots in Chrome DevTools.</td>
+  </tr>
+  <tr>
+    <td>HTTP 502 Bad Gateway from Nginx</td>
+    <td><b>App Crash or Keep-Alive Timeout Mismatch</b></td>
+    <td>Node.js keepAliveTimeout is shorter than Nginx's upstream keepalive timeout.</td>
+    <td>Set Node.js <code>server.keepAliveTimeout = 65000</code> (longer than Nginx's 60s default).</td>
+  </tr>
+</table>
+
+<details class="ex">
+  <summary><b>Drill: Why making an HTTP API call inside a DB transaction causes total site outage</b> (Click to expand)</summary>
+  <p><b>Scenario:</b> An engineer writes:
+    <pre data-lang="typescript"><code class="language-typescript">await db.query("BEGIN");
+await db.query("UPDATE user_credits SET balance = balance - 10 WHERE id = $1", [userId]);
+// External payment gateway call
+await stripe.charges.create({ amount: 1000 }); 
+await db.query("COMMIT");</code></pre>
+  </p>
+  <p><b>Question:</b> What happens if Stripe experiences a 15-second latency delay?</p>
+  <div class="callout warn">
+    <p><b>Answer: Total connection pool starvation!</b></p>
+    <p>While the API waits 15 seconds for Stripe's network response, the PostgreSQL database connection remains held open and the user row remains locked. Within 2 seconds of high traffic, all available database connections in the pool (e.g. 50 connections) are locked waiting on Stripe. Every other user trying to browse the homepage or read a product is blocked, bringing down the entire application.</p>
+    <p><b>Rule:</b> NEVER perform external network I/O inside an open database transaction!</p>
+  </div>
+</details>
+`;export{e as default};

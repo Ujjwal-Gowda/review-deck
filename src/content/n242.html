@@ -3,10 +3,10 @@
 <h3>The Fundamental Law of Distributed Systems</h3>
 <p>The moment your backend needs to update a database AND publish a message to a broker (RabbitMQ, Redis Streams, Kafka, NATS), you encounter the <b>Dual-Write Problem</b>:</p>
 
-<pre data-lang="typescript"><code class="language-typescript">// ❌ CATASTROPHIC DISTRIBUTED FAILURE: The Dual-Write Bug
+<pre data-lang="typescript"><code class="language-typescript">// [FAIL] CATASTROPHIC DISTRIBUTED FAILURE: The Dual-Write Bug
 async function handleOrder(order) {
   await db.query("INSERT INTO orders (...) VALUES (...)");
-  // 🔥 What if the server crashes, out-of-memory fires, or network drops HERE?
+  // [CRITICAL] What if the server crashes, out-of-memory fires, or network drops HERE?
   // The database committed the order, but the event is NEVER published!
   // The customer is charged, but the warehouse never packs the box!
   await messageQueue.publish("order.created", order);

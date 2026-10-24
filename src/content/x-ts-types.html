@@ -13,10 +13,10 @@
 │   function printCoord(p: Point2D) { console.log(p.x, p.y); }                           │
 │                                                                                        │
 │   const v = new Vector2D();                                                            │
-│   printCoord(v); // ✅ 100% VALID IN TYPESCRIPT!                                      │
+│   printCoord(v); // [OK] 100% VALID IN TYPESCRIPT!                                      │
 │                  // Java/C# would throw compile error: Type Mismatch!                  │
 │                                                                                        │
-│   ★ In TypeScript: Shapes matter, nominal names do NOT.                                │
+│   * In TypeScript: Shapes matter, nominal names do NOT.                                │
 └────────────────────────────────────────────────────────────────────────────────────────┘
 </div>
 
@@ -41,7 +41,7 @@ function processPayment(p: Payment): string {
     case "cash":
       return "Cash accepted at store register";
     default:
-      // ⚠️ COMPILER SAFETY LOCK:
+      // [WARN] COMPILER SAFETY LOCK:
       // If someone adds a new variant to `Payment` (e.g. { kind: "apple_pay" })
       // and forgets to add a case statement here, TypeScript will REFUSE TO COMPILE!
       const _unreachable: never = p;
@@ -59,7 +59,7 @@ function getProperty<T, K extends keyof T>(obj: T, key: K): T[K] {
 
 const user = { id: 101, username: "dev_sara", email: "sara@corp.io" };
 const username = getProperty(user, "username"); // Type is strictly `string`!
-// getProperty(user, "invalidKey"); // ❌ Compile Error: Argument of type '"invalidKey"' is not assignable!</code></pre>
+// getProperty(user, "invalidKey"); // [FAIL] Compile Error: Argument of type '"invalidKey"' is not assignable!</code></pre>
 
 <h3>Part 3: Conditional Types &amp; The `infer` Keyword</h3>
 <p>Conditional types enable type-level ternary logic (<code>T extends U ? X : Y</code>). The <code>infer</code> keyword extracts an internal type parameter dynamically:</p>
@@ -101,7 +101,7 @@ interface AppConfig {
 const config: DeepReadonly<AppConfig> = {
   database: { host: "localhost", port: 5432, credentials: { user: "admin", pass: "secret" } },
 };
-// config.database.port = 5433; // ❌ Compile Error: Cannot assign to 'port' because it is a read-only property!</code></pre>
+// config.database.port = 5433; // [FAIL] Compile Error: Cannot assign to 'port' because it is a read-only property!</code></pre>
 
 <h3>Part 5: Template Literal Types (Type-Safe Strings)</h3>
 <p>Construct complex event names, route patterns, and CSS units with mathematical precision:</p>
@@ -116,8 +116,8 @@ type HttpMethod = "GET" | "POST" | "DELETE";
 type Endpoint = `/api/v1/${string}`;
 type ApiRoute = `${HttpMethod} ${Endpoint}`;
 
-const validRoute: ApiRoute = "GET /api/v1/orders"; // ✅ Valid
-// const invalidRoute: ApiRoute = "PATCH /orders"; // ❌ Compile Error!</code></pre>
+const validRoute: ApiRoute = "GET /api/v1/orders"; // [OK] Valid
+// const invalidRoute: ApiRoute = "PATCH /orders"; // [FAIL] Compile Error!</code></pre>
 
 <h3>Part 6: Bridging Runtime &amp; Compile-Time with Zod</h3>
 <p>Remember: <b>TypeScript types exist ONLY at compile time.</b> When compiled to JavaScript, all interfaces, types, and generics are completely erased (zero runtime existence).</p>

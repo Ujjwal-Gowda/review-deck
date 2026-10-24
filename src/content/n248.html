@@ -74,33 +74,33 @@
 <div class="cheat">
   <div class="card">
     <h4>1. The Floating Promise</h4>
-    <pre data-lang="typescript"><code class="language-typescript">// ❌ BUG: Async function called without await
+    <pre data-lang="typescript"><code class="language-typescript">// [FAIL] BUG: Async function called without await
 // If this throws, it causes an unhandled promise rejection
 emailService.sendWelcome(user.id);
 
-// ✅ FIX:
+// [OK] FIX:
 await emailService.sendWelcome(user.id);
 // OR explicitly handle background failure:
 void emailService.sendWelcome(user.id).catch(logErr);</code></pre>
   </div>
   <div class="card">
     <h4>2. The Unbounded Query</h4>
-    <pre data-lang="sql"><code class="language-sql">-- ❌ BUG: Works with 50 rows in testing; crashes server with 500,000 rows
+    <pre data-lang="sql"><code class="language-sql">-- [FAIL] BUG: Works with 50 rows in testing; crashes server with 500,000 rows
 SELECT * FROM audit_logs WHERE org_id = $1;
 
--- ✅ FIX: Force pagination limit & cursor
+-- [OK] FIX: Force pagination limit & cursor
 SELECT * FROM audit_logs 
 WHERE org_id = $1 AND id < $2 
 ORDER BY id DESC LIMIT 50;</code></pre>
   </div>
   <div class="card">
     <h4>3. Leaked Connection / Lock</h4>
-    <pre data-lang="typescript"><code class="language-typescript">// ❌ BUG: If processOrder throws, client is NEVER released back to pool!
+    <pre data-lang="typescript"><code class="language-typescript">// [FAIL] BUG: If processOrder throws, client is NEVER released back to pool!
 const client = await pool.connect();
 await processOrder(client);
 client.release();
 
-// ✅ FIX: Always wrap in try...finally
+// [OK] FIX: Always wrap in try...finally
 const client = await pool.connect();
 try {
   await processOrder(client);
@@ -110,7 +110,7 @@ try {
   </div>
   <div class="card">
     <h4>4. Missing Database Index</h4>
-    <pre data-lang="sql"><code class="language-sql">-- ❌ In PR: "Added created_at filter to invoices"
+    <pre data-lang="sql"><code class="language-sql">-- [FAIL] In PR: "Added created_at filter to invoices"
 -- Missing migration:
 CREATE INDEX CONCURRENTLY idx_invoices_created_at 
 ON invoices(created_at);</code></pre>

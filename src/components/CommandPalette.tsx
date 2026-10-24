@@ -3,6 +3,7 @@ import { CHAPTERS, type Chapter } from "../curriculum";
 import { GLOSSARY } from "../glossary";
 import { TRACKS } from "../tracks";
 import { STAGES } from "../structure";
+import { IconSearch } from "./Icons";
 
 interface Props {
   isOpen: boolean;
@@ -73,8 +74,8 @@ export function CommandPalette({ isOpen, onClose, onToggleTheme, onToggleZen, is
       {
         id: "action-theme",
         category: "Action",
-        title: "Toggle Light / Dark / Auto Theme",
-        subtitle: "Switch color theme",
+        title: "Switch Theme (Editorial / Playful / Dark / Light)",
+        subtitle: "Cycle between Editorial Brutalist, Playful Duolingo, Dark, and Light",
         badge: "Theme",
         action: () => { onToggleTheme(); onClose(); }
       },
@@ -193,7 +194,9 @@ export function CommandPalette({ isOpen, onClose, onToggleTheme, onToggleZen, is
     <div className="palette-backdrop" onClick={onClose}>
       <div className="palette-modal" onClick={e => e.stopPropagation()} onKeyDown={handleKeyDown}>
         <div className="palette-searchbar">
-          <span className="palette-icon">⌘</span>
+          <span className="palette-icon">
+            <IconSearch size={16} />
+          </span>
           <input
             ref={inputRef}
             type="search"

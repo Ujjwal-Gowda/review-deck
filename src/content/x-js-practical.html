@@ -1,0 +1,296 @@
+<p class="goal">Master production-grade JavaScript with Node.js: contrast CommonJS vs ESM module resolution, process large datasets with Node Streams and backpressure, build zero-dependency HTTP servers, write automated tests, and build six progressive mastery projects.</p>
+
+<h3>1. Learning Objectives</h3>
+<ul>
+  <li><b>Node.js vs Browser Environment:</b> Contrast Node's server-side runtime APIs (filesystem, network sockets, child processes, OS signals) with the browser's DOM and Web APIs.</li>
+  <li><b>Module Systems (ESM vs CommonJS):</b> Master <code>import</code>/<code>export</code> vs <code>require</code>/<code>module.exports</code>, static vs dynamic loading, and package boundary configuration.</li>
+  <li><b>Streaming &amp; Backpressure:</b> Process arbitrarily large multi-gigabyte files using <code>Readable</code>, <code>Writable</code>, <code>Transform</code>, and <code>stream.pipeline</code> with constant low memory usage.</li>
+  <li><b>Zero-Dependency HTTP Server:</b> Build a fully functional REST API server using native <code>node:http</code> without external dependencies like Express.</li>
+  <li><b>Testing &amp; Reliability:</b> Write comprehensive unit and integration tests using Vitest and native <code>node:test</code>, and implement graceful process shutdown on <code>SIGTERM</code>.</li>
+  <li><b>JavaScript Mastery Projects:</b> Implement six progressive projects with clear requirements, architectural boundaries, and verification rubrics.</li>
+</ul>
+
+<h3>2. Prerequisites &amp; Mental Model</h3>
+<p>Node.js is an open-source, cross-platform JavaScript runtime environment built on Google Chrome's V8 engine and the Libuv asynchronous I/O library. It allows JavaScript to execute outside the browser as a systems language:</p>
+
+<ul>
+  <li><b>No DOM or Window:</b> Global variables like <code>window</code>, <code>document</code>, and <code>navigator</code> do not exist in Node.js. The universal global object is <code>globalThis</code> (aliased as <code>global</code> in Node).</li>
+  <li><b>Direct OS Access:</b> Node.js programs have full access to local files, network sockets, environment variables (<code>process.env</code>), command-line arguments (<code>process.argv</code>), and child processes.</li>
+  <li><b>Non-Blocking I/O:</b> All slow operations (reading a file, querying a database, listening on a port) are non-blocking by default, keeping the V8 single thread responsive to new requests.</li>
+</ul>
+
+<h3>3. Module Systems: ECMAScript Modules (ESM) vs CommonJS (CJS)</h3>
+<p>Modern Node.js supports two module systems. Understanding the exact differences is critical:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Feature</th>
+      <th>ECMAScript Modules (ESM)</th>
+      <th>CommonJS (CJS)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><b>Syntax</b></td>
+      <td><code>import { x } from "./mod.js";</code><br><code>export const x = 1;</code></td>
+      <td><code>const { x } = require("./mod");</code><br><code>module.exports = { x };</code></td>
+    </tr>
+    <tr>
+      <td><b>Loading Model</b></td>
+      <td><b>Asynchronous &amp; Static:</b> Imports are parsed and resolved before any code executes. Tree-shaking is possible.</td>
+      <td><b>Synchronous &amp; Dynamic:</b> <code>require()</code> executes synchronously at runtime wherever called.</td>
+    </tr>
+    <tr>
+      <td><b>Top-Level <code>await</code></b></td>
+      <td>Supported natively in ESM files.</td>
+      <td>Unsupported (throws SyntaxError).</td>
+    </tr>
+    <tr>
+      <td><b>Special Variables</b></td>
+      <td><code>import.meta.url</code> (use <code>node:url</code> to get file path).</td>
+      <td><code>__dirname</code>, <code>__filename</code>.</td>
+    </tr>
+    <tr>
+      <td><b>File Extension / Config</b></td>
+      <td><code>.mjs</code> or <code>"type": "module"</code> in <code>package.json</code>.</td>
+      <td><code>.cjs</code> or default in Node without <code>"type": "module"</code>.</td>
+    </tr>
+  </tbody>
+</table>
+
+<pre data-lang="javascript"><code class="language-javascript">// Modern ESM standard (package.json has "type": "module")
+import { readFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
+
+// Equivalent of __dirname in ESM:
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const configPath = join(__dirname, "config.json");
+const rawData = await readFile(configPath, "utf-8"); // Top-level await!
+const config = JSON.parse(rawData);
+</code></pre>
+
+<h3>4. Working with Large Files: Streams &amp; Backpressure</h3>
+<p>Reading a 2GB file into memory with <code>fs.readFile()</code> will crash Node with an <code>OutOfMemory</code> error. Instead, use <b>Streams</b> to process data chunk-by-chunk with constant memory consumption:</p>
+
+<ul>
+  <li><b><code>ReadableStream</code>:</b> Produces chunks of data (e.g. reading from disk or incoming HTTP request).</li>
+  <li><b><code>WritableStream</code>:</b> Consumes chunks of data (e.g. writing to disk or outgoing HTTP response).</li>
+  <li><b><code>TransformStream</code>:</b> Modifies chunks in flight (e.g. compression, encryption, CSV parsing).</li>
+  <li><b>Backpressure:</b> If the reader produces data faster than the writer can consume it, backpressure signals the reader to pause until the writer flushes its internal buffer.</li>
+</ul>
+
+<pre data-lang="javascript"><code class="language-javascript">import { createReadStream, createWriteStream } from "node:fs";
+import { createGzip } from "node:zlib";
+import { pipeline } from "node:stream/promises";
+
+async function compressLogFile(sourcePath, destPath) {
+  try {
+    // stream.pipeline handles error cleanup and backpressure automatically!
+    await pipeline(
+      createReadStream(sourcePath), // Readable stream
+      createGzip(),                 // Transform stream (compresses to .gz)
+      createWriteStream(destPath)   // Writable stream
+    );
+    console.log("Compression completed with minimal RAM usage!");
+  } catch (err) {
+    console.error("Pipeline failed:", err);
+  }
+}
+</code></pre>
+
+<h3>5. Zero-Dependency HTTP Server in Pure Node.js</h3>
+<p>You do not need third-party dependencies to build a production REST API. Node's built-in <code>node:http</code> module provides complete HTTP/1.1 capabilities:</p>
+
+<pre data-lang="javascript"><code class="language-javascript">import { createServer } from "node:http";
+
+const PORT = 3000;
+const users = new Map([
+  ["1", { id: "1", name: "Alice", role: "admin" }],
+  ["2", { id: "2", name: "Bob", role: "user" }]
+]);
+
+// Helper to parse incoming JSON request body
+function parseJsonBody(req) {
+  return new Promise((resolve, reject) => {
+    let body = "";
+    req.on("data", chunk => {
+      body += chunk;
+      // Guard against memory flood (limit body to 1MB)
+      if (body.length > 1e6) {
+        req.destroy();
+        reject(new Error("Request payload too large"));
+      }
+    });
+    req.on("end", () => {
+      try {
+        resolve(body ? JSON.parse(body) : {});
+      } catch (err) {
+        reject(new Error("Malformed JSON"));
+      }
+    });
+    req.on("error", reject);
+  });
+}
+
+const server = createServer(async (req, res) => {
+  const url = new URL(req.url, `http://${req.headers.host}`);
+  const method = req.method;
+
+  // Set standard JSON headers
+  res.setHeader("Content-Type", "application/json; charset=utf-8");
+
+  try {
+    // Route 1: GET /api/users
+    if (method === "GET" && url.pathname === "/api/users") {
+      res.writeHead(200);
+      res.end(JSON.stringify(Array.from(users.values())));
+      return;
+    }
+
+    // Route 2: GET /api/users/:id
+    if (method === "GET" && url.pathname.startsWith("/api/users/")) {
+      const id = url.pathname.split("/")[3];
+      const user = users.get(id);
+      if (!user) {
+        res.writeHead(404);
+        res.end(JSON.stringify({ error: "User not found" }));
+        return;
+      }
+      res.writeHead(200);
+      res.end(JSON.stringify(user));
+      return;
+    }
+
+    // Route 3: POST /api/users
+    if (method === "POST" && url.pathname === "/api/users") {
+      const payload = await parseJsonBody(req);
+      if (!payload.name) {
+        res.writeHead(400);
+        res.end(JSON.stringify({ error: "Property 'name' is required" }));
+        return;
+      }
+      const newId = String(users.size + 1);
+      const newUser = { id: newId, name: payload.name, role: payload.role || "user" };
+      users.set(newId, newUser);
+      res.writeHead(201);
+      res.end(JSON.stringify(newUser));
+      return;
+    }
+
+    // Default 404
+    res.writeHead(404);
+    res.end(JSON.stringify({ error: "Route not found" }));
+  } catch (err) {
+    res.writeHead(500);
+    res.end(JSON.stringify({ error: err.message }));
+  }
+});
+
+server.listen(PORT, () => {
+  console.log(`Server listening at http://localhost:${PORT}`);
+});
+</code></pre>
+
+<h3>6. Production Reliability: Graceful Shutdown &amp; Signal Handling</h3>
+<p>When deploying to Docker, Kubernetes, or systemd, the OS sends signals when stopping a container. Your server must intercept these signals, stop accepting new connections, finish inflight requests, and close database handles cleanly:</p>
+
+<pre data-lang="javascript"><code class="language-javascript">function setupGracefulShutdown(server) {
+  const shutdown = (signal) => {
+    console.log(`\nReceived ${signal}. Draining connections gracefully...`);
+    
+    // Stop accepting new incoming TCP connections
+    server.close(() => {
+      console.log("All pending requests closed. Process exiting cleanly.");
+      process.exit(0);
+    });
+
+    // Forced timeout: If inflight requests do not drain in 10s, force kill
+    setTimeout(() => {
+      console.error("Graceful shutdown timeout exceeded. Forcefully killing process.");
+      process.exit(1);
+    }, 10000).unref(); // unref prevents this timer from keeping event loop alive
+  };
+
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+  process.on("SIGINT", () => shutdown("SIGINT"));
+}
+</code></pre>
+
+<h3>7. The Six Progressive JavaScript Mastery Projects</h3>
+<p>To establish true independence in JavaScript, complete these six mastery projects in order. Build each project using strict ECMAScript modules, zero unhandled rejections, and test verification:</p>
+
+<ol>
+  <li><b>Project 1: Command-Line Utility (CLI):</b>
+    <ul>
+      <li><b>Requirements:</b> Build a command-line tool that parses flags, reads files, and formats outputs. Do not use external argument parsers like Commander or Yargs; parse <code>process.argv</code> manually.</li>
+      <li><b>Features:</b> Support <code>--help</code>, <code>--version</code>, input/output paths, and standard exit codes (0 for success, 1 for runtime error, 2 for invalid arguments).</li>
+      <li><b>Verification:</b> Test against positive runs and bad flag combinations.</li>
+    </ul>
+  </li>
+  <li><b>Project 2: Data Transformation &amp; Schema Validator:</b>
+    <ul>
+      <li><b>Requirements:</b> Build a typed schema validation function (similar to a lightweight Zod or Joi) from scratch.</li>
+      <li><b>Features:</b> Support <code>string()</code>, <code>number()</code>, <code>boolean()</code>, <code>array()</code>, <code>object()</code>, <code>optional()</code>, and custom refinement predicates (e.g. <code>min(1)</code>, <code>email()</code>).</li>
+      <li><b>Verification:</b> Return formatted error paths (e.g. <code>"user.addresses[0].zipCode: expected string, received number"</code>).</li>
+    </ul>
+  </li>
+  <li><b>Project 3: Streaming Log-Processing Application:</b>
+    <ul>
+      <li><b>Requirements:</b> Read large web server access logs (Apache/Nginx format) using Node streams.</li>
+      <li><b>Features:</b> Compute IP request frequencies, top 5 error endpoints, and p95 response time without holding the entire file in RAM.</li>
+      <li><b>Verification:</b> Benchmark memory usage to prove heap allocation stays under 30MB even when processing a 1GB log file.</li>
+    </ul>
+  </li>
+  <li><b>Project 4: Promise-Based Concurrent Task Runner:</b>
+    <ul>
+      <li><b>Requirements:</b> Build an asynchronous task queue engine with configurable concurrency limits and retry policies.</li>
+      <li><b>Features:</b> Enqueue asynchronous tasks, run at most $N$ simultaneously, support exponential backoff on transient errors, and support cooperative cancellation with <code>AbortController</code>.</li>
+      <li><b>Verification:</b> Write Vitest tests verifying concurrency never exceeds the set limit and canceled tasks do not execute.</li>
+    </ul>
+  </li>
+  <li><b>Project 5: Zero-Dependency REST API with Node.js:</b>
+    <ul>
+      <li><b>Requirements:</b> Build an HTTP CRUD service using <code>node:http</code> without Express, Fastify, or external routers.</li>
+      <li><b>Features:</b> Implement dynamic URL parameter routing (<code>/api/items/:id</code>), query string parsing, request body streaming, JSON serialization, and RFC 7807 problem details error responses.</li>
+      <li><b>Verification:</b> Automated integration test suite verifying all HTTP methods and error codes.</li>
+    </ul>
+  </li>
+  <li><b>Project 6: Robust Production Application with Caching &amp; Structured Logging:</b>
+    <ul>
+      <li><b>Requirements:</b> Synthesize your knowledge into a production-grade service featuring an in-memory TTL cache, structured JSON logging to stdout, error correlation IDs (UUIDs), and graceful shutdown handlers.</li>
+      <li><b>Features:</b> Track cache hit/miss rates, handle uncaught exceptions cleanly, and sanitize sensitive credentials from output logs.</li>
+      <li><b>Verification:</b> Verify zero memory leaks under load and verify clean connection draining on <code>SIGTERM</code>.</li>
+    </ul>
+  </li>
+</ol>
+
+<h3>8. Active Recall Drills</h3>
+<pre data-lang="javascript"><code class="language-javascript">// Drill 1: CommonJS vs ESM circular dependencies
+// In CJS, a circular require returns a partial (currently exported) object.
+// In ESM, what does circular import access behave like?
+
+// Drill 2: unhandledRejection vs uncaughtException
+// Which event fires when an async function rejects without a .catch()?
+process.on("unhandledRejection", (reason, promise) => {
+  console.log("Unhandled Rejection:", reason);
+});
+</code></pre>
+
+<details class="ex">
+  <summary>Click to view answers and explanations</summary>
+  <p><b>Drill 1:</b> ESM creates live bindings. If Module A accesses an export from Module B before Module B finishes evaluation, it encounters the Temporal Dead Zone (TDZ) and throws a <code>ReferenceError</code>.</p>
+  <p><b>Drill 2:</b> An unhandled Promise rejection triggers the <code>unhandledRejection</code> event. In modern Node.js, an unhandled rejection also prints a fatal warning and will terminate the process with non-zero exit code unless handled.</p>
+</details>
+
+<h3>9. Practical Verification Drill</h3>
+<p>Implement a clean file-watcher utility in Node.js using <code>node:fs/promises</code> and <code>node:fs</code>:</p>
+<ul>
+  <li>Watch a directory for created, modified, and deleted files.</li>
+  <li>Debounce duplicate change events (file systems often emit 2–3 write events per file modification).</li>
+  <li>Emit clean structured events: <code>{ type: "add" | "change" | "unlink", path: string, timestamp: number }</code>.</li>
+  <li>Test that writing a file 10 times in 50ms results in exactly one debounced <code>change</code> event.</li>
+</ul>

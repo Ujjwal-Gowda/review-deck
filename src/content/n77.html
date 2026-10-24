@@ -48,7 +48,7 @@
 
 <div class="callout warn"><b class="t">The Boundary Rule: Passing Server Components into Client Components</b>
 <p>A Client Component CANNOT import a Server Component directly (because the client bundle cannot execute server-only code). However, you can pass a Server Component as a <code>children</code> prop slot:</p>
-<pre data-lang="tsx"><code class="language-tsx">// ✅ VALID PATTERN: Composing Server Components inside Client Components
+<pre data-lang="tsx"><code class="language-tsx">// [OK] VALID PATTERN: Composing Server Components inside Client Components
 // app/ClientModal.tsx ("use client")
 "use client";
 export function ClientModal({ children }: { children: React.ReactNode }) {

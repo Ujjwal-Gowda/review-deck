@@ -1,4 +1,36 @@
 <p class="goal">Go's signature feature: cheap goroutines, channels for communication, and context for cancellation. With the patterns you'll actually use.</p>
+<h3>1. The M:N Runtime Scheduler: Why Goroutines Are Not Just "Lightweight Threads"</h3>
+<p>Calling goroutines "lightweight threads" obscures how Go actually achieves high concurrency. The Go runtime implements an <b>$M:N$ multiplexer</b> that schedules $G$ goroutines across $M$ kernel threads on $P$ logical processors:</p>
+
+<div class="diagram">  ┌──────────────────────── Go Runtime M:N Scheduler ────────────────────────┐
+  │                                                                           │
+  │   [G: Goroutines]                [P: Logical Processors]      [M: OS Threads]
+  │   - 2 KB starting stack          - GOMAXPROCS count           - Kernel threads
+  │   - Dynamically resizable        - Owns Local Run Queue (LRQ) - Scheduled by OS
+  │                                                                           │
+  │   ┌───┐ ┌───┐ ┌───┐              ┌───────────────────────┐    ┌─────────┐ │
+  │   │ G │ │ G │ │ G │ ───────────► │ P0 (LRQ: G1, G2, G3)  │ ──►│ M0 (CPU)│ │
+  │   └───┘ └───┘ └───┘              └───────────────────────┘    └─────────┘ │
+  │                                                                           │
+  │   Work Stealing: If P0's queue empties, it steals half the goroutines from P1!   │
+  │   Syscall Handoff: If M0 blocks in a syscall (read/write), P0 detaches to M1!     │
+  └───────────────────────────────────────────────────────────────────────────┘</div>
+
+<ul>
+  <li><b>Initial Cost:</b> Goroutines start with a tiny 2 KB contiguous stack (vs 1–8 MB for a native OS thread). Stacks grow and shrink dynamically on the heap as needed.</li>
+  <li><b>Cooperative vs Preemptive:</b> Since Go 1.14, the runtime uses non-cooperative signal-based preemption (via OS signals), preventing tight loops without function calls from starving a thread.</li>
+  <li><b>Work Stealing:</b> If an OS thread starves its local run queue (LRQ), it steals half the runnable goroutines from another processor's queue, preventing load imbalance.</li>
+</ul>
+
+<h3>2. The Go Memory Model: Happens-Before Guarantees</h3>
+<p>Modern multi-core CPUs execute out-of-order and maintain private L1/L2 caches. <b>Without synchronization, Core 1 may not see memory writes made by Core 2.</b> The Go Memory Model defines exact <i>happens-before</i> guarantees:</p>
+<ul>
+  <li><b>Channel Send &amp; Receive:</b> A send on a channel happens before the corresponding receive from that channel completes.</li>
+  <li><b>Channel Close:</b> A channel close happens before a receive that returns the zero value and <code>false</code> completes.</li>
+  <li><b>Sync Primitives:</b> An unlock of a <code>sync.Mutex</code> happens before any subsequent lock of that mutex returns.</li>
+  <li><b>Goroutine Creation:</b> The <code>go</code> statement that creates a new goroutine happens before the execution of that goroutine begins.</li>
+</ul>
+
 <h3>Goroutines</h3>
 <pre data-lang="go"><code class="language-go">go sendReceipt(order)              // runs concurrently; costs ~2 KB of stack, so you can start thousands
 // main returning ends the program, including running goroutines: wait for them explicitly</code></pre>

@@ -150,7 +150,7 @@ export function ProductCatalog({ categoryId }: { categoryId: string }) {
 <div class="cheat">
   <div class="card">
     <h4>1. Storing Derived State in `useEffect`</h4>
-    <pre data-lang="typescript"><code class="language-typescript">// ❌ CRITICAL ANTI-PATTERN: Wasted renders & state desync
+    <pre data-lang="typescript"><code class="language-typescript">// [FAIL] CRITICAL ANTI-PATTERN: Wasted renders & state desync
 const [items, setItems] = useState([]);
 const [total, setTotal] = useState(0);
 
@@ -158,12 +158,12 @@ useEffect(() => {
   setTotal(items.reduce((s, i) => s + i.price, 0));
 }, [items]); // Triggers a SECOND render cycle after every update!
 
-// ✅ THE FIX: Derive during render!
+// [OK] THE FIX: Derive during render!
 const total = items.reduce((s, i) => s + i.price, 0);</code></pre>
   </div>
   <div class="card">
     <h4>2. Array Index as Key in Dynamic Lists</h4>
-    <pre data-lang="tsx"><code class="language-tsx">// ❌ DANGEROUS BUG:
+    <pre data-lang="tsx"><code class="language-tsx">// [FAIL] DANGEROUS BUG:
 {items.map((item, index) => (
   &lt;TodoItem key={index} text={item.text} /&gt;
 ))}
@@ -171,7 +171,7 @@ const total = items.reduce((s, i) => s + i.price, 0);</code></pre>
 // React assumes the FIRST element never moved,
 // preserving internal input state and corrupting user form values!
 
-// ✅ THE FIX:
+// [OK] THE FIX:
 {items.map((item) => (
   &lt;TodoItem key={item.id} text={item.text} /&gt;
 ))}</code></pre>

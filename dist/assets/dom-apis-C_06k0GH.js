@@ -1,0 +1,89 @@
+const e=`<p class="goal">Master browser DOM scripting, event bubbling and capture phases, web workers, and modern Web APIs for high-performance frontend engineering.</p>
+
+<h3>1. Learning Objectives</h3>
+<ul>
+  <li><b>DOM Tree &amp; Rendering Pipeline:</b> Understand how HTML is parsed into the DOM tree, CSS into the CSSOM, and how mutations trigger Style, Layout, Paint, and Composite.</li>
+  <li><b>Event Propagation:</b> Master the three phases of DOM events: Capturing, Target, and Bubbling, and implement high-efficiency event delegation.</li>
+  <li><b>Off-Thread Concurrency:</b> Offload heavy CPU calculations from the UI thread to Web Workers with <code>postMessage</code> and <code>Transferable</code> objects.</li>
+  <li><b>Storage &amp; Persistence:</b> Compare <code>localStorage</code>, <code>sessionStorage</code>, and <code>IndexedDB</code> for client-side offline persistence.</li>
+</ul>
+
+<h3>2. The DOM Tree &amp; Event Propagation Pipeline</h3>
+<p>When an event occurs (e.g. clicking a button), the browser dispatches the event in three distinct phases:</p>
+
+<ol>
+  <li><b>Capturing Phase (Trickling down):</b> The event travels from the <code>window</code> object down through <code>document</code>, <code>&lt;html&gt;</code>, <code>&lt;body&gt;</code> to the parent containers until it reaches the target.</li>
+  <li><b>Target Phase:</b> The event arrives at the clicked element (the <code>e.target</code>).</li>
+  <li><b>Bubbling Phase (Floating up):</b> The event bubbles upward from the target element back to <code>window</code>.</li>
+</ol>
+
+<pre data-lang="javascript"><code class="language-javascript">// High-Performance Event Delegation:
+// Instead of attaching 1,000 listeners to 1,000 table rows, attach ONE listener to the parent!
+const table = document.querySelector("#orders-table");
+
+table.addEventListener("click", (event) => {
+  // e.target is the exact clicked element (e.g. a button inside a row)
+  const button = event.target.closest("button.action-btn");
+  if (!button || !table.contains(button)) return;
+
+  const orderId = button.dataset.orderId;
+  console.log("Action clicked for order:", orderId);
+});
+</code></pre>
+
+<h3>3. Offloading CPU Work: Dedicated Web Workers</h3>
+<p>Because the browser UI runs on a single thread alongside JavaScript execution, long-running loops freeze scrolling and user input. Web Workers run scripts in background threads:</p>
+
+<pre data-lang="javascript"><code class="language-javascript">// main.js (Main UI Thread)
+const worker = new Worker(new URL("./worker.js", import.meta.url), { type: "module" });
+
+// Send large array to worker using zero-copy Transferable ArrayBuffer
+const buffer = new Float64Array(1000000);
+worker.postMessage({ type: "PROCESS_DATA", buffer }, [buffer.buffer]);
+
+worker.onmessage = (e) => {
+  console.log("Computation result from worker:", e.data);
+};
+
+// worker.js (Background Thread)
+self.onmessage = (e) => {
+  if (e.data.type === "PROCESS_DATA") {
+    // Heavy math executed without dropping a single frame in the UI!
+    const result = heavyCalculation(e.data.buffer);
+    self.postMessage(result);
+  }
+};
+</code></pre>
+
+<h3>4. Browser Storage Comparison</h3>
+<table>
+  <thead>
+    <tr>
+      <th>Storage API</th>
+      <th>Capacity</th>
+      <th>Access API</th>
+      <th>Persistence Scope</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>localStorage</code></td>
+      <td>~5MB</td>
+      <td>Synchronous (blocks thread)</td>
+      <td>Persists across sessions until explicitly cleared.</td>
+    </tr>
+    <tr>
+      <td><code>sessionStorage</code></td>
+      <td>~5MB</td>
+      <td>Synchronous (blocks thread)</td>
+      <td>Cleared when the browser tab is closed.</td>
+    </tr>
+    <tr>
+      <td><code>IndexedDB</code></td>
+      <td>Hundreds of MBs / GBs</td>
+      <td>Asynchronous (non-blocking)</td>
+      <td>Structured object store for large datasets and offline apps.</td>
+    </tr>
+  </tbody>
+</table>
+`;export{e as default};

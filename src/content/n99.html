@@ -1,7 +1,7 @@
 <p class="goal">Changing the schema safely while the app keeps running.</p>
 <pre data-lang="sql"><code class="language-sql">-- migrations/0012_add_zone_to_orders.sql   (versioned, reviewed in PRs, applied by a tool, never by hand)
 ALTER TABLE orders ADD COLUMN zone text;                               -- nullable add: instant
-UPDATE orders SET zone = 'central' WHERE zone IS NULL;                -- ⚠ backfill in batches on big tables
+UPDATE orders SET zone = 'central' WHERE zone IS NULL;                -- [WARN] backfill in batches on big tables
 ALTER TABLE orders ALTER COLUMN zone SET NOT NULL;                    -- scans the table while holding a lock</code></pre>
 <p>Tools: Prisma Migrate, Drizzle Kit, Alembic (Python), golang-migrate / goose (Go), sqlx/refinery (Rust), Flyway, Atlas. They all record which migrations have run in a table and apply the rest in order.</p>
 <h3>Zero-downtime: expand → migrate → contract</h3>

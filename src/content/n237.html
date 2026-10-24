@@ -43,7 +43,7 @@
 <h3>Phase 1: The Race-Proof Database Core</h3>
 <p>The most dangerous bug in web development is the <i>Check-Then-Act</i> race condition (Time of Check to Time of Use, or TOCTOU). Never write this in your backend:</p>
 
-<pre data-lang="typescript"><code class="language-typescript">// ❌ CRITICAL BUG: Catastrophic race condition under concurrent traffic
+<pre data-lang="typescript"><code class="language-typescript">// [FAIL] CRITICAL BUG: Catastrophic race condition under concurrent traffic
 const product = await db.query("SELECT stock FROM products WHERE id = $1", [productId]);
 if (product.stock >= quantity) {
   // If 5 requests reach this line before any UPDATE executes, ALL 5 succeed!
